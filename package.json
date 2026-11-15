@@ -1,0 +1,81 @@
+{
+  "name": "dbviewer-tagger",
+  "version": "0.1.0",
+  "description": "CSV inspection & migration review tool",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:6200 && tsc -p tsconfig.main.json && node scripts/dev-electron.js",
+    "build": "pnpm run build:vite && pnpm run build:electron",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p tsconfig.main.json",
+    "dist": "pnpm run build && electron-builder",
+    "dist:mac": "pnpm run build && electron-builder --mac",
+    "dist:win": "pnpm run build && electron-builder --win",
+    "dist:linux": "pnpm run build && electron-builder --linux",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/nprogress": "^0.2.3",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/ssh2": "^1.15.5",
+    "@vitejs/plugin-react": "^4.0.0",
+    "concurrently": "^8.0.0",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.0.0",
+    "vite-plugin-electron": "^0.28.0",
+    "wait-on": "^7.0.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/pixelify-sans": "^5.3.0",
+    "@tanstack/react-table": "^8.17.0",
+    "@tanstack/react-virtual": "^3.14.3",
+    "@types/papaparse": "^5.3.14",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.383.0",
+    "nprogress": "^0.2.0",
+    "papaparse": "^5.4.1",
+    "pg": "^8.22.0",
+    "pretendard": "^1.3.9",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "sonner": "^2.0.7",
+    "ssh2": "^1.17.0"
+  },
+  "build": {
+    "appId": "io.github.wonderwall1995.dbviewer-tagger",
+    "productName": "DBViewer-tagger",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "FONT-LICENSES.md",
+        "to": "FONT-LICENSES.md"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
