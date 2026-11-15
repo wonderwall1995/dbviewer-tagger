@@ -58,6 +58,12 @@ declare global {
       hermesLoadConfig: () => Promise<HermesConfigView>
       hermesSaveConfig: (cfg: HermesConfigInput) => Promise<void>
       hermesTestConnection: () => Promise<{ ok: true } | { ok: false; message: string }>
+      hermesVaultTest: () => Promise<{ ok: boolean; message: string }>
+      hermesVaultList: () => Promise<{ ok: true; tree: Array<{ name: string; children: string[] }> } | { ok: false; message: string }>
+      cedSend: (product: string | null) => Promise<
+        | { ok: true; dir: string; skippedDrafts: number; noNotes: boolean; written: string[]; updated: string[]; unchanged: string[]; conflicts: string[]; leftover: string[] }
+        | { ok: false; message: string; dir: string }
+      >
       hermesGetSessions: () => Promise<{ object: string; data: HermesSession[] }>
       hermesGetMessages: (sessionId: string) => Promise<{ object: string; data: HermesMessage[] }>
       keyinfoReindex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
@@ -67,11 +73,14 @@ declare global {
       keyinfoIndex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
       onKeyinfoProgress: (cb: (data: { done: number; total: number }) => void) => void
       offKeyinfoProgress: () => void
+      cedGenerate: (product: string | null) => Promise<{ dir: string; files: string[]; skippedDrafts: number }>
       keynoteList: (product: string | null) => Promise<KeyNote[]>
       keynoteSave: (product: string | null, notes: KeyNote[]) => Promise<void>
       keynoteCandidates: (product: string | null) => Promise<KeyCandidate[]>
       keynoteAcceptCandidate: (product: string | null, signature: string) => Promise<KeyNote | null>
-      keynoteRejectCandidate: (product: string | null, signature: string) => Promise<void>
+      keynoteSampleRows: (filePath: string, columnKeys: string[], limit: number, skipBlank: boolean, offset: number, sort: { column: string; dir: 'asc' | 'desc' } | null) => Promise<{ ok: boolean; reason: string; columns: string[]; rows: string[][]; total: number; hasMore: boolean; truncated: boolean }>
+      keynotePruneByPins: (product: string | null, pins: Array<{ columnKey: string }>) => Promise<string[]>
+      keynoteRefreshMembers: (product: string | null) => Promise<number>
       keyinfoListRelations: () => Promise<KeyRelationGroup[]>
       keyinfoSaveRelations: (groups: KeyRelationGroup[]) => Promise<void>
       backupList: () => Promise<BackupMeta[]>
@@ -95,6 +104,8 @@ declare global {
     port: string
     username: string
     pemPath: string
+    // ~/.ssh/config의 Host 이름. 채우면 시스템 ssh로 접속하고 host, username, pemPath는 쓰지 않는다.
+    alias: string
   }
 
   // 불러온 설정. API 키 값은 포함하지 않고 저장 여부(hasKey)만 알려준다.
@@ -104,6 +115,7 @@ declare global {
     serverUrl: string
     hasKey: boolean
     ssh: HermesSshSetting
+    vaultPath: string
     // 로그아웃 설정이 켜져 있고 이번 실행에서 아직 연결 확인을 하지 않은 프로필이다.
     needsVerify: boolean
   }
@@ -121,6 +133,7 @@ declare global {
     serverUrl: string
     apiKey?: string
     ssh: HermesSshSetting
+    vaultPath?: string
   }
 
   interface HermesConfigInput {
@@ -240,7 +253,8 @@ declare global {
 
   // Key 노트: 관계 그룹을 확장한 의미 단위 노트. 노트 하나는 한 제품에만 속한다.
   // 저장할 때 product 값은 저장하는 제품으로 맞춰진다. 확인된(confirmed) 노트만 내보낸다.
-  type KeyNoteStatus = 'draft' | 'confirmed'
+  // suspended = 작업 일시 중단. 노트 목록에서 빠져 후보 목록에 보류로 나타난다.
+  type KeyNoteStatus = 'draft' | 'confirmed' | 'suspended'
 
   interface KeyNoteMember {
     fileName: string
@@ -256,21 +270,22 @@ declare global {
     keywords: string[]
     valueMeanings: string
     status: KeyNoteStatus
-    sourceTable: string
     members: KeyNoteMember[]
+    excluded: KeyNoteMember[]
     createdAt: string
     updatedAt: string
   }
 
-  // Key 자동 후보. 제안일 뿐이고, 수락해야 초안 Key 노트가 된다.
+  // Key 자동 후보. 제안일 뿐이고, 수락해야 초안 Key 노트가 된다. 핀으로 고정한 컬럼이 들어 있는 묶음만 나온다.
+  // hold = 작업 일시 중단한 노트 (noteId). 수락하면 내용 그대로 초안으로 돌아온다.
   // kind: fk = FK로 이어진 컬럼 묶음, ref = FK 제약은 없지만 이름 규칙으로 이어진 것으로 추정한 묶음,
   // name = 같은 이름의 컬럼 묶음. signature는 후보를 가리키는 값이다.
   interface KeyCandidate {
     signature: string
-    kind: 'fk' | 'ref' | 'name'
+    kind: 'fk' | 'ref' | 'name' | 'hold'
+    noteId?: string
     title: string
     members: KeyNoteMember[]
-    sourceTable: string
     reason: string
   }
 

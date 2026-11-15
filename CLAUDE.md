@@ -7,6 +7,9 @@
 - LLMS.md 파일은 공개 (Public) 될 내용의 일부이기에, 보안 내용의 작성을 엄금하며 User가 작성한 경우 LLM은 이것에 대한 주의를 표한다.
 - 본 프로젝트는 Open 상태로 진행될 예정이다. 보안 또는 개인 정보 문제에 민감하게 참조할 것.
 
+# Reference
+- Keyinfo, CED 관련: Hermes가 CED를 세션 인식이나 AGENTS.md 재읽기에 기대지 않고 필요할 때 찾아 읽도록, Hermes 내부에 정보의 Indexing 및 읽어오기 소형 프로젝트를 따로 둔다.
+
 # PURPOSE
 - User의 포트폴리오 일환으로써 'Context Enrichment Docs'(이하, CED)를 생산하기 위한 목적이 주요하다.
 - 이전에는 개별 DB 차이 간 CSV 파일 중심 Inspector 였었다.

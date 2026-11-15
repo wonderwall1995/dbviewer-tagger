@@ -7,6 +7,10 @@ import zlib from 'zlib'
 import Papa from 'papaparse'
 import { Client } from 'pg'
 import { Client as SshClient } from 'ssh2'
+import type { SFTPWrapper, Stats, FileEntryWithStats } from 'ssh2'
+import crypto from 'crypto'
+import { isSafeAlias, makeExecOps, sshRunner, startAliasTunnel } from './sshAlias'
+import type { RemoteOps } from './sshAlias'
 
 const isDev = !app.isPackaged
 
@@ -92,6 +96,44 @@ app.on('window-all-closed', () => {
 let LOCAL_FILE = dataPaths(DATA_ROOT).localFile
 let SHEET_SETTINGS_FILE = dataPaths(DATA_ROOT).sheetSettingsFile
 
+// ── 프리셋 파일 경로 ──────────────────────────────────────────────────────────
+// 프리셋 JSON에는 작업 폴더 안의 파일을 작업 폴더 기준 상대경로(예: DB-downloads/웹데모/public/a.csv)로 저장한다.
+// 불러올 때는 현재 작업 폴더 기준 절대경로로 풀어서 화면에 넘긴다. 작업 폴더 밖의 파일은 절대경로 그대로 둔다.
+function toStoredPath(p: string): string {
+  if (typeof p !== 'string' || !path.isAbsolute(p)) return p
+  const rel = path.relative(DATA_ROOT, p)
+  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return p
+  return rel.split(path.sep).join('/')
+}
+
+function fromStoredPath(p: string): string {
+  if (typeof p !== 'string' || p === '') return p
+  if (!path.isAbsolute(p)) return path.resolve(DATA_ROOT, p)
+  if (fs.existsSync(p)) return p
+  // 예전 작업 폴더의 절대경로가 남은 경우: DB-downloads / S3-downloads 아래 같은 위치에 파일이 있으면 그것을 쓴다.
+  const parts = p.split(/[\\/]+/)
+  for (const root of ['DB-downloads', 'S3-downloads']) {
+    const i = parts.lastIndexOf(root)
+    if (i === -1) continue
+    const candidate = path.join(DATA_ROOT, root, ...parts.slice(i + 1))
+    if (fs.existsSync(candidate)) return candidate
+  }
+  return p
+}
+
+function mapPresetPaths<T>(data: T, convert: (p: string) => string): T {
+  const sources = (data as { fileSources?: Record<string, unknown> } | null)?.fileSources
+  if (!sources || typeof sources !== 'object') return data
+  const next: Record<string, unknown> = {}
+  for (const [name, src] of Object.entries(sources)) {
+    const s = src as { type?: string; path?: string; localPath?: string } | null
+    if (s?.type === 'local' && typeof s.path === 'string') next[name] = { ...s, path: convert(s.path) }
+    else if (s?.type === 's3' && typeof s.localPath === 'string') next[name] = { ...s, localPath: convert(s.localPath) }
+    else next[name] = src
+  }
+  return { ...data, fileSources: next }
+}
+
 ipcMain.handle('sheet:saveSettings', (_event, data: unknown) => {
   fs.mkdirSync(path.dirname(SHEET_SETTINGS_FILE), { recursive: true })
   fs.writeFileSync(SHEET_SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf-8')
@@ -116,7 +158,7 @@ ipcMain.handle('local:save', (_event, data: unknown) => {
       if (typeof prev?.activeFile === 'string') next = { ...(data as object), activeFile: prev.activeFile }
     }
   } catch { /* 읽지 못하면 받은 내용 그대로 저장한다. */ }
-  fs.writeFileSync(LOCAL_FILE, JSON.stringify(next, null, 2), 'utf-8')
+  fs.writeFileSync(LOCAL_FILE, JSON.stringify(mapPresetPaths(next, toStoredPath), null, 2), 'utf-8')
 })
 
 // 프리셋 JSON의 activeFile(마지막으로 보던 CSV)만 바꾼다. 다른 내용은 건드리지 않는다.
@@ -140,7 +182,7 @@ ipcMain.handle('local:load', () => {
       fs.writeFileSync(LOCAL_FILE, JSON.stringify(empty, null, 2), 'utf-8')
       return empty
     }
-    return JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8'))
+    return mapPresetPaths(JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8')), fromStoredPath)
   } catch {
     return null
   }
@@ -151,7 +193,7 @@ ipcMain.handle('local:savePreset', (_event, name: string, data: unknown) => {
   const safeName = (name.trim().replace(/\.json$/i, '') || 'local') + '.json'
   const targetFile = path.join(DATA_ROOT, 'local', 'presets', safeName)
   fs.mkdirSync(path.dirname(targetFile), { recursive: true })
-  fs.writeFileSync(targetFile, JSON.stringify(data, null, 2), 'utf-8')
+  fs.writeFileSync(targetFile, JSON.stringify(mapPresetPaths(data, toStoredPath), null, 2), 'utf-8')
   return safeName
 })
 
@@ -184,7 +226,7 @@ ipcMain.handle('local:loadPreset', (_event, name: string) => {
   const filePath = path.join(DATA_ROOT, 'local', 'presets', name)
   try {
     if (!fs.existsSync(filePath)) return null
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    return mapPresetPaths(JSON.parse(fs.readFileSync(filePath, 'utf-8')), fromStoredPath)
   } catch {
     return null
   }
@@ -854,8 +896,10 @@ const HERMES_CONFIG_PATH = path.join(app.getPath('userData'), 'hermes-config.bin
 const HERMES_MAX_PROFILES = 10
 const hermesVerified = new Set<string>()
 
-interface HermesSsh { enabled: boolean; host: string; port: string; username: string; pemPath: string }
-interface HermesProfile { id: string; name: string; serverUrl: string; apiKey: string; ssh: HermesSsh }
+// alias: ~/.ssh/config의 Host 이름. 채우면 host, username, pemPath 대신 시스템 ssh가 그 설정대로 접속한다.
+interface HermesSsh { enabled: boolean; host: string; port: string; username: string; pemPath: string; alias: string }
+// vaultPath: Hermes 서버(SSH로 접속하는 PC)의 Obsidian 볼트 절대 경로. 맥락 문서(CED)를 보낼 때 쓴다. 암호화된 설정에만 둔다.
+interface HermesProfile { id: string; name: string; serverUrl: string; apiKey: string; ssh: HermesSsh; vaultPath: string }
 interface HermesConfig { activeId: string; logoutOnExit: boolean; profiles: HermesProfile[] }
 
 function newHermesProfileId(): string {
@@ -872,7 +916,8 @@ function emptyHermesProfile(name: string, id: string = newHermesProfileId()): He
     name,
     serverUrl: '',
     apiKey: '',
-    ssh: { enabled: false, host: '', port: '22', username: '', pemPath: '' },
+    ssh: { enabled: false, host: '', port: '22', username: '', pemPath: '', alias: '' },
+    vaultPath: '',
   }
 }
 
@@ -884,6 +929,7 @@ function normalizeHermesSsh(value: any): HermesSsh {
     port: text(value?.port) || '22',
     username: text(value?.username),
     pemPath: text(value?.pemPath),
+    alias: text(value?.alias),
   }
 }
 
@@ -905,6 +951,7 @@ function loadHermesConfig(): HermesConfig {
       serverUrl: typeof p?.serverUrl === 'string' ? p.serverUrl : '',
       apiKey: typeof p?.apiKey === 'string' ? p.apiKey : '',
       ssh: normalizeHermesSsh(p?.ssh),
+      vaultPath: typeof p?.vaultPath === 'string' ? p.vaultPath.trim() : '',
     }))
   } else if (raw && (typeof raw.serverUrl === 'string' || typeof raw.apiKey === 'string')) {
     // 이전 형식({ serverUrl, apiKey })은 프로필 1로 옮긴다.
@@ -937,9 +984,12 @@ async function resolveHermesTarget(skipVerify: boolean): Promise<{ base: string;
   let url: URL
   try { url = new URL(profile.serverUrl) } catch { throw new Error('서버 주소 형식이 올바르지 않아요') }
 
-  if (profile.ssh.enabled && profile.ssh.host) {
+  if (profile.ssh.enabled && (profile.ssh.alias || profile.ssh.host)) {
     const remotePort = parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80)
-    const localPort = await ensureTunnel(`hermes:${profile.id}`, profile.ssh, url.hostname, remotePort)
+    const key = `hermes:${profile.id}`
+    const localPort = profile.ssh.alias
+      ? await ensureAliasTunnel(key, profile.ssh.alias, url.hostname, remotePort)
+      : await ensureTunnel(key, profile.ssh, url.hostname, remotePort)
     url.hostname = '127.0.0.1'
     url.port = String(localPort)
   }
@@ -988,6 +1038,7 @@ ipcMain.handle('hermes:loadConfig', () => {
       serverUrl: p.serverUrl,
       hasKey: p.apiKey !== '',
       ssh: p.ssh,
+      vaultPath: p.vaultPath,
       // 로그아웃 설정이 켜져 있고 이번 실행에서 연결 확인을 아직 안 한 프로필이다.
       needsVerify: cfg.logoutOnExit && !hermesVerified.has(p.id),
     })),
@@ -1009,12 +1060,13 @@ ipcMain.handle('hermes:saveConfig', (_event, payload: any) => {
       serverUrl: text(p?.serverUrl),
       apiKey: text(p?.apiKey) !== '' ? text(p?.apiKey) : (prev?.apiKey ?? ''),
       ssh: normalizeHermesSsh(p?.ssh),
+      vaultPath: text(p?.vaultPath),
     }
   })
   if (profiles.length === 0) profiles = [emptyHermesProfile('프로필 1')]
 
   // 연결 값(주소, 키, SSH 터널)이 바뀐 프로필과 삭제된 프로필은 연결 확인을 다시 해야 한다.
-  const sshKey = (s: HermesSsh) => `${s.enabled}|${s.host}|${s.port}|${s.username}|${s.pemPath}`
+  const sshKey = (s: HermesSsh) => `${s.enabled}|${s.host}|${s.port}|${s.username}|${s.pemPath}|${s.alias}`
   for (const profile of profiles) {
     const prev = byId.get(profile.id)
     if (!prev || prev.serverUrl !== profile.serverUrl || prev.apiKey !== profile.apiKey || sshKey(prev.ssh) !== sshKey(profile.ssh)) {
@@ -1047,6 +1099,230 @@ ipcMain.handle('hermes:getSessions', () => hermesGet('/api/sessions'))
 
 ipcMain.handle('hermes:getMessages', (_event, sessionId: string) => {
   return hermesGet(`/api/sessions/${encodeURIComponent(String(sessionId))}/messages`)
+})
+
+// ── CED를 Hermes 서버의 Obsidian 볼트로 보내기 (SFTP) ─────────────────────────────
+// Hermes 프로필의 SSH 정보(호스트, 사용자, 키)로 접속해 <볼트>/CED/<제품>/ 에 .md 문서를 쓴다.
+// 쓰는 범위는 그 폴더 안으로만 제한한다. 볼트의 다른 파일은 읽지도, 지우지도 않는다.
+// 볼트 경로는 암호화된 Hermes 설정에만 두고, 로그와 오류 메시지에는 넣지 않는다.
+//
+// 덮어쓰기 규칙: 앱이 마지막으로 쓴 내용(.ced-state.json의 해시)과 지금 파일이 같을 때만 덮어쓴다.
+// 다르면 사람이 볼트에서 고친 파일로 보고 건너뛴다. (볼트의 수정이 우선, 앱은 볼트에서 가져오지 않는다)
+// 앱에서 빠진 문서는 볼트에서 지우지 않고 남겨 둔다고 알려 준다.
+
+const VAULT_CED_DIR = 'CED'
+const VAULT_STATE_FILE = '.ced-state.json'
+
+interface VaultSession { ops: RemoteOps; root: string; close: () => void }
+
+const vaultJoin = (...parts: string[]) => parts.join('/').replace(/\/+/g, '/')
+const sha256 = (data: Buffer) => crypto.createHash('sha256').update(data).digest('hex')
+
+function activeHermesProfile(): HermesProfile {
+  const cfg = loadHermesConfig()
+  const profile = cfg.profiles.find((p) => p.id === cfg.activeId) ?? cfg.profiles[0]
+  // 로그아웃 설정이 켜져 있으면 연결 확인을 통과하기 전에는 접속하지 않는다.
+  if (cfg.logoutOnExit && !hermesVerified.has(profile.id)) {
+    throw new Error('로그아웃 상태예요. Hermes 설정 화면에서 연결 확인을 눌러 주세요')
+  }
+  return profile
+}
+
+function openVaultSession(profile: HermesProfile): Promise<VaultSession> {
+  const root = profile.vaultPath.replace(/\/+$/, '')
+  if (!root || !root.startsWith('/')) return Promise.reject(new Error('볼트 경로를 절대 경로로 입력해 주세요 (예: /home/사용자/문서/Obsidian Vault)'))
+  if (!profile.ssh.enabled) return Promise.reject(new Error('Hermes 설정에서 SSH 터널 사용을 먼저 켜 주세요'))
+
+  // 별칭: 시스템 ssh로 접속한다. ssh 설정(키 암호, ssh-agent, ProxyJump)을 그대로 따른다.
+  if (profile.ssh.alias) {
+    if (!isSafeAlias(profile.ssh.alias)) return Promise.reject(new Error('SSH 별칭에 쓸 수 없는 글자가 있어요'))
+    return Promise.resolve({ ops: makeExecOps(sshRunner(profile.ssh.alias)), root, close: () => {} })
+  }
+
+  // 호스트, 사용자, 키 파일: ssh2의 SFTP로 접속한다.
+  if (!profile.ssh.host || !profile.ssh.username || !profile.ssh.pemPath) {
+    return Promise.reject(new Error('Hermes 설정의 SSH 항목(별칭, 또는 호스트, 사용자, 키)을 먼저 채워 주세요'))
+  }
+  return new Promise((resolve, reject) => {
+    const ssh = new SshClient()
+    let settled = false
+    const fail = (e: Error) => { if (!settled) { settled = true; try { ssh.end() } catch { /* 이미 닫힘 */ } reject(e) } }
+    ssh.on('ready', () => {
+      ssh.sftp((err, sftp) => {
+        if (err) return fail(err)
+        settled = true
+        resolve({ ops: sftpAsRemoteOps(sftp), root, close: () => { try { ssh.end() } catch { /* 이미 닫힘 */ } } })
+      })
+    })
+    ssh.on('error', fail)
+    try {
+      ssh.connect({
+        host: profile.ssh.host,
+        port: parseInt(profile.ssh.port) || 22,
+        username: profile.ssh.username,
+        privateKey: fs.readFileSync(profile.ssh.pemPath),
+        readyTimeout: 15_000,
+      })
+    } catch (e) { fail(e instanceof Error ? e : new Error(String(e))) }
+  })
+}
+
+// SFTP 콜백 함수를 Promise로 바꾸고, 별칭 방식과 같은 모양(RemoteOps)으로 맞춘다.
+function sftpAsRemoteOps(sftp: SFTPWrapper): RemoteOps {
+  return {
+    stat: (p) => new Promise((res, rej) => sftp.stat(p, (e, s: Stats) => (e ? rej(e) : res({ isDirectory: s.isDirectory(), size: s.size })))),
+    readdir: (p) => new Promise((res, rej) => sftp.readdir(p, (e, l: FileEntryWithStats[]) => (e ? rej(e) : res(l.map((f) => ({ filename: f.filename, isDirectory: f.attrs.isDirectory() })))))),
+    mkdir: (p) => new Promise((res, rej) => sftp.mkdir(p, (e) => (e ? rej(e) : res()))),
+    readFile: (p) => new Promise((res, rej) => sftp.readFile(p, (e, b) => (e ? rej(e) : res(b)))),
+    writeFile: (p, data) => new Promise((res, rej) => sftp.writeFile(p, data, (e) => (e ? rej(e) : res()))),
+    unlink: (p) => new Promise((res, rej) => sftp.unlink(p, (e) => (e ? rej(e) : res()))),
+    // SFTP의 기본 이름 바꾸기는 대상이 있으면 실패한다. OpenSSH의 덮어쓰기용 확장을 쓰고, 안 되면 지운 뒤 바꾼다.
+    rename: (from, to) => new Promise((res, rej) => {
+      sftp.ext_openssh_rename(from, to, (e) => {
+        if (!e) return res()
+        sftp.unlink(to, () => sftp.rename(from, to, (e2) => (e2 ? rej(e2) : res())))
+      })
+    }),
+  }
+}
+
+const isNotFound = (e: unknown) => (e as { code?: number })?.code === 2
+
+// 폴더가 없으면 만든다. (mkdir -p) 볼트 루트는 이미 있어야 한다.
+async function ensureRemoteDirs(ops: RemoteOps, root: string, segments: string[]): Promise<string> {
+  let cur = root
+  for (const seg of segments) {
+    cur = vaultJoin(cur, seg)
+    try { await ops.stat(cur) } catch (e) {
+      if (!isNotFound(e)) throw e
+      await ops.mkdir(cur)
+    }
+  }
+  return cur
+}
+
+function describeVaultError(e: unknown): string {
+  const err = e as { message?: string; code?: number | string; level?: string }
+  if (err?.level === 'client-authentication') return 'SSH 인증에 실패했어요. 사용자 이름과 키를 확인해 주세요'
+  if (err?.code === 'ECONNREFUSED') return 'SSH 서버에 연결하지 못했어요 (연결 거부). 서버가 켜져 있는지 확인해 주세요'
+  if (err?.code === 'ENOTFOUND' || err?.code === 'EHOSTUNREACH') return 'SSH 호스트를 찾을 수 없어요'
+  if (err?.code === 3) return '볼트에 쓸 권한이 없어요'
+  if (err?.code === 2) return '볼트 경로를 찾을 수 없어요'
+  return e instanceof Error ? e.message : String(e)
+}
+
+// 연결 시험: 볼트 경로가 있는지, 옵시디언 볼트가 맞는지(.obsidian), 쓸 수 있는지 본다. CED 폴더는 만들어 둔다.
+ipcMain.handle('hermes:vaultTest', async () => {
+  let session: VaultSession | null = null
+  try {
+    session = await openVaultSession(activeHermesProfile())
+    const ops = session.ops
+    const root = await ops.stat(session.root)
+    if (!root.isDirectory) return { ok: false as const, message: '볼트 경로가 폴더가 아니에요' }
+    let isVault = true
+    try { await ops.stat(vaultJoin(session.root, '.obsidian')) } catch { isVault = false }
+    const dir = await ensureRemoteDirs(ops, session.root, [VAULT_CED_DIR])
+    const probe = vaultJoin(dir, '.write-test')
+    await ops.writeFile(probe, Buffer.from('ok'))
+    await ops.unlink(probe)
+    return {
+      ok: true as const,
+      message: isVault ? '연결과 쓰기를 확인했어요' : '쓰기는 되지만 .obsidian 폴더가 없어요. 볼트 경로가 맞는지 확인해 주세요',
+    }
+  } catch (e) {
+    return { ok: false as const, message: describeVaultError(e) }
+  } finally {
+    session?.close()
+  }
+})
+
+// 구조 보기: 볼트의 폴더 이름만 두 단계까지 보여 준다. 노트 파일 이름과 내용은 읽지 않는다.
+ipcMain.handle('hermes:vaultList', async () => {
+  let session: VaultSession | null = null
+  try {
+    session = await openVaultSession(activeHermesProfile())
+    const ops = session.ops
+    const top = (await ops.readdir(session.root)).filter((f) => f.isDirectory)
+    const tree: Array<{ name: string; children: string[] }> = []
+    for (const d of top.sort((a, b) => a.filename.localeCompare(b.filename))) {
+      let children: string[] = []
+      if (!d.filename.startsWith('.')) {
+        try {
+          children = (await ops.readdir(vaultJoin(session.root, d.filename)))
+            .filter((f) => f.isDirectory && !f.filename.startsWith('.'))
+            .map((f) => f.filename)
+            .sort((a, b) => a.localeCompare(b))
+        } catch { children = [] }
+      }
+      tree.push({ name: d.filename, children })
+    }
+    return { ok: true as const, tree }
+  } catch (e) {
+    return { ok: false as const, message: describeVaultError(e) }
+  } finally {
+    session?.close()
+  }
+})
+
+// 맥락 문서를 만들고(작업 폴더의 CED/<제품>/) 볼트로 보낸다.
+ipcMain.handle('ced:send', async (_event, product: string | null) => {
+  const local = generateCed(product)
+  const docs = local.files.filter((f) => f.toLowerCase().endsWith('.md'))
+  const base = { dir: local.dir, skippedDrafts: local.skippedDrafts, written: [] as string[], updated: [] as string[], unchanged: [] as string[], conflicts: [] as string[], leftover: [] as string[] }
+  // 확인된 노트가 없으면(목차만 있음) 보낼 것이 없다.
+  if (docs.length <= 1) return { ok: true as const, ...base, noNotes: true }
+
+  let session: VaultSession | null = null
+  try {
+    session = await openVaultSession(activeHermesProfile())
+    const ops = session.ops
+    const remoteDir = await ensureRemoteDirs(ops, session.root, [VAULT_CED_DIR, path.basename(local.dir)])
+
+    let state: Record<string, string> = {}
+    try {
+      const parsed = JSON.parse((await ops.readFile(vaultJoin(remoteDir, VAULT_STATE_FILE))).toString('utf-8'))
+      if (parsed && typeof parsed.files === 'object') state = parsed.files
+    } catch { /* 처음 보내거나 상태 파일이 없으면 빈 상태로 시작한다. */ }
+
+    const nextState: Record<string, string> = {}
+    const put = async (name: string, buf: Buffer) => {
+      const target = vaultJoin(remoteDir, name)
+      const tmp = `${target}.tmp-${Date.now().toString(36)}`
+      await ops.writeFile(tmp, buf)
+      const size = (await ops.stat(tmp)).size
+      if (size !== buf.length) { await ops.unlink(tmp).catch(() => {}); throw new Error(`${name}: 전송한 크기가 달라요`) }
+      await ops.rename(tmp, target)
+    }
+
+    for (const name of docs) {
+      if (/[\\/]/.test(name)) continue   // 파일 이름에 경로가 섞여 있으면 보내지 않는다.
+      const buf = fs.readFileSync(path.join(local.dir, name))
+      const hash = sha256(buf)
+      let existing: Buffer | null = null
+      try { existing = await ops.readFile(vaultJoin(remoteDir, name)) } catch (e) { if (!isNotFound(e)) throw e }
+
+      if (existing === null) {
+        await put(name, buf); base.written.push(name); nextState[name] = hash
+      } else if (sha256(existing) === hash) {
+        base.unchanged.push(name); nextState[name] = hash
+      } else if (state[name] && state[name] === sha256(existing)) {
+        await put(name, buf); base.updated.push(name); nextState[name] = hash
+      } else {
+        // 앱이 마지막으로 쓴 내용과 다르다. 사람이 볼트에서 고친 파일이므로 덮어쓰지 않는다.
+        base.conflicts.push(name)
+        if (state[name]) nextState[name] = state[name]
+      }
+    }
+    for (const name of Object.keys(state)) {
+      if (!docs.includes(name)) base.leftover.push(name)
+    }
+    await ops.writeFile(vaultJoin(remoteDir, VAULT_STATE_FILE), Buffer.from(JSON.stringify({ version: 1, files: nextState }, null, 2), 'utf-8'))
+    return { ok: true as const, ...base, noNotes: false }
+  } catch (e) {
+    return { ok: false as const, message: describeVaultError(e), dir: local.dir }
+  } finally {
+    session?.close()
+  }
 })
 
 // 슬롯 목록 — 버튼 이름 표시용
@@ -1123,7 +1399,7 @@ ipcMain.handle('ssh:pickPemFile', async () => {
 
 // ── SSH 터널 ─────────────────────────────────────────────────────────────────
 
-interface TunnelEntry { ssh: SshClient; server: net.Server; localPort: number }
+interface TunnelEntry { localPort: number; close: () => void }
 const activeTunnels = new Map<string, TunnelEntry>()
 
 function ensureTunnel(key: string, sshCfg: SshConfig, dbHost: string, dbPort: number): Promise<number> {
@@ -1148,7 +1424,15 @@ function ensureTunnel(key: string, sshCfg: SshConfig, dbHost: string, dbPort: nu
       })
       server.listen(0, '127.0.0.1', () => {
         const localPort = (server.address() as net.AddressInfo).port
-        activeTunnels.set(key, { ssh, server, localPort })
+        const entry: TunnelEntry = { localPort, close: () => { server.close(); ssh.end() } }
+        activeTunnels.set(key, entry)
+        // 연결이 끊기면 목록에서 지운다. 지우지 않으면 죽은 포트를 계속 쓰게 되어, 다음 요청에서 다시 연결하지 못한다.
+        ssh.on('close', () => {
+          if (activeTunnels.get(key) === entry) {
+            server.close()
+            activeTunnels.delete(key)
+          }
+        })
         resolve(localPort)
       })
       server.on('error', reject)
@@ -1161,16 +1445,36 @@ function ensureTunnel(key: string, sshCfg: SshConfig, dbHost: string, dbPort: nu
       port: parseInt(sshCfg.port) || 22,
       username: sshCfg.username,
       privateKey: fs.readFileSync(sshCfg.pemPath),
+      // 30초마다 살아 있는지 확인하고, 3번 응답이 없으면 끊긴 것으로 본다. (ssh_config의 ServerAliveInterval과 같은 역할)
+      keepaliveInterval: 30_000,
+      keepaliveCountMax: 3,
+      readyTimeout: 15_000,
     })
   })
+}
+
+// 별칭(~/.ssh/config의 Host)으로 터널을 연다. 시스템 ssh를 쓴다.
+const pendingAliasTunnels = new Map<string, Promise<number>>()
+function ensureAliasTunnel(key: string, alias: string, host: string, port: number): Promise<number> {
+  const existing = activeTunnels.get(key)
+  if (existing) return Promise.resolve(existing.localPort)
+  const pending = pendingAliasTunnels.get(key)
+  if (pending) return pending   // 요청이 겹쳐도 터널은 하나만 연다.
+  const p = startAliasTunnel(alias, host, port)
+    .then((t) => {
+      activeTunnels.set(key, { localPort: t.localPort, close: t.close })
+      return t.localPort
+    })
+    .finally(() => { pendingAliasTunnels.delete(key) })
+  pendingAliasTunnels.set(key, p)
+  return p
 }
 
 function closeTunnel(key: string): void {
   const t = activeTunnels.get(key)
   if (!t) return
-  t.server.close()
-  t.ssh.end()
   activeTunnels.delete(key)
+  t.close()
 }
 
 // requireVerified가 true이면 연결 확인을 통과한 슬롯만 사용할 수 있다.
@@ -1813,19 +2117,20 @@ ipcMain.handle('keyinfo:saveRelations', (_event, groups: unknown[]) => saveKeyin
 // 제품마다 docs/keyinfo/<제품>/keynotes.json에 저장한다. (제품이 없으면 none 폴더)
 // 제품 사이의 연결은 키워드(개념 노트로 가는 링크)가 맡는다.
 
-type KeyNoteStatus = 'draft' | 'confirmed'
+// suspended = 작업 일시 중단. 노트 목록에서 빠져 후보 목록에 보류로 나타난다. 내용은 그대로 둔다.
+type KeyNoteStatus = 'draft' | 'confirmed' | 'suspended'
 interface KeyNoteMember { fileName: string; columnKey: string }
 interface KeyNote {
   id: string
   product: string          // 소속 제품. 한 노트는 한 제품에만 속한다.
   title: string            // 제목. 기본값은 대표 컬럼 이름이다.
   definition: string       // 한 줄 정의
-  body: string             // 본문 (마크다운)
+  body: string             // 본문 (평문)
   keywords: string[]       // 개념 노트로 가는 링크로 내보낸다.
   valueMeanings: string    // 값 의미. 상태값, 코드값 컬럼에 쓴다.
   status: KeyNoteStatus    // 초안은 내보내지 않는다.
-  sourceTable: string      // 원천 테이블 (이 Key가 만들어지는 테이블)
   members: KeyNoteMember[] // 출현 목록
+  excluded: KeyNoteMember[] // 사용자가 출현 목록에서 뺀 컬럼. 새로고침이 다시 넣지 않는다.
   createdAt: string
   updatedAt: string
 }
@@ -1855,6 +2160,16 @@ function normalizeKeyNote(raw: any, product: string): KeyNote {
     seen.add(key)
     members.push({ fileName, columnKey })
   }
+  const excluded: KeyNoteMember[] = []
+  const seenExcluded = new Set<string>()
+  for (const m of Array.isArray(raw?.excluded) ? raw.excluded : []) {
+    const fileName = text(m?.fileName)
+    const columnKey = text(m?.columnKey)
+    const key = `${fileName}\u0000${columnKey}`
+    if (!fileName || !columnKey || seenExcluded.has(key) || seen.has(key)) continue
+    seenExcluded.add(key)
+    excluded.push({ fileName, columnKey })
+  }
   const keywords: string[] = []
   for (const k of Array.isArray(raw?.keywords) ? raw.keywords : []) {
     const word = text(k)
@@ -1869,9 +2184,9 @@ function normalizeKeyNote(raw: any, product: string): KeyNote {
     body: typeof raw?.body === 'string' ? raw.body : '',
     keywords,
     valueMeanings: typeof raw?.valueMeanings === 'string' ? raw.valueMeanings : '',
-    status: raw?.status === 'confirmed' ? 'confirmed' : 'draft',
-    sourceTable: text(raw?.sourceTable),
+    status: raw?.status === 'confirmed' ? 'confirmed' : raw?.status === 'suspended' ? 'suspended' : 'draft',
     members,
+    excluded,
     createdAt: text(raw?.createdAt) || now,
     updatedAt: text(raw?.updatedAt) || now,
   }
@@ -1972,6 +2287,120 @@ ipcMain.handle('keynote:save', (_event, product: string | null, notes: unknown) 
   saveKeyNotes(product, notes)
 })
 
+// ── 제품 맥락 문서 (Context Enrichment Docs, CED) ─────────────────────────────
+// 확인된(confirmed) Key 노트로 마크다운 문서를 만들어 작업 폴더의 CED/<제품>/ 에 쓴다.
+// 구성: 제품 목차 파일 1개(<제품>.md) + Key 노트당 파일 1개(<제목>.md). Obsidian 링크([[제목]])로 목차와 노트를 잇는다.
+// 이 함수는 파일만 만든다. Hermes로 보내는 일은 하지 않는다.
+// 지난번에 만든 파일 목록(.ced-manifest.json)에 있는데 이번에 없는 파일만 지운다. 사용자가 직접 넣은 파일은 건드리지 않는다.
+const CED_MANIFEST = '.ced-manifest.json'
+
+function cedFileStem(title: string): string {
+  const stem = title.replace(/[\\/:*?"<>|#^[\]]/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '')
+  return stem || '제목 없음'
+}
+
+function cedColumnLine(fileName: string, columnKey: string, schema: KeyinfoData['schema']): string {
+  const col = schema[fileName]?.[columnKey]
+  const parts: string[] = []
+  if (col?.dbType) parts.push(col.dbType)
+  if (col?.isPK) parts.push('PK')
+  if (col?.isFK) parts.push(col.fkRef ? `FK → ${col.fkRef}` : 'FK')
+  if (col?.isNotNull) parts.push('NN')
+  if (col?.isUnique) parts.push('UQ')
+  const detail = parts.length > 0 ? ` (${parts.join(', ')})` : ''
+  return `- \`${fileName}\` · \`${columnKey}\`${detail}`
+}
+
+function buildCedNote(note: KeyNote, productName: string, indexStem: string, schema: KeyinfoData['schema']): string {
+  // 출현 목록은 키워드와 같이 문서의 값(메타데이터)이다. 테이블.컬럼 목록과 테이블 목록을 둘 다 둔다.
+  const appearsIn = note.members.map((m) => `${m.fileName.replace(/\.csv$/i, '')}.${m.columnKey}`)
+  const tables = [...new Set(note.members.map((m) => m.fileName.replace(/\.csv$/i, '')))]
+  const lines: string[] = [
+    '---',
+    `product: ${JSON.stringify(productName)}`,
+    `keywords: ${JSON.stringify(note.keywords)}`,
+    `appearsIn: ${JSON.stringify(appearsIn)}`,
+    `tables: ${JSON.stringify(tables)}`,
+    `status: ${note.status}`,
+    `updated: ${JSON.stringify(note.updatedAt)}`,
+    '---',
+    `# ${note.title}`,
+    '',
+    `목차: [[${indexStem}]]`,
+    '',
+  ]
+  if (note.definition) lines.push('## 정의', '', note.definition, '')
+  if (note.members.length > 0) {
+    lines.push('## 출현 목록', '')
+    for (const m of note.members) lines.push(cedColumnLine(m.fileName, m.columnKey, schema))
+    lines.push('')
+  }
+  if (note.valueMeanings.trim()) lines.push('## 값의 뜻', '', note.valueMeanings.trim(), '')
+  if (note.body.trim()) lines.push('## 설명', '', note.body.trim(), '')
+  return lines.join('\n')
+}
+
+function generateCed(product: string | null | undefined): { dir: string; files: string[]; skippedDrafts: number } {
+  const dirName = productDirName(product)
+  const all = loadKeyNotes(product)
+  const notes = all.filter((n) => n.status === 'confirmed')
+  const schema = loadKeyinfoData(getKeyinfoPath(product)).schema
+  const outDir = path.join(DATA_ROOT, 'CED', cedFileStem(dirName))
+  fs.mkdirSync(outDir, { recursive: true })
+
+  const indexStem = cedFileStem(dirName)
+  const used = new Set<string>([indexStem.toLowerCase()])
+  const written: { stem: string; note: KeyNote }[] = []
+  for (const note of notes) {
+    let stem = cedFileStem(note.title)
+    if (used.has(stem.toLowerCase())) stem = `${stem}-${note.id.slice(-4)}`
+    used.add(stem.toLowerCase())
+    written.push({ stem, note })
+  }
+
+  const files: string[] = []
+  for (const { stem, note } of written) {
+    fs.writeFileSync(path.join(outDir, `${stem}.md`), buildCedNote(note, dirName, indexStem, schema), 'utf-8')
+    files.push(`${stem}.md`)
+  }
+
+  const indexLines = [
+    '---',
+    `product: ${JSON.stringify(dirName)}`,
+    `notes: ${written.length}`,
+    `generated: ${JSON.stringify(new Date().toISOString())}`,
+    '---',
+    `# ${dirName} 맥락 문서`,
+    '',
+    '확인된 Key 노트 목록이다.',
+    '',
+  ]
+  if (written.length === 0) indexLines.push('(확인된 Key 노트가 없다)')
+  for (const { stem, note } of written) {
+    indexLines.push(`- [[${stem}]]${note.definition ? ` — ${note.definition}` : ''}`)
+  }
+  indexLines.push('')
+  fs.writeFileSync(path.join(outDir, `${indexStem}.md`), indexLines.join('\n'), 'utf-8')
+  files.push(`${indexStem}.md`)
+
+  // 지난번에 만들었고 이번에는 없는 파일만 지운다.
+  const manifestPath = path.join(outDir, CED_MANIFEST)
+  try {
+    const prev: unknown = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+    const prevFiles = Array.isArray((prev as { files?: unknown })?.files) ? (prev as { files: unknown[] }).files : []
+    for (const f of prevFiles) {
+      if (typeof f !== 'string' || files.includes(f) || /[\\/]/.test(f)) continue
+      const target = path.join(outDir, f)
+      if (fs.existsSync(target)) fs.unlinkSync(target)
+    }
+  } catch { /* 처음 만들거나 목록을 읽지 못하면 지우지 않는다. */ }
+  fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, files }, null, 2), 'utf-8')
+
+  return { dir: outDir, files, skippedDrafts: all.length - notes.length }
+}
+
+ipcMain.handle('ced:generate', (_event, product: string | null) => generateCed(product))
+
 // ── Key 자동 후보 ───────────────────────────────────────────────────────────────
 // 자동 색인(keyinfo.json의 schema)에서 Key 후보를 제안한다. 후보는 제안일 뿐이고, 사람이 수락해야 초안 노트가 된다.
 //  1. FK 체인: FK로 이어진 컬럼은 하나의 후보로 묶는다. (예: users.id, transactions.sender_id, comments.user_id)
@@ -1981,12 +2410,13 @@ ipcMain.handle('keynote:save', (_event, product: string | null, notes: unknown) 
 //  - _로 시작하는 파일(마이그레이션 기록 등 내부용)은 제외한다.
 //  - 이미 Key 노트에 들어간 컬럼은 후보에서 뺀다. 거절한 후보는 다시 보이지 않는다.
 
+// kind hold = 작업 일시 중단한 노트. noteId로 노트를 가리키고, 수락하면 내용 그대로 초안으로 돌아온다.
 interface KeyCandidate {
   signature: string
-  kind: 'fk' | 'ref' | 'name'
+  kind: 'fk' | 'ref' | 'name' | 'hold'
+  noteId?: string
   title: string
   members: KeyNoteMember[]
-  sourceTable: string
   reason: string
 }
 
@@ -2004,11 +2434,10 @@ function splitColumnRef(ref: string): { table: string; column: string } | null {
   return { table: ref.slice(0, i), column: ref.slice(i + 1) }
 }
 
-function buildKeyCandidates(
-  schema: Record<string, Record<string, KeyinfoColSchema>>,
-  covered: Set<string>,
-  rejected: Set<string>,
-): KeyCandidate[] {
+interface KeyGroup { kind: 'fk' | 'ref' | 'name'; title: string; reason: string; members: KeyNoteMember[] }
+
+// 스키마에서 같은 Key로 보이는 컬럼 묶음을 모두 찾는다. 노트에 들어갔는지, 핀이 있는지는 여기서 따지지 않는다.
+function buildKeyGroups(schema: Record<string, Record<string, KeyinfoColSchema>>): KeyGroup[] {
   const files = Object.keys(schema ?? {}).filter((f) => !f.startsWith('_'))
 
   // 테이블 이름 -> 파일. 사이드바 표시용으로 "스키마.테이블.csv"가 된 파일도 마지막 조각으로 찾는다.
@@ -2098,7 +2527,7 @@ function buildKeyCandidates(
   const logicalRoots = new Set<string>()
   for (const [a] of logicalEdges) logicalRoots.add(find(a))
 
-  const groups: Array<{ kind: 'fk' | 'ref' | 'name'; title: string; sourceTable: string; reason: string; members: KeyNoteMember[] }> = []
+  const groups: KeyGroup[] = []
 
   // 1. FK로 이어진 컬럼. 제약이 있으면 fk, 이름 규칙으로 추정한 연결이 하나라도 있으면 ref이다.
   const chains = new Map<string, KeyNoteMember[]>()
@@ -2121,7 +2550,6 @@ function buildKeyCandidates(
     groups.push({
       kind: inferred ? 'ref' : 'fk',
       title: `${repTable.split('.').pop()}.${rep.columnKey}`,
-      sourceTable: repTable,
       reason: inferred ? `FK 제약 없음, 이름 규칙으로 추정 (${members.length}개)` : `FK로 이어진 컬럼 ${members.length}개`,
       members,
     })
@@ -2142,72 +2570,212 @@ function buildKeyCandidates(
     groups.push({
       kind: 'name',
       title: members[0].columnKey,
-      sourceTable: '',
       reason: `같은 이름이 ${new Set(members.map((m) => m.fileName)).size}개 파일에`,
       members,
     })
   }
 
-  // 이미 노트에 들어간 컬럼은 빼고, 2개 미만이 남거나 거절한 후보는 제외한다.
+  return groups
+}
+
+// 후보는 핀으로 고정한 컬럼이 들어 있는 묶음만 보여 준다. 핀을 거두면 후보에서도 사라진다.
+// 이미 노트에 들어간 컬럼은 빼고, 2개 미만이 남으면 후보로 보이지 않는다.
+function buildKeyCandidates(
+  schema: Record<string, Record<string, KeyinfoColSchema>>,
+  covered: Set<string>,
+  pinnedColumnKeys: Set<string>,
+): KeyCandidate[] {
   const result: KeyCandidate[] = []
-  for (const g of groups) {
+  for (const g of buildKeyGroups(schema)) {
+    if (!g.members.some((m) => pinnedColumnKeys.has(m.columnKey))) continue
     const members = g.members.filter((m) => !covered.has(keyOf(m.fileName, m.columnKey)))
     if (members.length < 2) continue
     const signature = members.map((m) => `${m.fileName}:${m.columnKey}`).sort().join('|')
-    if (rejected.has(signature)) continue
-    result.push({ signature, kind: g.kind, title: g.title, members, sourceTable: g.sourceTable, reason: g.reason })
+    result.push({ signature, kind: g.kind, title: g.title, members, reason: g.reason })
   }
-  const order = { fk: 0, ref: 1, name: 2 }
+  const order = { fk: 0, ref: 1, name: 2, hold: 3 }
   result.sort((a, b) => (a.kind === b.kind ? a.title.localeCompare(b.title) : order[a.kind] - order[b.kind]))
   return result
 }
 
-function getKeyRejectedPath(product?: string | null): string {
-  return path.join(DOCS_KEYINFO_DIR, productDirName(product), 'keynote-rejected.json')
-}
-
-function loadKeyRejected(product?: string | null): Set<string> {
-  try {
-    const p = getKeyRejectedPath(product)
-    if (!fs.existsSync(p)) return new Set()
-    const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'))
-    return new Set(Array.isArray(parsed?.rejected) ? parsed.rejected.filter((s: unknown) => typeof s === 'string') : [])
-  } catch {
-    return new Set()
-  }
+function pinnedColumnKeys(product?: string | null): Set<string> {
+  return new Set(loadKeyinfoData(getKeyinfoPath(product)).pinnedColumns.map((p) => p.columnKey))
 }
 
 function listKeyCandidates(product?: string | null): KeyCandidate[] {
   migrateLegacyRelations()
   const data = loadKeyinfoData(getKeyinfoPath(product))
+  const notes = loadKeyNotes(product)
   const covered = new Set<string>()
-  for (const note of loadKeyNotes(product)) {
+  for (const note of notes) {
     for (const m of note.members) covered.add(keyOf(m.fileName, m.columnKey))
   }
-  return buildKeyCandidates(data.schema, covered, loadKeyRejected(product))
+  const candidates = buildKeyCandidates(data.schema, covered, pinnedColumnKeys(product))
+  // 작업을 일시 중단한 노트는 후보 맨 위에 보류로 보인다. 내용은 그대로 있다.
+  const held: KeyCandidate[] = notes
+    .filter((n) => n.status === 'suspended')
+    .map((n) => ({
+      signature: `hold:${n.id}`,
+      kind: 'hold' as const,
+      noteId: n.id,
+      title: n.title,
+      members: n.members,
+      reason: '작업 일시 중단한 노트',
+    }))
+  return [...held, ...candidates]
 }
 
 ipcMain.handle('keynote:candidates', (_event, product: string | null) => listKeyCandidates(product))
 
-// 후보를 수락하면 초안 노트가 된다. 후보가 이미 사라졌다면(다른 노트가 먼저 차지했거나 거절됨) null을 돌려준다.
+// 후보를 수락하면 초안 노트가 된다. 보류한 노트는 내용 그대로 초안으로 돌아온다.
+// 후보가 이미 사라졌다면(다른 노트가 먼저 차지했거나 핀이 없어짐) null을 돌려준다.
 ipcMain.handle('keynote:acceptCandidate', (_event, product: string | null, signature: string) => {
   const candidate = listKeyCandidates(product).find((c) => c.signature === signature)
   if (!candidate) return null
+  const notes = loadKeyNotes(product)
+  if (candidate.kind === 'hold') {
+    const held = notes.find((n) => n.id === candidate.noteId)
+    if (!held) return null
+    held.status = 'draft'
+    held.updatedAt = new Date().toISOString()
+    writeKeyNotes(product, notes)
+    return held
+  }
   const note = normalizeKeyNote(
-    { title: candidate.title, members: candidate.members, sourceTable: candidate.sourceTable, status: 'draft' },
+    { title: candidate.title, members: candidate.members, status: 'draft' },
     productDirName(product),
   )
-  writeKeyNotes(product, [...loadKeyNotes(product), note])
+  writeKeyNotes(product, [...notes, note])
   return note
 })
 
-ipcMain.handle('keynote:rejectCandidate', (_event, product: string | null, signature: string) => {
-  if (typeof signature !== 'string' || signature === '') return
-  const rejected = loadKeyRejected(product)
-  rejected.add(signature)
-  const p = getKeyRejectedPath(product)
-  fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(p, JSON.stringify({ version: 1, rejected: [...rejected] }, null, 2), 'utf-8')
+// 핀을 거둔 뒤 부르는 정리 함수. 남은 핀이 하나도 없는 노트는 지운다. (핀이 Key 노트가 존재하는 조건이다)
+// 보류 노트도 같다. 지운 노트의 제목 목록을 돌려준다.
+ipcMain.handle('keynote:pruneByPins', (_event, product: string | null, pins: unknown) => {
+  const keys = new Set<string>()
+  for (const p of Array.isArray(pins) ? pins : []) {
+    const k = (p as { columnKey?: unknown })?.columnKey
+    if (typeof k === 'string' && k) keys.add(k)
+  }
+  const notes = loadKeyNotes(product)
+  const kept = notes.filter((n) => n.members.some((m) => keys.has(m.columnKey)))
+  const removed = notes.filter((n) => !kept.includes(n)).map((n) => n.title)
+  if (removed.length > 0) writeKeyNotes(product, kept)
+  return removed
+})
+
+// 출현 목록 새로고침. 노트마다 같은 Key로 보이는 컬럼 묶음을 다시 찾아 새 테이블의 컬럼을 넣는다.
+// 사용자가 뺀 컬럼(excluded)은 다시 넣지 않는다.
+// 보류 노트는 건드리지 않는다. 바뀐 노트 수를 돌려준다.
+ipcMain.handle('keynote:refreshMembers', (_event, product: string | null) => {
+  const schema = loadKeyinfoData(getKeyinfoPath(product)).schema
+  const groups = buildKeyGroups(schema)
+  const notes = loadKeyNotes(product)
+  let changed = 0
+  for (const note of notes) {
+    if (note.status === 'suspended') continue
+    const have = new Set(note.members.map((m) => keyOf(m.fileName, m.columnKey)))
+    const skip = new Set(note.excluded.map((m) => keyOf(m.fileName, m.columnKey)))
+    let touched = false
+    for (const g of groups) {
+      if (!g.members.some((m) => have.has(keyOf(m.fileName, m.columnKey)))) continue
+      for (const m of g.members) {
+        const k = keyOf(m.fileName, m.columnKey)
+        if (have.has(k) || skip.has(k)) continue
+        note.members.push(m)
+        have.add(k)
+        touched = true
+      }
+    }
+    if (touched) { note.updatedAt = new Date().toISOString(); changed++ }
+  }
+  if (changed > 0) writeKeyNotes(product, notes)
+  return changed
+})
+// 값 예시: CSV에서 지정한 컬럼의 값만 읽어 20~50행씩 나눠 준다. 읽기 전용이다.
+// 파일 경로는 프리셋 JSON의 fileSources에서 온다. 제약 행([PK])과 타입 행({integer})은 건너뛴다.
+// 파일은 앞쪽 32MB까지 한 번 읽어 고른 컬럼만 메모리에 두고(마지막 한 번의 결과만), 파일이 바뀌면(수정 시각, 크기) 다시 읽는다.
+// 필터(빈 값, 0 제외)와 정렬은 읽은 전체 행에 적용하므로, 먼저 불러온 행만 정렬되는 일이 없다.
+const SAMPLE_READ_CAP = 32 * 1024 * 1024
+let sampleCache: {
+  key: string
+  columns: string[]
+  rows: string[][]
+  truncated: boolean
+  viewKey: string
+  view: string[][]
+} | null = null
+
+ipcMain.handle('keynote:sampleRows', (_event, filePath: unknown, columnKeys: unknown, limit: unknown, skipBlank: unknown, offset: unknown, sort: unknown) => {
+  const fail = (reason: string) => ({ ok: false, reason, columns: [] as string[], rows: [] as string[][], total: 0, hasMore: false, truncated: false })
+  if (typeof filePath !== 'string' || !/\.csv$/i.test(filePath)) return fail('invalid')
+  if (!fs.existsSync(filePath)) return fail('missing')
+  const wanted = Array.isArray(columnKeys) ? columnKeys.filter((k): k is string => typeof k === 'string') : []
+  const take = Math.min(Math.max(typeof limit === 'number' ? Math.floor(limit) : 20, 1), 200)
+  const from = Math.max(typeof offset === 'number' ? Math.floor(offset) : 0, 0)
+  const sortCol = typeof (sort as { column?: unknown } | null)?.column === 'string' ? (sort as { column: string }).column : ''
+  const sortDir = (sort as { dir?: unknown } | null)?.dir === 'desc' ? 'desc' : 'asc'
+  try {
+    const stat = fs.statSync(filePath)
+    const key = JSON.stringify([filePath, stat.mtimeMs, stat.size, wanted])
+    if (!sampleCache || sampleCache.key !== key) {
+      const size = Math.min(stat.size, SAMPLE_READ_CAP)
+      const fd = fs.openSync(filePath, 'r')
+      const buf = Buffer.alloc(size)
+      const n = fs.readSync(fd, buf, 0, size, 0)
+      fs.closeSync(fd)
+      let text = buf.subarray(0, n).toString('utf-8')
+      const truncated = stat.size > SAMPLE_READ_CAP
+      if (truncated) text = text.slice(0, text.lastIndexOf('\n') + 1)   // 잘린 마지막 행을 버린다.
+      const all = Papa.parse<string[]>(text, { header: false, skipEmptyLines: true }).data
+      if (all.length === 0) {
+        sampleCache = { key, columns: [], rows: [], truncated, viewKey: '', view: [] }
+      } else {
+        const header = all[0].map((h) => String(h).trim())
+        let start = 1
+        const isConstraintRow = (r: string[]) => r.some((c) => c.trim()) && r.every((c) => !c.trim() || /^\[.*\]$/.test(c.trim()))
+        const isTypeRow = (r: string[]) => r.some((c) => c.trim()) && r.every((c) => !c.trim() || /^\{.*\}$/.test(c.trim()))
+        if (all[start] && isConstraintRow(all[start])) start++
+        if (all[start] && isTypeRow(all[start])) start++
+        const columns = wanted.filter((k) => header.includes(k))
+        const idx = columns.map((k) => header.indexOf(k))
+        const rows = all.slice(start).map((r) => idx.map((i) => String(r[i] ?? '')))
+        sampleCache = { key, columns, rows, truncated, viewKey: '', view: [] }
+      }
+    }
+    const cache = sampleCache
+    const viewKey = JSON.stringify([skipBlank === true, sortCol, sortDir])
+    if (cache.viewKey !== viewKey) {
+      let view = cache.rows
+      // 고른 컬럼의 값이 모두 비었거나 0인 행은 뺀다.
+      if (skipBlank === true) view = view.filter((r) => r.some((v) => v.trim() !== '' && !/^[-+]?0+(\.0+)?$/.test(v.trim())))
+      const ci = cache.columns.indexOf(sortCol)
+      if (ci >= 0) {
+        // 값이 모두 숫자면 숫자 크기로, 아니면 글자 순서로 비교한다. 빈 값은 방향과 상관없이 맨 뒤에 둔다.
+        const numeric = cache.rows.every((r) => r[ci].trim() === '' || !Number.isNaN(Number(r[ci])))
+        const sign = sortDir === 'desc' ? -1 : 1
+        view = [...view].sort((a, b) => {
+          const x = a[ci].trim(), y = b[ci].trim()
+          if (x === '' || y === '') return x === y ? 0 : x === '' ? 1 : -1
+          const c = numeric ? Number(x) - Number(y) : x.localeCompare(y, 'ko', { numeric: true })
+          return c * sign
+        })
+      }
+      cache.view = view
+      cache.viewKey = viewKey
+    }
+    return {
+      ok: true,
+      reason: '',
+      columns: cache.columns,
+      rows: cache.view.slice(from, from + take),
+      total: cache.view.length,
+      hasMore: from + take < cache.view.length,
+      truncated: cache.truncated,
+    }
+  } catch {
+    return fail('unreadable')
+  }
 })
 // ── Key 노트 끝 ─────────────────────────────────────────────────────────────────
 

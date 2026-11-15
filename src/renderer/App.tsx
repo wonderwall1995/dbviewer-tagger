@@ -70,6 +70,7 @@ export default function App() {
   const [dbOpen, setDbOpen] = useState(false)
   const [productOpen, setProductOpen] = useState(false)
   const [keyinfoOpen, setKeyinfoOpen] = useState(false)
+  const [keyinfoTab, setKeyinfoTab] = useState<'pins' | 'notes'>('pins')   // 창을 열 때 먼저 보여 줄 탭
   const [hermesOpen, setHermesOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
@@ -95,6 +96,15 @@ export default function App() {
   const [pinnedColumns, setPinnedColumns] = useState<PinnedColumn[]>([])
   const [keyinfoSchema, setKeyinfoSchema] = useState<Record<string, Record<string, KeyinfoColumnSchema>>>({})
   const keyinfoReadyRef = useRef(false)
+  // 이중 뷰에서 포커스가 없는 창의 핀과 스키마. 창마다 시트 -> JSON -> 제품이 따로라서, 그 창의 제품 것을 보여 준다.
+  const [otherPaneKeyinfo, setOtherPaneKeyinfo] = useState<{
+    paneId: PaneId
+    product: string | null
+    pins: PinnedColumn[]
+    schema: Record<string, Record<string, KeyinfoColumnSchema>>
+  } | null>(null)
+  const keyinfoLoadSeqRef = useRef(0)                                   // 핀 읽기 요청 순번
+  const keyinfoLoadedProductRef = useRef<string | null | undefined>(undefined)   // 화면의 핀이 속한 제품 (undefined = 아직 읽지 않음)
   const loadKeyinfoRef = useRef(async (_product: string | null, _fileSources: Record<string, FileSource>) => {})
   const [bgTask, setBgTask] = useState<{ label: string; done: number; total: number } | null>(null)
   const bgTaskClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -414,21 +424,54 @@ export default function App() {
 
   // keyinfo 로드 함수 (ref에 저장해 applyLoadedData에서 호출 — 자동 색인 없음)
   useEffect(() => {
+    // 제품마다 핀 파일이 따로 있다. 화면에 있는 핀이 어느 제품의 것인지 keyinfoLoadedProductRef에 적어 두고,
+    // 저장은 그 제품에만 한다. 읽기가 겹치면 마지막 요청만 반영하고, 읽지 못하면 저장하지 않는다.
     loadKeyinfoRef.current = async (product: string | null, _fileSources: Record<string, FileSource>) => {
+      const target = product || null
+      const seq = ++keyinfoLoadSeqRef.current
       keyinfoReadyRef.current = false
+      // 제품이 없는 프리셋은 Keyinfo(핀, 스키마)를 쓰지 않는다. 비워 두고 어디에도 저장하지 않는다.
+      if (!target) {
+        setPinnedColumns([])
+        setKeyinfoFolders([])
+        setKeyinfoSchema({})
+        keyinfoLoadedProductRef.current = null
+        return
+      }
       try {
-        const loaded = await window.electronAPI.keyinfoLoad(product)
+        const loaded = await window.electronAPI.keyinfoLoad(target)
+        if (seq !== keyinfoLoadSeqRef.current) return   // 더 새로운 읽기가 시작됐다. 이 응답은 버린다.
         setPinnedColumns(loaded.pinnedColumns ?? [])
         setKeyinfoFolders(loaded.folders ?? [])
         setKeyinfoSchema(loaded.schema ?? {})
-      } catch {}
-      keyinfoReadyRef.current = true
+        keyinfoLoadedProductRef.current = target
+        keyinfoReadyRef.current = true
+      } catch {
+        // 읽지 못하면 ready를 켜지 않는다. 이전 제품의 핀이 이 제품 파일에 저장되는 일을 막는다.
+      }
     }
   }, [])
 
+  // 포커스가 바뀌거나 이중 뷰가 켜질 때, 포커스가 없는 창의 제품 핀을 읽어 둔다. (읽기만 하고 저장하지 않는다)
+  useEffect(() => {
+    if (layout !== 'split-v') { setOtherPaneKeyinfo(null); return }
+    const otherId: PaneId = focusedPaneId === 'A' ? 'B' : 'A'
+    const product = paneContextsRef.current[otherId]?.activeProduct || null
+    let cancelled = false
+    window.electronAPI.keyinfoLoad(product)
+      .then(d => {
+        if (cancelled) return
+        setOtherPaneKeyinfo({ paneId: otherId, product, pins: d.pinnedColumns ?? [], schema: d.schema ?? {} })
+      })
+      .catch(() => { if (!cancelled) setOtherPaneKeyinfo(null) })
+    return () => { cancelled = true }
+  }, [layout, focusedPaneId])
+
   // 핀·폴더 변경 시 JSON에 저장
   useEffect(() => {
-    if (!keyinfoReadyRef.current) return
+    if (!keyinfoReadyRef.current || !activeProduct) return   // 제품이 없으면 저장하지 않는다.
+    // 화면의 핀이 지금 제품의 것일 때만 저장한다. (제품이 바뀐 직후에 이전 제품의 핀을 쓰지 않는다)
+    if (keyinfoLoadedProductRef.current !== (activeProduct || null)) return
     window.electronAPI.keyinfoSaveLayout(activeProduct || null, pinnedColumns, keyinfoFolders).catch(() => {})
   }, [pinnedColumns, keyinfoFolders, activeProduct])
 
@@ -488,11 +531,29 @@ export default function App() {
   useEffect(() => {
     if (!hasLoaded.current) return
     if (activeSheetIdRef.current !== 'default') return
-    window.electronAPI.localSave({ folders, fileToFolder, fileSources, columnWidths: allColumnWidths, pageSettings: allPageSettings, hiddenFiles: [...hiddenFiles], fileComments, lorebookCategories, deletedColumns: allColumnDeletions, hiddenColumns: allHiddenColumns, lorebookIndex })
-  }, [folders, fileToFolder, fileSources, allColumnWidths, allPageSettings, hiddenFiles, fileComments, lorebookCategories, allColumnDeletions, allHiddenColumns, lorebookIndex])
+    window.electronAPI.localSave({ folders, fileToFolder, fileSources, columnWidths: allColumnWidths, pageSettings: allPageSettings, hiddenFiles: [...hiddenFiles], fileComments, lorebookCategories, deletedColumns: allColumnDeletions, hiddenColumns: allHiddenColumns, lorebookIndex, ...(activeProduct ? { product: activeProduct } : {}) })
+  }, [folders, fileToFolder, fileSources, allColumnWidths, allPageSettings, hiddenFiles, fileComments, lorebookCategories, allColumnDeletions, allHiddenColumns, lorebookIndex, activeProduct])
 
   // 프리셋 데이터를 앱 상태에 적용하는 공통 헬퍼
   // keepPanes=true: 시트 전환 시 DataGrid 상태 유지 (pane/parsedMap 초기화 생략)
+  // 시트에 연결된 JSON을 불러온 뒤 시트, JSON, 제품이 맞는지 본다. 맞지 않으면 어디가 어긋났는지 알려 준다.
+  // - JSON을 읽지 못함: 시트가 가리키는 파일이 없거나 깨짐. 화면이 비어 보이는 이유를 알려 준다.
+  // - JSON의 제품이 등록 목록에 없음: 그 제품의 Keyinfo는 읽히지만 제품 목록(P 버튼)에는 없다.
+  const checkSheetLoad = useCallback(async (sheet: SheetMeta, data: LocalPreset | null) => {
+    if (!sheet.jsonFile) return   // 아직 JSON에 연결하지 않은 시트는 비어 있는 것이 정상이다.
+    if (!data) {
+      toast.error(`시트 "${sheet.name}"에 연결된 ${sheet.jsonFile}을(를) 불러오지 못했어요. 파일이 없거나 읽을 수 없어요.`, { duration: 7000 })
+      return
+    }
+    if (!data.product) return
+    try {
+      const registered = await window.electronAPI.lorebookGetCategories()
+      if (!registered.includes(data.product)) {
+        toast.warning(`${sheet.jsonFile}의 제품 "${data.product}"이(가) 등록된 제품 목록에 없어요. Footer의 P 버튼에서 확인해 주세요.`, { duration: 7000 })
+      }
+    } catch { /* 목록을 읽지 못하면 점검만 건너뛴다. */ }
+  }, [])
+
   const applyLoadedData = useCallback((data: LocalPreset | null, keepPanes = false) => {
     if (!keepPanes) {
       setPanes([{ id: 'A', activeFile: null, activeFileParsed: null, pinned: false }])
@@ -582,11 +643,12 @@ export default function App() {
     if (sheet.isDefault) data = await window.electronAPI.localLoad()
     else if (sheet.jsonFile) data = await window.electronAPI.localLoadPreset(sheet.jsonFile)
     applyLoadedData(data, true)
+    void checkSheetLoad(sheet, data)
     updatePane(pid, { activeFile: null, activeFileParsed: null })
     setPaneSheetIds(prev => ({ ...prev, [pid]: sheetId }))
     paneSheetIdsRef.current = { ...paneSheetIdsRef.current, [pid]: sheetId }
     void openRememberedFileRef.current(sheetId, data)
-  }, [applyLoadedData, updatePane])
+  }, [applyLoadedData, updatePane, checkSheetLoad])
 
   const handleSheetTabClick = useCallback((sheetId: string) => {
     if (layoutRef.current === 'split-v') { loadSheetIntoPanef(sheetId); return }
@@ -612,17 +674,19 @@ export default function App() {
     if (sheet.isDefault) {
       window.electronAPI.localLoad().then((d) => {
         applyLoadedData(d, true)
+        void checkSheetLoad(sheet, d)
         void openRememberedFileRef.current(sheet.id, d)
       })
     } else if (sheet.jsonFile) {
       window.electronAPI.localLoadPreset(sheet.jsonFile).then((d) => {
         applyLoadedData(d, true)
+        void checkSheetLoad(sheet, d)
         void openRememberedFileRef.current(sheet.id, d)
       })
     } else {
       applyLoadedData(null, true)
     }
-  }, [activeSheetId, applyLoadedData])
+  }, [activeSheetId, applyLoadedData, checkSheetLoad])
 
   const recordSources = useCallback(
     (newFiles: { name: string; source?: FileSource }[]) => {
@@ -1129,16 +1193,26 @@ export default function App() {
 
   const handlePinColumn = useCallback((columnKey: string) => {
     if (!activeFile) return
+    if (!activeProductRef.current) {
+      toast.warning('제품이 지정된 프리셋에서만 핀을 고정할 수 있어요. 프리셋을 제품과 함께 저장한 뒤 다시 해 주세요.', { duration: 5000 })
+      return
+    }
     const current = pinnedColumnsRef.current
     const exactIdx = current.findIndex(p => p.fileName === activeFile && p.columnKey === columnKey)
     const isDupeKey = current.some(p => p.columnKey === columnKey)
 
     if (exactIdx >= 0) {
-      // 해제
+      // 해제. 핀이 Key 노트가 존재하는 조건이라서, 남은 핀이 없는 노트는 함께 지운다.
       setPinnedColumns(prev => {
         const next = prev.filter((_, i) => i !== exactIdx)
         return next.map((p, i) => ({ ...p, pinId: i + 1 }))
       })
+      const remainingPins = current.filter((_, i) => i !== exactIdx)
+      window.electronAPI.keynotePruneByPins(activeProductRef.current || null, remainingPins)
+        .then(removed => {
+          if (removed.length > 0) toast.info(`핀이 없어진 Key 노트 ${removed.length}개를 함께 지웠어요: ${removed.join(', ')}`, { duration: 6000 })
+        })
+        .catch(() => {})
     } else if (!isDupeKey) {
       // 새 핀 → 추가 + 해당 파일 단독 색인
       setPinnedColumns(prev => [...prev, { pinId: prev.length + 1, fileName: activeFile, columnKey }])
@@ -1149,8 +1223,11 @@ export default function App() {
           { [activeFile]: src } as Record<string, { type: string; path?: string; localPath?: string }>
         ).then(updated => setKeyinfoSchema(updated.schema ?? {})).catch(() => {})
       }
+    } else {
+      // 다른 파일에 같은 열이 이미 핀으로 고정되어 있다. 이 파일의 열은 그 핀을 따르므로, 해제는 고정한 파일에서 해야 한다.
+      const owner = current.find(p => p.columnKey === columnKey)
+      if (owner) toast.info(`"${columnKey}" 열은 ${owner.fileName}의 #${owner.pinId} 핀을 따릅니다. 해제는 ${owner.fileName}에서 해 주세요.`, { duration: 5000 })
     }
-    // isDupeKey && exactIdx < 0: 다른 파일에 같은 칼럼 이미 핀 → no-op
   }, [activeFile])
 
   const handleEraseColumn = useCallback(async (colKey: string) => {
@@ -1223,7 +1300,11 @@ export default function App() {
             : {}),
         })
         setSidebarDirty(false)
-        if (product) setActiveProduct(product)
+        if (product) {
+          // 제품이 바뀌면 그 제품의 Keyinfo를 읽는다. 읽지 않으면 이전 제품의 핀이 새 제품 파일에 저장된다.
+          if (product !== activeProductRef.current) void loadKeyinfoRef.current(product, fileSources)
+          setActiveProduct(product)
+        }
         toast.success(`${savedName} 저장 완료`)
         setLastJson({ sheetId: activeSheetIdRef.current, name: savedName })
         // 이름 지정 저장 + 커스텀 시트 → 시트에 json 연결 후 sheet-settings 동기화
@@ -1311,6 +1392,12 @@ export default function App() {
             onClick={() => layout === 'split-v' ? closePaneB() : openPaneB()}
             title={layout === 'split-v' ? '단일 뷰로 전환' : '화면 분할'}
           >이중 뷰</button>
+          {/* Key 노트로 바로 가는 두 번째 입구. 푸터 K 버튼으로 여는 것과 같은 창을 노트 탭으로 연다. */}
+          <button
+            className="split-toggle-btn split-toggle-btn--header" {...uiId('HD.keynote')}
+            onClick={() => { setKeyinfoTab('notes'); setKeyinfoOpen(true) }}
+            title="Key 노트 열기"
+          >Key 노트</button>
         </div>
         <div className="header-divider" {...uiId('HD.divider', '2')} />
         {/* 오른쪽 영역: GitHub 버튼 */}
@@ -1377,6 +1464,7 @@ export default function App() {
               ? <span className="header-main-placeholder">제품을 등록해주세요 — Footer의 P 버튼</span>
               : lorebookCategories.map(cat => {
                   const isDragging = dragProduct === cat
+                  const isActiveProduct = cat === activeProduct   // 지금 불러온 프리셋(JSON)의 제품
                   const dropSide = productDropTarget?.cat === cat ? productDropTarget.side : null
                   return (
                     <button
@@ -1384,10 +1472,13 @@ export default function App() {
                       className={[
                         'header-main-btn',
                         isDragging ? 'header-main-btn--dragging' : '',
+                        isActiveProduct ? 'header-main-btn--active' : '',
                         dropSide === 'before' ? 'header-main-btn--drop-before' : '',
                         dropSide === 'after' ? 'header-main-btn--drop-after' : '',
                       ].filter(Boolean).join(' ')} {...uiId('MN.product', cat)}
                       draggable
+                      aria-pressed={isActiveProduct}
+                      title={isActiveProduct ? `활성 제품: 지금 불러온 프리셋의 제품이에요` : undefined}
                       onDragStart={e => {
                         e.dataTransfer.effectAllowed = 'move'
                         setDragProduct(cat)
@@ -1419,6 +1510,7 @@ export default function App() {
                         setProductDropTarget(null)
                       }}
                     >
+                      {isActiveProduct && <span className="header-main-btn-dot" aria-hidden />}
                       {cat}
                     </button>
                   )
@@ -1588,6 +1680,15 @@ export default function App() {
               const paneFile = pane.activeFile
               const paneParsed = pane.activeFileParsed
               const panePendingStatus = paneFile ? pendingFiles[paneFile]?.status : undefined
+              // 이 창의 제품과 그 제품의 핀. 포커스가 있는 창은 화면 상태를 쓰고, 없는 창은 자기 제품의 핀을 쓴다.
+              // 두 창의 제품이 같으면 한쪽에서 고친 핀이 바로 보이도록 화면 상태를 같이 쓴다.
+              const paneProduct = isFocused ? activeProduct : (paneContextsRef.current[pane.id]?.activeProduct ?? '')
+              const useLive = isFocused || paneProduct === activeProduct
+              const paneKeyinfo = !useLive && otherPaneKeyinfo?.paneId === pane.id && otherPaneKeyinfo.product === (paneProduct || null)
+                ? otherPaneKeyinfo
+                : null
+              const panePins = useLive ? pinnedColumns : (paneKeyinfo?.pins ?? [])
+              const paneSchema = useLive ? keyinfoSchema : (paneKeyinfo?.schema ?? {})
               return (
                 <div
                   key={pane.id}
@@ -1638,10 +1739,10 @@ export default function App() {
                         onResetDeletedColumn={isFocused ? (colKey) => handleResetDeletedColumn(paneParsed.fileName, colKey) : () => {}}
                         onLorebookCreated={isFocused ? handleLorebookCreated : () => {}}
                         columnComments={isFocused ? columnComments : {}}
-                        columnSchema={keyinfoSchema[paneParsed.fileName] ?? {}}
-                        activeProduct={activeProduct}
+                        columnSchema={paneSchema[paneParsed.fileName] ?? {}}
+                        activeProduct={paneProduct}
                         onOpenLorebook={() => setLorebookOpen(true)}
-                        pinnedColumns={pinnedColumns}
+                        pinnedColumns={panePins}
                         onPinColumn={isFocused ? handlePinColumn : () => {}}
                       />
                     </div>
@@ -1676,7 +1777,7 @@ export default function App() {
             P
             <span className="lb-tooltip">Product</span>
           </button>
-          <button className="footer-keyinfo-btn" {...uiId('FT.keyinfo')} onClick={() => setKeyinfoOpen(true)}>
+          <button className="footer-keyinfo-btn" {...uiId('FT.keyinfo')} onClick={() => { setKeyinfoTab('pins'); setKeyinfoOpen(true) }}>
             K
             <span className="lb-tooltip">Keyinfo</span>
           </button>
@@ -1727,6 +1828,8 @@ export default function App() {
             products={lorebookCategories}
             fileSources={fileSources as Record<string, { type: string; path?: string; localPath?: string }>}
             folders={keyinfoFolders}
+            activeFile={activeFile}
+            initialTab={keyinfoTab}
             onClose={() => setKeyinfoOpen(false)}
             onOpenCsv={handleSelectFile}
             onSchemaUpdated={(schema) => setKeyinfoSchema(schema)}

@@ -15,6 +15,8 @@ interface Props {
   products: string[]
   fileSources: Record<string, { type: string; path?: string; localPath?: string }>
   folders: KeyinfoFolder[]
+  activeFile: string | null
+  initialTab?: 'pins' | 'notes'
   onClose: () => void
   onOpenCsv: (fileName: string) => void
   onSchemaUpdated: (schema: KeyinfoData['schema']) => void
@@ -183,7 +185,7 @@ function PinContextMenu({
 
 export function KeyinfoModal({
   parsedMap, pinnedColumns, keyinfoSchema, activeProduct, products,
-  fileSources, folders, onClose, onOpenCsv, onSchemaUpdated, onLayoutChange,
+  fileSources, folders, activeFile, initialTab = 'pins', onClose, onOpenCsv, onSchemaUpdated, onLayoutChange,
 }: Props) {
   // 우측 패널 선택
   const [selectedKey, setSelectedKey] = useState<{ fileName: string; columnKey: string } | null>(null)
@@ -216,7 +218,8 @@ export function KeyinfoModal({
   const [tagLoading, setTagLoading] = useState(false)
 
   // 탭: 핀 보기 / Key 노트
-  const [tab, setTab] = useState<'pins' | 'notes'>('pins')
+  const [tab, setTab] = useState<'pins' | 'notes'>(initialTab)
+  const [sending, setSending] = useState(false)   // 맥락 문서를 볼트로 보내는 중
   const [noteProgress, setNoteProgress] = useState({ confirmed: 0, total: 0 })
   const handleNoteProgress = useCallback((confirmed: number, total: number) => setNoteProgress({ confirmed, total }), [])
 
@@ -338,6 +341,15 @@ export function KeyinfoModal({
   }
 
   // ── 핀 삭제 ──────────────────────────────────────────────────────────────
+  // 핀이 Key 노트가 존재하는 조건이다. 남은 핀이 하나도 없는 노트는 핀을 거둘 때 함께 지운다.
+  const pruneNotes = (product: string | null, remainingPins: PinnedColumn[]) => {
+    window.electronAPI.keynotePruneByPins(product, remainingPins)
+      .then(removed => {
+        if (removed.length > 0) toast.info(`핀이 없어진 Key 노트 ${removed.length}개를 함께 지웠어요: ${removed.join(', ')}`, { duration: 6000 })
+      })
+      .catch(() => {})
+  }
+
   const handleDeletePins = (pinIds: number[]) => {
     if (sel) {
       const selPin = effectivePins.find(p => p.fileName === sel.fileName && p.columnKey === sel.columnKey)
@@ -353,6 +365,7 @@ export function KeyinfoModal({
         .map((p, i) => ({ ...p, pinId: i + 1 }))
       const remainingFolders = nullProductData?.folders ?? []
       window.electronAPI.keyinfoSaveLayout(null, remaining, remainingFolders)
+      pruneNotes(null, remaining)
       if (remaining.length === 0) {
         setNullProductData(null)
         setProductData(null)
@@ -369,6 +382,7 @@ export function KeyinfoModal({
       .filter(p => !pinIds.includes(p.pinId))
       .map((p, i) => ({ ...p, pinId: i + 1 }))
     onLayoutChange(remaining, folders)
+    pruneNotes(activeProduct || null, remaining)
   }
 
   // ── 주석 ─────────────────────────────────────────────────────────────────
@@ -497,6 +511,7 @@ export function KeyinfoModal({
 
   // ── keyinfo 액션 ──────────────────────────────────────────────────────────
   const handleLoad = async () => {
+    if (!activeProduct) return   // 제품이 없으면 색인하지 않는다.
     try { const updated = await window.electronAPI.keyinfoReindex(activeProduct || null, fileSources); onSchemaUpdated(updated.schema) } catch {}
   }
 
@@ -600,27 +615,61 @@ export function KeyinfoModal({
               {noteProgress.total > 0 && <span className="keyinfo-tab-count">{noteProgress.confirmed}/{noteProgress.total}</span>}
             </button>
           </div>
-          {/* 제품 내보내기: 지금 고른 제품의 Key 노트를 모두 Hermes(노트북의 Obsidian 볼트)로 내보낸다.
-              지금은 자리만 있는 더미 버튼이다. */}
+          {/* 제품 맥락 문서 전송: 지금 고른 제품의 확인된 Key 노트로 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트로 보낸다.
+              볼트 경로와 SSH는 Hermes 설정에서 정한다. 볼트에서 사람이 고친 파일은 덮어쓰지 않는다. */}
           <button
-            className="keyinfo-export-btn" {...uiId('KI.export')}
-            onClick={() => {
+            className={`keyinfo-export-btn${sending ? ' keyinfo-export-btn--busy' : ''}`} {...uiId('KI.export')}
+            disabled={sending}
+            onClick={async () => {
               if (!localProduct || localProduct === '__null__') {
-                toast.warning('제품을 고른 뒤 내보낼 수 있어요.')
+                toast.warning('제품을 고른 뒤 전송할 수 있어요.')
                 return
               }
-              toast.info(`'${localProduct}' 제품 내보내기는 준비 중이에요. 노트북 볼트로 보내는 방법을 정한 뒤 동작해요.`)
+              setSending(true)
+              try {
+                const r = await window.electronAPI.cedSend(localProduct)
+                if (!r.ok) {
+                  toast.error(`볼트로 보내지 못했어요: ${r.message}`, { duration: 8000 })
+                  return
+                }
+                if (r.noNotes) {
+                  toast.warning(`확인된 Key 노트가 없어요. 노트를 확인 상태로 바꾼 뒤 다시 눌러 주세요.${r.skippedDrafts > 0 ? ` (초안 ${r.skippedDrafts}개)` : ''}`)
+                  return
+                }
+                const sent = r.written.length + r.updated.length
+                toast.success(`볼트로 보냈어요: 새 문서 ${r.written.length}개, 갱신 ${r.updated.length}개, 변경 없음 ${r.unchanged.length}개${sent === 0 ? ' (보낼 변경이 없어요)' : ''}`, { duration: 6000 })
+                if (r.conflicts.length > 0) {
+                  toast.warning(`볼트에서 고친 문서는 덮어쓰지 않았어요: ${r.conflicts.join(', ')}`, { duration: 9000 })
+                }
+                if (r.leftover.length > 0) {
+                  toast.info(`앱에서 빠졌지만 볼트에 남겨 둔 문서: ${r.leftover.join(', ')}`, { duration: 9000 })
+                }
+              } catch {
+                toast.error('볼트로 보내지 못했어요.')
+              } finally {
+                setSending(false)
+              }
             }}
-            title="지금 고른 제품의 Key 노트를 모두 내보내기 (준비 중)"
+            title="지금 고른 제품의 맥락 문서를 만들어 Hermes 서버의 Obsidian 볼트(CED 폴더)로 보냅니다"
           >
             <Upload size={12} />
-            제품 내보내기
-            <span className="keyinfo-export-soon">준비 중</span>
+            {sending ? '전송 중…' : '제품 맥락 문서 전송'}
           </button>
         </div>
 
-        {tab === 'notes' && (
-          <KeyNotesPane product={localProduct === '__null__' ? null : localProduct} onProgress={handleNoteProgress} />
+        {tab === 'notes' && (!localProduct || localProduct === '__null__') && (
+          <div className="kn-pane" {...uiId('KI.notes')}>
+            <div className="kn-empty kn-empty--center">제품이 지정되지 않은 프리셋에는 Key 노트를 만들 수 없어요. 프리셋을 제품과 함께 저장한 뒤 이용해 주세요.</div>
+          </div>
+        )}
+        {tab === 'notes' && !!localProduct && localProduct !== '__null__' && (
+          <KeyNotesPane
+            product={localProduct === '__null__' ? null : localProduct}
+            schema={effectiveSchema}
+            fileSources={isOwnProduct && localProduct !== '__null__' ? fileSources : null}
+            onSchemaUpdated={onSchemaUpdated}
+            onProgress={handleNoteProgress}
+          />
         )}
         <div className="keyinfo-modal-inner" style={tab === 'notes' ? { display: 'none' } : undefined}>
         <div className="keyinfo-modal-main">
@@ -845,16 +894,19 @@ export function KeyinfoModal({
                     {crossFiles.length > 0 && (
                       <ul className="keyinfo-cross-list">
                         {crossFiles.map(({ fileName, entry }) => {
-                          const isCurrent = fileName === sel.fileName
+                          const isOrigin = fileName === sel.fileName   // 핀을 고정한 파일
+                          const isViewing = fileName === activeFile   // 지금 화면에서 보고 있는 파일
                           return (
                             <li
                               key={fileName}
-                              className={['keyinfo-cross-item', isCurrent ? 'keyinfo-cross-item--current' : ''].filter(Boolean).join(' ')}
-                              onClick={() => !isCurrent && onOpenCsv(fileName)}
+                              className={['keyinfo-cross-item', isOrigin ? 'keyinfo-cross-item--current' : '', isViewing ? 'keyinfo-cross-item--viewing' : ''].filter(Boolean).join(' ')}
+                              onClick={() => !isViewing && onOpenCsv(fileName)}
+                              aria-selected={isViewing}
                             >
                               <span className="keyinfo-cross-filename">
                                 {fileName.replace(/\.csv$/i, '')}
-                                {isCurrent && <span className="keyinfo-cross-cur-tag">현재</span>}
+                                {isOrigin && <span className="keyinfo-cross-cur-tag">핀 고정</span>}
+                                {isViewing && <span className="keyinfo-cross-view-tag">선택됨</span>}
                               </span>
                               <span className="keyinfo-cross-badges">{constraintBadges(entry)}</span>
                             </li>
@@ -916,7 +968,7 @@ export function KeyinfoModal({
                 ? `선택한 핀 ${confirmDelete.length}개를 삭제하시겠습니까?`
                 : `핀 #${confirmDelete[0]}을(를) 삭제하시겠습니까?`}
             </p>
-            <p className="confirm-modal-sub">Lorebook 요소는 삭제되지 않습니다. 진행합니까?</p>
+            <p className="confirm-modal-sub">Lorebook 요소는 삭제되지 않습니다. 이 핀에만 연결된 Key 노트는 함께 삭제됩니다. 진행합니까?</p>
           </div>
           <div className="modal-footer">
             <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmDelete(null)}>취소</button>

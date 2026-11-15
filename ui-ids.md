@@ -46,6 +46,7 @@
 | HD.zone-right | HD.right | HD.zone-c | 오른쪽 영역 (GitHub 버튼) | `header-zone--right` | |
 | HD.title | HD.name | HD.logo | 앱 제목 "DBViewer-tagger" | `logo-header-title` | |
 | HD.inspector | HD.ids | HD.tag | Inspector 토글 버튼 (제목 바로 옆 자리에 겹쳐 띄운 위젯, 모달이 열려 있어도 보임) | (없음) | |
+| HD.keynote | HD.notes | HD.key-note-btn | "Key 노트" 버튼. 가운데 영역(`HD.zone-center`)의 "이중 뷰" 버튼 오른쪽. 누르면 Keyinfo 창을 Key 노트 탭으로 바로 연다 (푸터 K 버튼과 같은 창) | `split-toggle-btn--header` | |
 | HD.github | HD.link | HD.credit | 오른쪽 영역의 "GitHub" 버튼 | `logo-copyright` | |
 
 ## SB 사이드바
@@ -85,7 +86,7 @@
 | MN.root | MN.area | MN.right | 사이드바를 뺀 메인 전체 | `main-area` | |
 | MN.top | MN.header | MN.head | 메인 위쪽 영역 전체 (제품 줄, 시트 탭) | `header-main` | |
 | MN.product-bar | MN.products | MN.prod-row | "DB - Load" 버튼과 제품 버튼 줄 | `header-main-1` | |
-| MN.product | MN.product-btn | MN.prod | 제품 버튼 (반복, 드래그로 순서 변경) | `header-main-btn` | |
+| MN.product | MN.product-btn | MN.prod | 제품 버튼 (반복, 드래그로 순서 변경). 지금 불러온 프리셋의 제품이면 파란 테두리, 점, `aria-pressed`로 활성 표시 | `header-main-btn` (활성: `header-main-btn--active`) | |
 | MN.split | MN.dual-view | MN.split-btn | "이중 뷰" 버튼. 앱 헤더 가운데 영역(`HD.zone-center`)의 왼쪽 끝. GitHub 버튼과 같은 폭 | `split-toggle-btn--header` | |
 
 ### 시트 탭 줄
@@ -199,7 +200,7 @@
 
 | 추천 | 대안 | 위치/설명 | 코드 | 선택 |
 |---|---|---|---|---|
-| KI.export | KI.export-product | 제품 줄 오른쪽 "제품 내보내기" 버튼. 지금 고른 제품의 Key 노트 전체를 내보냄 (더미, 누르면 준비 중 안내) | `keyinfo-export-btn` | |
+| KI.export | KI.send-context | 제품 줄 오른쪽 "제품 맥락 문서 전송" 버튼. 지금 고른 제품의 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트 CED 폴더로 SFTP 전송 (볼트에서 고친 파일은 덮어쓰지 않음) | `keyinfo-export-btn` | |
 | KI.product-bar | KI.products | 위쪽 제품 선택 칩 줄 | `keyinfo-product-bar` | |
 | KI.product-chip | KI.product | 제품 칩 하나 (반복, 현재 제품은 점 표시) | `keyinfo-product-bar` 안의 버튼 | |
 | KI.issue-count | KI.warn-count | 제품 미지정 핀 경고 수 | `keyinfo-issue-count` | |
@@ -220,14 +221,24 @@
 | KI.cross-actions | KI.cross-btns | 같은 Key 목록의 액션 버튼들 | `keyinfo-cross-actions` | |
 | KI.notes | KI.key-notes | Key 노트 탭 화면 전체 | `kn-pane` | |
 | KI.candidates-head | KI.cand-head | 후보 목록 제목 줄 | `kn-section-title` | |
-| KI.candidates | KI.cand-list | 자동 후보 목록 (수락 / 거절) | `kn-candidates` | |
+| KI.refresh | KI.note-refresh | 후보 제목 줄 오른쪽 새로고침 버튼. 새 테이블을 색인하고 노트의 출현 목록과 후보를 갱신 | `kn-refresh` | |
+| KI.candidates | KI.cand-list | 후보 목록 (수락만 있음. 핀으로 고정한 키의 후보와 보류한 노트가 나옴) | `kn-candidates` | |
 | KI.candidate | KI.cand-row | 후보 한 줄 (반복) | `kn-cand` | |
 | KI.notelist-head | KI.note-head | 노트 목록 제목 줄과 진행 표시 | `kn-section-title` | |
 | KI.progress | KI.note-progress | "Key N개 중 M개 확인됨" 표시 | `kn-progress` | |
 | KI.notelist | KI.note-list | 노트 목록 | `kn-notes` | |
 | KI.note | KI.note-row | 노트 한 줄 (반복) | `kn-note` | |
 | KI.note-editor | KI.note-edit | 오른쪽 노트 편집 영역 | `kn-right` | |
+| KI.note-head | KI.note-title-row | 편집 영역 맨 위 줄. 제목(읽기 전용)과 한 줄 정의를 한 줄에 둠 | `kn-row` | |
+| KI.keywords | KI.keyword-row | 키워드 줄. 입력 칸과 + 버튼이 왼쪽, 추가한 키워드가 오른쪽에 한 줄로 붙음 | `kn-keywords` | |
+| KI.meaning-row | KI.meaning-examples | 값 의미(왼쪽)와 값 예시(오른쪽)를 한 줄에 둔 영역 | `kn-row--meaning` | |
+| KI.examples | KI.value-examples | 값 예시 영역. 고른 테이블의 이 Key 컬럼 값을 CSV 앞 20행에서 읽어 작은 표로 보여 줌 (읽기 전용, 셀을 누르면 복사) | `kn-field--examples` | |
+| KI.examples-table | KI.examples-select | 값 예시의 테이블 선택 | `kn-ex-select` | |
+| KI.examples-skip | KI.examples-filter | 값 예시의 "빈 값·0 제외" 체크박스. 켜면 고른 컬럼 값이 비었거나 0인 행을 뺀 20행을 보여 줌 | `kn-ex-toggle` | |
+| KI.examples-refresh | KI.examples-reload | 값 예시 오른쪽 위 작은 새로고침 버튼. CSV를 다시 읽어 예시를 갱신 | `kn-ex-refresh` | |
+| KI.examples-grid | KI.examples-table-grid | 값 예시 표. 컬럼 머리글을 누르면 정렬 (작은 값부터, 큰 값부터, 해제). 스크롤하면 50행씩 파일 끝까지 이어 불러옴 | `kn-ex-grid` | |
 | KI.note-status | KI.status-switch | 초안 / 확인됨 전환 | `kn-status-switch` | |
+| KI.note-suspend | KI.note-pause | "작업 일시 중단" 버튼. 노트를 후보 목록으로 옮김 (적은 내용은 보존) | `kn-link` | |
 | KI.summary | KI.product-panel | 아래쪽 제품 요약 패널 | `keyinfo-product-panel` | |
 | KI.summary-card | KI.product-card | 제품 요약 카드 (반복) | `keyinfo-product-card` | |
 | KI.comment | KI.comment-popup | 핀 주석 편집 팝업 | `keyinfo-comment-modal-body` | |
@@ -358,18 +369,29 @@
 | HM.profile-menu | HM.profile-ctx | 프로필 우클릭 메뉴 (이름 변경, 삭제) | `hermes-ctx` | |
 | HM.profile-delete-confirm | HM.delete-bar | 프로필 삭제 확인 줄 | `hermes-delete-bar` | |
 | HM.sessions | HM.side | 왼쪽 세션 목록 영역 (보기만 함) | `hermes-sidebar` | |
+| HM.view-tabs | HM.read-mode | 세션 목록 위의 MD / TXT 읽기 방식 전환 | `hermes-view-tabs` | |
 | HM.session | HM.session-row | 세션 하나 (반복) | `hermes-session-title` | |
 | HM.main | HM.chat | 오른쪽 대화 영역 | `hermes-main` | |
 | HM.config | HM.settings | 연결 설정 화면 | `hermes-config` | |
 | HM.config-url | HM.url | 서버 주소 입력 | `hermes-config-input` (1번째) | |
 | HM.config-key | HM.api-key | API 키 입력 | `hermes-config-input` (2번째) | |
 | HM.ssh-toggle | HM.ssh-accordion | SSH 터널 접이식 제목줄 | `hermes-accordion-head` | |
+| HM.ssh-alias | HM.ssh-host-alias | SSH 별칭 입력. ~/.ssh/config의 Host 이름을 적으면 시스템 ssh로 접속 | `hermes-config-input` | |
 | HM.ssh | HM.ssh-area | SSH 터널 설정 영역 | `hermes-accordion-body` | |
+| HM.vault-toggle | HM.vault-accordion | 볼트 전송(CED) 접이식 제목줄 | `hermes-accordion-head` | |
+| HM.vault | HM.vault-area | 볼트 전송 설정 영역 (볼트 경로, 연결 시험, 구조 보기) | `hermes-accordion-body` | |
+| HM.vault-path | HM.vault-input | 서버 PC의 Obsidian 볼트 절대 경로 입력 | `hermes-config-input` | |
+| HM.vault-test | HM.vault-test-btn | "볼트 연결 시험" 버튼. 경로, .obsidian, 쓰기 권한을 확인 | `hermes-config-save` | |
+| HM.vault-list | HM.vault-tree-btn | "구조 보기" 버튼. 볼트 폴더 이름만 두 단계까지 보여 줌 | `hermes-config-save` | |
+| HM.vault-result | HM.vault-msg | 볼트 시험 결과 문구 | `hermes-test-ok`, `hermes-test-fail` | |
+| HM.vault-tree | HM.vault-folders | 볼트 폴더 구조 목록 | `hermes-vault-tree` | |
 | HM.logout | HM.logout-check | "앱을 끄면 로그아웃" 체크박스 | `hermes-check--logout` | |
 | HM.config-test | HM.test-btn | "연결 확인" 버튼 | `hermes-config-save` | |
 | HM.config-result | HM.test-result | 연결 확인 결과 문구 | `hermes-test-ok`, `hermes-test-fail` | |
 | HM.messages | HM.thread | 메시지 목록 (보기만 함) | `hermes-messages` | |
 | HM.message | HM.bubble | 메시지 하나 (반복) | `hermes-msg` | |
+| HM.think | HM.thinking | 접히는 "Thinking ..." 블록 (생각, 도구 실행 결과) | `hermes-think` | |
+| HM.message-failed | HM.bad-message | 그리지 못한 메시지 자리의 "표시할 수 없음" | `hermes-msg-failed` | |
 
 ## PD Products
 

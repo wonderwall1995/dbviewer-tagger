@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import { Settings, Plus, Loader2, ChevronRight, ChevronDown, FolderOpen, Eye, Bot } from 'lucide-react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { HermesMessageBody } from './HermesMessageBody'
+import type { ReadMode } from './HermesMessageBody'
 
 interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
+  role: string
+  content: unknown
 }
 
 interface Props {
@@ -48,7 +50,8 @@ function emptyProfile(name: string): ProfileDraft {
     hasKey: false,
     needsVerify: false,
     keyDraft: '',
-    ssh: { enabled: false, host: '', port: '22', username: '', pemPath: '' },
+    ssh: { enabled: false, host: '', port: '22', username: '', pemPath: '', alias: '' },
+    vaultPath: '',
   }
 }
 
@@ -70,6 +73,11 @@ export function HermesModal({ onClose }: Props) {
   const [sshOpen, setSshOpen] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  // 볼트 전송 (CED): 볼트 경로 칸, 연결 시험, 구조 보기
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [vaultBusy, setVaultBusy] = useState<'test' | 'list' | null>(null)
+  const [vaultResult, setVaultResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [vaultTree, setVaultTree] = useState<Array<{ name: string; children: string[] }> | null>(null)
 
   // 세션과 대화 (읽기 전용)
   const [sessions, setSessions] = useState<HermesSession[]>([])
@@ -78,6 +86,8 @@ export function HermesModal({ onClose }: Props) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messagesLoading, setMessagesLoading] = useState(false)
+  // 대화를 읽는 방식: md = 마크다운으로 보기, txt = 받은 글자 그대로 보기
+  const [readMode, setReadMode] = useState<ReadMode>('md')
   const loadSeq = useRef(0)
   const profileScrollRef = useRef<HTMLDivElement>(null)
 
@@ -104,6 +114,7 @@ export function HermesModal({ onClose }: Props) {
           serverUrl: p.serverUrl,
           apiKey: p.keyDraft || undefined,
           ssh: p.ssh,
+          vaultPath: p.vaultPath,
         }
       }),
     }
@@ -289,6 +300,27 @@ export function HermesModal({ onClose }: Props) {
     if (picked) patchSsh({ pemPath: picked })
   }
 
+  // 볼트 연결 시험과 구조 보기. 둘 다 저장한 설정으로 접속하므로 먼저 저장한다. 구조 보기는 폴더 이름만 읽는다.
+  const handleVaultTest = async () => {
+    if (vaultBusy) return
+    setVaultBusy('test'); setVaultResult(null)
+    try {
+      await flushSave()
+      setVaultResult(await window.electronAPI.hermesVaultTest())
+    } finally { setVaultBusy(null) }
+  }
+
+  const handleVaultList = async () => {
+    if (vaultBusy) return
+    setVaultBusy('list'); setVaultResult(null); setVaultTree(null)
+    try {
+      await flushSave()
+      const res = await window.electronAPI.hermesVaultList()
+      if (res.ok) setVaultTree(res.tree)
+      else setVaultResult({ ok: false, message: res.message })
+    } finally { setVaultBusy(null) }
+  }
+
   const handleTest = async () => {
     if (testing) return
     setTesting(true)
@@ -401,6 +433,18 @@ export function HermesModal({ onClose }: Props) {
       <div className="hermes-body">
         {/* 좌측: 세션 목록 (보기만) */}
         <div className="hermes-sidebar" {...uiId('HM.sessions')}>
+          <div className="hermes-view-tabs" {...uiId('HM.view-tabs')}>
+            <button
+              className={`hermes-view-tab${readMode === 'md' ? ' hermes-view-tab--on' : ''}`}
+              onClick={() => setReadMode('md')}
+              title="마크다운으로 보기"
+            >MD</button>
+            <button
+              className={`hermes-view-tab${readMode === 'txt' ? ' hermes-view-tab--on' : ''}`}
+              onClick={() => setReadMode('txt')}
+              title="받은 글자 그대로 보기"
+            >TXT</button>
+          </div>
           <ul className="hermes-session-list">
             {sessions.map(s => (
               <li
@@ -476,6 +520,16 @@ export function HermesModal({ onClose }: Props) {
                   <p className="hermes-note">
                     서버 주소는 SSH로 접속한 PC 기준의 주소로 적어요. (예: http://127.0.0.1:8642)
                   </p>
+                  <label className="hermes-config-label">SSH 별칭 (선택)</label>
+                  <input
+                    className="hermes-config-input" {...uiId('HM.ssh-alias')}
+                    value={activeProfile.ssh.alias}
+                    onChange={e => patchSsh({ alias: e.target.value.replace(/\s/g, '') })}
+                    placeholder="~/.ssh/config의 Host 이름 (예: hermes)"
+                  />
+                  <p className="hermes-note">
+                    별칭을 적으면 아래 호스트, 사용자, 키 칸은 쓰지 않고, 이 PC의 ssh 설정을 그대로 따라요. 키 암호는 물을 수 없어서 암호 없는 키나 ssh-agent가 필요해요. 이 PC에 OpenSSH 클라이언트(ssh)가 있어야 해요.
+                  </p>
                   <div className="hermes-ssh-row">
                     <div className="hermes-ssh-field hermes-ssh-field--grow">
                       <label className="hermes-config-label">SSH 호스트</label>
@@ -502,6 +556,65 @@ export function HermesModal({ onClose }: Props) {
                       <FolderOpen size={13} />
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* 볼트 전송 (CED): 선택 사항이라 접어 둔다. 맥락 문서를 이 서버의 Obsidian 볼트로 보낼 때 쓴다. */}
+              <button
+                className="hermes-accordion-head" {...uiId('HM.vault-toggle')}
+                onClick={() => setVaultOpen(o => !o)}
+              >
+                {vaultOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                <span>볼트 전송 (CED)</span>
+                {activeProfile.vaultPath && <span className="hermes-accordion-on">설정됨</span>}
+              </button>
+              {vaultOpen && (
+                <div className="hermes-accordion-body" {...uiId('HM.vault')}>
+                  <label className="hermes-config-label">볼트 경로</label>
+                  <input
+                    className="hermes-config-input" {...uiId('HM.vault-path')}
+                    value={activeProfile.vaultPath}
+                    onChange={e => { patchActive({ vaultPath: e.target.value }); setVaultResult(null); setVaultTree(null) }}
+                    placeholder="/home/사용자/문서/Obsidian Vault"
+                  />
+                  <p className="hermes-note">
+                    SSH로 접속한 PC의 Obsidian 볼트 절대 경로예요. 문서는 이 안의 CED/제품 폴더에만 써요. SSH 터널 설정(호스트, 사용자, 키)을 같이 써요.
+                  </p>
+                  <div className="hermes-config-actions">
+                    <button
+                      className="hermes-config-save" {...uiId('HM.vault-test')}
+                      onClick={handleVaultTest}
+                      disabled={!!vaultBusy || !activeProfile.vaultPath.trim()}
+                    >
+                      {vaultBusy === 'test' ? <Loader2 size={13} className="spin" /> : '볼트 연결 시험'}
+                    </button>
+                    <button
+                      className="hermes-config-save" {...uiId('HM.vault-list')}
+                      onClick={handleVaultList}
+                      disabled={!!vaultBusy || !activeProfile.vaultPath.trim()}
+                      title="볼트의 폴더 이름만 보여 줘요. 노트 이름과 내용은 읽지 않아요"
+                    >
+                      {vaultBusy === 'list' ? <Loader2 size={13} className="spin" /> : '구조 보기'}
+                    </button>
+                    {vaultResult && (
+                      <span className={vaultResult.ok ? 'hermes-test-ok' : 'hermes-test-fail'} {...uiId('HM.vault-result')}>
+                        {vaultResult.message}
+                      </span>
+                    )}
+                  </div>
+                  {vaultTree && (
+                    <ul className="hermes-vault-tree" {...uiId('HM.vault-tree')}>
+                      {vaultTree.length === 0 && <li>폴더가 없어요</li>}
+                      {vaultTree.map(d => (
+                        <li key={d.name}>
+                          {d.name}/
+                          {d.children.length > 0 && (
+                            <ul>{d.children.map(c => <li key={c}>{c}/</li>)}</ul>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 
@@ -559,7 +672,7 @@ export function HermesModal({ onClose }: Props) {
               {messages.map((m, i) => (
                 <div key={i} className={`hermes-msg hermes-msg--${m.role}`} {...uiId('HM.message')}>
                   {m.role === 'assistant' && <Bot size={20} className="hermes-msg-avatar" />}
-                  <div className="hermes-msg-bubble">{m.content}</div>
+                  <div className="hermes-msg-bubble"><HermesMessageBody role={m.role} content={m.content} mode={readMode} /></div>
                 </div>
               ))}
             </div>
