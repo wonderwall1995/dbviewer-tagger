@@ -8,9 +8,12 @@ import Papa from 'papaparse'
 import { Client } from 'pg'
 import { Client as SshClient } from 'ssh2'
 import type { SFTPWrapper, Stats, FileEntryWithStats } from 'ssh2'
-import crypto from 'crypto'
 import { isSafeAlias, makeExecOps, sshRunner, startAliasTunnel } from './sshAlias'
 import type { RemoteOps } from './sshAlias'
+import { createCedSender } from './cedTransfer'
+import { writeCedIndex } from './cedIndex'
+import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from './workspaceBackup'
+import type { BackupMeta } from './workspaceBackup'
 
 const isDev = !app.isPackaged
 
@@ -322,7 +325,6 @@ function applyDataRoot(root: string): void {
   DOCS_KEYINFO_DIR = p.docsKeyinfoDir
   TMP_DIR = p.tmpDir
   BACKUP_ROOT = p.backupRoot
-  LOCAL_DIR = p.localDir
   KEYINFO_RELATIONS_PATH = p.keyinfoRelationsPath
 }
 
@@ -1111,12 +1113,10 @@ ipcMain.handle('hermes:getMessages', (_event, sessionId: string) => {
 // 앱에서 빠진 문서는 볼트에서 지우지 않고 남겨 둔다고 알려 준다.
 
 const VAULT_CED_DIR = 'CED'
-const VAULT_STATE_FILE = '.ced-state.json'
 
 interface VaultSession { ops: RemoteOps; root: string; close: () => void }
 
 const vaultJoin = (...parts: string[]) => parts.join('/').replace(/\/+/g, '/')
-const sha256 = (data: Buffer) => crypto.createHash('sha256').update(data).digest('hex')
 
 function activeHermesProfile(): HermesProfile {
   const cfg = loadHermesConfig()
@@ -1265,65 +1265,15 @@ ipcMain.handle('hermes:vaultList', async () => {
 })
 
 // 맥락 문서를 만들고(작업 폴더의 CED/<제품>/) 볼트로 보낸다.
-ipcMain.handle('ced:send', async (_event, product: string | null) => {
-  const local = generateCed(product)
-  const docs = local.files.filter((f) => f.toLowerCase().endsWith('.md'))
-  const base = { dir: local.dir, skippedDrafts: local.skippedDrafts, written: [] as string[], updated: [] as string[], unchanged: [] as string[], conflicts: [] as string[], leftover: [] as string[] }
-  // 확인된 노트가 없으면(목차만 있음) 보낼 것이 없다.
-  if (docs.length <= 1) return { ok: true as const, ...base, noNotes: true }
-
-  let session: VaultSession | null = null
-  try {
-    session = await openVaultSession(activeHermesProfile())
-    const ops = session.ops
-    const remoteDir = await ensureRemoteDirs(ops, session.root, [VAULT_CED_DIR, path.basename(local.dir)])
-
-    let state: Record<string, string> = {}
-    try {
-      const parsed = JSON.parse((await ops.readFile(vaultJoin(remoteDir, VAULT_STATE_FILE))).toString('utf-8'))
-      if (parsed && typeof parsed.files === 'object') state = parsed.files
-    } catch { /* 처음 보내거나 상태 파일이 없으면 빈 상태로 시작한다. */ }
-
-    const nextState: Record<string, string> = {}
-    const put = async (name: string, buf: Buffer) => {
-      const target = vaultJoin(remoteDir, name)
-      const tmp = `${target}.tmp-${Date.now().toString(36)}`
-      await ops.writeFile(tmp, buf)
-      const size = (await ops.stat(tmp)).size
-      if (size !== buf.length) { await ops.unlink(tmp).catch(() => {}); throw new Error(`${name}: 전송한 크기가 달라요`) }
-      await ops.rename(tmp, target)
-    }
-
-    for (const name of docs) {
-      if (/[\\/]/.test(name)) continue   // 파일 이름에 경로가 섞여 있으면 보내지 않는다.
-      const buf = fs.readFileSync(path.join(local.dir, name))
-      const hash = sha256(buf)
-      let existing: Buffer | null = null
-      try { existing = await ops.readFile(vaultJoin(remoteDir, name)) } catch (e) { if (!isNotFound(e)) throw e }
-
-      if (existing === null) {
-        await put(name, buf); base.written.push(name); nextState[name] = hash
-      } else if (sha256(existing) === hash) {
-        base.unchanged.push(name); nextState[name] = hash
-      } else if (state[name] && state[name] === sha256(existing)) {
-        await put(name, buf); base.updated.push(name); nextState[name] = hash
-      } else {
-        // 앱이 마지막으로 쓴 내용과 다르다. 사람이 볼트에서 고친 파일이므로 덮어쓰지 않는다.
-        base.conflicts.push(name)
-        if (state[name]) nextState[name] = state[name]
-      }
-    }
-    for (const name of Object.keys(state)) {
-      if (!docs.includes(name)) base.leftover.push(name)
-    }
-    await ops.writeFile(vaultJoin(remoteDir, VAULT_STATE_FILE), Buffer.from(JSON.stringify({ version: 1, files: nextState }, null, 2), 'utf-8'))
-    return { ok: true as const, ...base, noNotes: false }
-  } catch (e) {
-    return { ok: false as const, message: describeVaultError(e), dir: local.dir }
-  } finally {
-    session?.close()
-  }
-})
+ipcMain.handle('ced:send', createCedSender({
+  dataRoot: () => DATA_ROOT,
+  generate: generateCed,
+  connect: async () => {
+    const profile = activeHermesProfile()
+    return { ...await openVaultSession(profile), transport: profile.ssh.alias ? 'ssh-exec' as const : 'sftp' as const }
+  },
+  describeError: describeVaultError,
+}))
 
 // 슬롯 목록 — 버튼 이름 표시용
 ipcMain.handle('db:listSlots', () => {
@@ -2047,24 +1997,12 @@ ipcMain.handle('local:clearTmp', async () => {
 
 // ── Backup ────────────────────────────────────────────────────────────────────
 let BACKUP_ROOT = dataPaths(DATA_ROOT).backupRoot
-let LOCAL_DIR = dataPaths(DATA_ROOT).localDir
-
-interface BackupMeta { id: string; title: string; comment: string; date: string }
-
-function copyDirSync(src: string, dest: string) {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name)
-    const d = path.join(dest, entry.name)
-    if (entry.isDirectory()) copyDirSync(s, d)
-    else fs.copyFileSync(s, d)
-  }
-}
 
 ipcMain.handle('backup:list', async (): Promise<BackupMeta[]> => {
   if (!fs.existsSync(BACKUP_ROOT)) return []
   const result: BackupMeta[] = []
   for (const name of fs.readdirSync(BACKUP_ROOT)) {
+    if (!name.startsWith('backup_')) continue
     const metaPath = path.join(BACKUP_ROOT, name, 'meta.json')
     if (fs.existsSync(metaPath)) {
       try { result.push(JSON.parse(fs.readFileSync(metaPath, 'utf-8'))) } catch {}
@@ -2074,25 +2012,16 @@ ipcMain.handle('backup:list', async (): Promise<BackupMeta[]> => {
 })
 
 ipcMain.handle('backup:save', async (_event, title: string, comment: string): Promise<BackupMeta> => {
-  if (!fs.existsSync(BACKUP_ROOT)) fs.mkdirSync(BACKUP_ROOT, { recursive: true })
-  const id = `backup_${Date.now()}`
-  const backupDir = path.join(BACKUP_ROOT, id)
-  fs.mkdirSync(backupDir, { recursive: true })
-  if (fs.existsSync(LOCAL_DIR)) copyDirSync(LOCAL_DIR, path.join(backupDir, 'local'))
-  const meta: BackupMeta = { id, title: title.trim() || '백업', comment: comment.trim(), date: new Date().toISOString() }
-  fs.writeFileSync(path.join(backupDir, 'meta.json'), JSON.stringify(meta, null, 2), 'utf-8')
-  return meta
+  return saveWorkspaceBackup(DATA_ROOT, title, comment)
 })
 
 ipcMain.handle('backup:restore', async (_event, id: string) => {
-  const backupLocalDir = path.join(BACKUP_ROOT, id, 'local')
-  if (!fs.existsSync(backupLocalDir)) throw new Error('backup not found')
-  if (fs.existsSync(LOCAL_DIR)) fs.rmSync(LOCAL_DIR, { recursive: true, force: true })
-  copyDirSync(backupLocalDir, LOCAL_DIR)
+  restoreWorkspaceBackup(DATA_ROOT, id)
+  keyNoteMigratedFor = ''
 })
 
 ipcMain.handle('backup:delete', async (_event, id: string) => {
-  const backupDir = path.join(BACKUP_ROOT, id)
+  const backupDir = backupDirectory(DATA_ROOT, id)
   if (fs.existsSync(backupDir)) fs.rmSync(backupDir, { recursive: true, force: true })
 })
 
@@ -2380,7 +2309,7 @@ function generateCed(product: string | null | undefined): { dir: string; files: 
     indexLines.push(`- [[${stem}]]${note.definition ? ` — ${note.definition}` : ''}`)
   }
   indexLines.push('')
-  fs.writeFileSync(path.join(outDir, `${indexStem}.md`), indexLines.join('\n'), 'utf-8')
+  writeCedIndex(path.join(outDir, `${indexStem}.md`), indexLines.join('\n'))
   files.push(`${indexStem}.md`)
 
   // 지난번에 만들었고 이번에는 없는 파일만 지운다.

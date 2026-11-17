@@ -602,7 +602,7 @@ export function KeyinfoModal({
                 localProduct === '__null__' ? 'keyinfo-product-bar-btn--active' : '',
               ].filter(Boolean).join(' ')}
               onClick={() => handleSelectProduct('__null__')}
-              title="제품 미지정 핀 목록 — 검수 워크플로우에서 제외될 수 있습니다"
+              title="제품 미지정 핀 목록 — Key 노트를 작성하려면 제품을 지정하세요"
             >
               ⚠ 없음
               <span className="keyinfo-issue-count" {...uiId('KI.issue-count')}>{nullProductData.pins.length}</span>

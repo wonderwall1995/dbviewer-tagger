@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { toast } from 'sonner'
 
 interface Props {
   onClose: () => void
 }
 
 type Mode = 'list' | 'creating'
+
+const scopeNames: Record<string, string> = {
+  local: 'Local 설정', 'docs/keyinfo': 'Key 노트와 핀', 'docs/lorebook': 'Lorebook 주석',
+}
+const backupScope = (backup: BackupMeta) => (backup.scopes ?? ['local']).map(s => scopeNames[s] ?? s).join(', ')
 
 export function BackupModal({ onClose }: Props) {
   const [backups, setBackups] = useState<BackupMeta[]>([])
@@ -18,6 +24,7 @@ export function BackupModal({ onClose }: Props) {
   const [confirmRestore, setConfirmRestore] = useState<BackupMeta | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<BackupMeta | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { loadBackups() }, [])
@@ -30,7 +37,7 @@ export function BackupModal({ onClose }: Props) {
     try {
       const list = await window.electronAPI.backupList()
       setBackups(list)
-    } catch {}
+    } catch { toast.error('백업 목록을 불러오지 못했습니다.') }
   }
 
   const handleSaveInit = () => {
@@ -40,23 +47,29 @@ export function BackupModal({ onClose }: Props) {
   }
 
   const handleSaveConfirm = async () => {
+    if (saving) return
     setSaving(true)
     try {
       const meta = await window.electronAPI.backupSave(title, comment)
       await loadBackups()
       setSelected(meta)
       setMode('list')
-    } catch {}
+      toast.success('설정, Keyinfo, Lorebook을 백업했습니다.')
+    } catch { toast.error('백업을 저장하지 못했습니다. 저장 공간과 폴더 권한을 확인하세요.') }
     setSaving(false)
   }
 
   const handleRestore = async () => {
-    if (!confirmRestore) return
+    if (!confirmRestore || restoring) return
+    setRestoring(true)
     try {
       await window.electronAPI.backupRestore(confirmRestore.id)
       setConfirmRestore(null)
       onClose()
-    } catch {}
+      window.location.reload()
+    } catch (error) {
+      toast.error(`백업을 복원하지 못했습니다. ${error instanceof Error ? error.message : ''}`, { duration: 8000 })
+    } finally { setRestoring(false) }
   }
 
   const handleDelete = async () => {
@@ -105,6 +118,7 @@ export function BackupModal({ onClose }: Props) {
           <div className="backup-right" {...uiId('BK.right')}>
             {mode === 'creating' ? (
               <div className="backup-create-form" {...uiId('BK.create')}>
+                <p className="confirm-modal-sub">Local 설정, Key 노트와 핀, Lorebook 주석을 저장합니다.</p>
                 <div className="backup-field">
                   <label className="backup-label">제목</label>
                   <input
@@ -145,6 +159,7 @@ export function BackupModal({ onClose }: Props) {
                   <div className="backup-detail-comment">{selected.comment}</div>
                 )}
                 <div className="backup-detail-date">{formatDate(selected.date)}</div>
+                <p className="confirm-modal-sub">포함: {backupScope(selected)}</p>
               </div>
             ) : (
               <div className="backup-detail-empty">← 백업을 선택하거나 저장하세요</div>
@@ -181,20 +196,21 @@ export function BackupModal({ onClose }: Props) {
       {confirmRestore && (
         <Modal
           title="백업 불러오기"
-          onClose={() => setConfirmRestore(null)}
+          onClose={() => { if (!restoring) setConfirmRestore(null) }}
           cardClassName="confirm-modal-card"
           draggable={false}
           showCloseButton={false}
         >
           <div className="confirm-modal-body">
             <p className="confirm-modal-msg">
-              <strong className="backup-restore-warning" {...uiId('BK.confirm')}>경고:</strong> 현재 Local로 설정해둔 모든 세팅을 해당 백업 파일로 덮어 씁니다.
+              <strong className="backup-restore-warning" {...uiId('BK.confirm')}>경고:</strong> 현재 {backupScope(confirmRestore)}을 백업 내용으로 바꿉니다.
             </p>
             <p className="confirm-modal-sub">{confirmRestore.title}</p>
+            <p className="confirm-modal-sub">백업에 없는 데이터는 유지합니다. 완료 후 화면을 다시 불러옵니다.</p>
           </div>
           <div className="modal-footer">
-            <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmRestore(null)}>취소</button>
-            <button className="modal-btn modal-btn--save" onClick={handleRestore}>진행</button>
+            <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmRestore(null)} disabled={restoring}>취소</button>
+            <button className="modal-btn modal-btn--save" onClick={handleRestore} disabled={restoring}>{restoring ? '복원 중…' : '진행'}</button>
           </div>
         </Modal>
       )}

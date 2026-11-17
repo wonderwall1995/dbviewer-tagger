@@ -302,6 +302,8 @@ declare global {
   }
 
   interface BackupMeta {
+    version?: number
+    scopes?: Array<'local' | 'docs/keyinfo' | 'docs/lorebook'>
     id: string
     title: string
     comment: string

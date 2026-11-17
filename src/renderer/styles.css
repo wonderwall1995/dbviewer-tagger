@@ -500,7 +500,7 @@ html, body, #root {
   min-height: 0;
 }
 
-/* 검수 뷰 오버레이 — .main-body 기준으로 inset: 0 */
+/* 뷰 오버레이 — .main-body 기준으로 inset: 0 */
 
 @keyframes overlay-in {
   from { opacity: 0; transform: translateY(4px); }

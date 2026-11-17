@@ -7,6 +7,8 @@ docs/
 local/
 DB-downloads/
 CED/
+backups/
+.restoring-*/
 
 # *.local
 .DS_Store

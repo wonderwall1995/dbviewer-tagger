@@ -12,5 +12,4 @@
 
 # PURPOSE
 - User의 포트폴리오 일환으로써 'Context Enrichment Docs'(이하, CED)를 생산하기 위한 목적이 주요하다.
-- 이전에는 개별 DB 차이 간 CSV 파일 중심 Inspector 였었다.
-- CSV 파일을 Inspect 하는 기능 + DB에 연결하여 해당 DB의 스키마 - 테이블을 불러오는 기능 유지.
+- CED 작성을 위해 CSV를 탐색하고, DB에 연결하여 스키마와 테이블을 불러온다.

@@ -1,6 +1,6 @@
-# CSV Inspector
+# DBViewer-tagger
 
-CSV 파일 품질 검사에서 출발해, 제품별 작업공간 관리 · 커스텀 테이블 빌더 · DB 직접 연결 · AI 어시스턴트까지 갖춘 종합 데이터 워크스페이스로 발전했습니다.
+DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Context Enrichment Docs(CED)를 작성하는 데스크톱 도구입니다.
 
 ---
 
@@ -19,7 +19,7 @@ CSV 파일 품질 검사에서 출발해, 제품별 작업공간 관리 · 커�
 
 ## 주요 기능
 
-### CSV 검수
+### CSV 탐색
 - 로컬 파일과 PostgreSQL DB에서 CSV 불러오기
 - 셀 단위 이슈 하이라이팅 (null · 빈값 · 타입 불일치 · ID 중복 · 의심값 · 포맷 이상)
 - 컬럼별 타입 자동 추론 (`id` / `phone` / `email` / `date` / `boolean` / `number` / `text`)
@@ -28,12 +28,17 @@ CSV 파일 품질 검사에서 출발해, 제품별 작업공간 관리 · 커�
 ### 시트 & 프리셋
 - 멀티 시트 레이아웃 — 시트별로 독립적인 파일 구성 저장
 - 프리셋 저장 / 불러오기 / 삭제
-- 작업공간 전체 스냅샷 백업 및 복원
+- Local 설정, Keyinfo, Lorebook 백업 및 복원
 
 ### Keyinfo (키 컬럼 스키마)
 - 제품별 주요 컬럼 핀 고정 및 폴더 분류
 - DB 스키마 연동: 타입 · PK / FK · 유니크 · NOT NULL · 역참조 자동 색인
 - 교차 제품 컬럼 관계 그룹 관리
+
+### CED 작성
+- 확인된 Key 노트로 제품 목차와 Key별 Markdown 문서를 만든다.
+- 목차 내용이 같으면 파일과 `generated` 시각을 유지한다.
+- 목차 내용이 바뀌면 파일과 `generated` 시각을 갱신한다.
 
 ### 커스텀 테이블 (Product Viewer)
 - CSV 파일과 Keyinfo 키를 조합해 사용자 정의 비교 테이블 구성
@@ -90,7 +95,7 @@ src/
 | `keyinfo:*` | 키 컬럼 핀/폴더/관계 관리, DB 스키마 색인 |
 | `customtable:*` | 커스텀 테이블 CRUD, 폴더 관리, 자동 저장/복원 |
 | `lorebook:*` | 컬럼 주석 CRUD, 카테고리 관리 |
-| `backup:*` | 작업공간 스냅샷 저장/복원/삭제 |
+| `backup:*` | Local 설정, Keyinfo, Lorebook 백업 저장/복원/삭제 |
 | `hermes:*` | Hermes 연결 설정과 세션 읽기 (읽기 전용) |
 | `keynote:*` | Key 노트 저장, 자동 후보 제안, 수락과 거절 |
 | `editor:*` | A/B 비교 에디터 템플릿 관리 |
@@ -119,7 +124,7 @@ CSV, 프리셋, 키 문서는 **작업 폴더**에 저장됩니다.
 ├── docs/
 │   ├── lorebook/          # 컬럼 주석 파일
 │   └── keyinfo/           # Keyinfo 문서
-└── backups/               # 작업공간 백업
+└── backups/               # Local 설정, Keyinfo, Lorebook 백업
 ```
 
 ---

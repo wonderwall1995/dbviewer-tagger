@@ -25,8 +25,9 @@ export interface RemoteOps {
 export type RunResult = { code: number; out: Buffer; err: string }
 export type Runner = (command: string, input?: Buffer) => Promise<RunResult>
 
-// 모든 ssh 실행에 붙이는 옵션. 암호를 묻지 않고, 10초 안에 연결되지 않으면 포기하고, 30초마다 살아 있는지 확인한다.
-const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=3']
+// 원격 명령은 기존 터널의 LocalForward를 다시 열지 않는다. -W 연결에도 같은 규칙을 쓴다.
+// 암호를 묻지 않고, 10초 안에 연결되지 않으면 포기하고, 30초마다 살아 있는지 확인한다.
+const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes', '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=3']
 
 // ssh가 남긴 오류 문구를 사용자가 이해할 수 있는 말로 바꾼다.
 export function friendlySshError(stderr: string): string {
