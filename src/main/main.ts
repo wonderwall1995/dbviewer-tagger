@@ -20,6 +20,7 @@ import { makeSessionState } from './core/context'
 import type { Ctx, Handlers } from './core/context'
 import { localHandlers, importToLocalDownloads, getDownloadsRoot, withinDownloadsRoot } from './core/local'
 import { csvHandlers, recordSnapshotStats } from './core/csv'
+import { lorebookHandlers, listProductNames } from './core/lorebook'
 
 const isDev = !app.isPackaged
 
@@ -196,131 +197,7 @@ ipcMain.handle('local:openDownloads', async (_event, root: 's3' | 'db' = 'db', s
 
 registerCore(csvHandlers)
 
-// ── Lorebook (docs/lorebook/) ─────────────────────────────────────────────────
-
-function withinLorebookRoot(target: string): boolean {
-  const norm = path.resolve(target)
-  return norm === WS.lorebookRoot || norm.startsWith(WS.lorebookRoot + path.sep)
-}
-
-// lorebook:list — lorebook 루트 내 모든 .json 파일 목록 (재귀)
-ipcMain.handle('lorebook:list', async () => {
-  if (!fs.existsSync(WS.lorebookRoot)) return []
-  const results: { name: string; path: string; folder: string }[] = []
-  const walk = (dir: string, folder: string) => {
-    const entries = fs.readdirSync(dir, { withFileTypes: true })
-    for (const e of entries) {
-      const full = path.join(dir, e.name)
-      if (e.isDirectory()) {
-        walk(full, folder ? `${folder}/${e.name}` : e.name)
-      } else if (e.isFile() && e.name.endsWith('.json')) {
-        results.push({ name: e.name.replace(/\.json$/, ''), path: full, folder })
-      }
-    }
-  }
-  walk(WS.lorebookRoot, '')
-  return results
-})
-
-// lorebook:read — 파일 내용 반환
-ipcMain.handle('lorebook:read', async (_event, absPath: string) => {
-  if (!withinLorebookRoot(absPath)) throw new Error('경로 오류')
-  return fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf-8') : ''
-})
-
-// lorebook:write — 파일 생성/수정 (중간 폴더 자동 생성)
-ipcMain.handle('lorebook:write', async (_event, absPath: string, content: string) => {
-  if (!withinLorebookRoot(absPath)) throw new Error('경로 오류')
-  await fs.promises.mkdir(path.dirname(absPath), { recursive: true })
-  await fs.promises.writeFile(absPath, content, 'utf-8')
-})
-
-// lorebook:delete — 파일 삭제
-ipcMain.handle('lorebook:delete', async (_event, absPath: string) => {
-  if (!withinLorebookRoot(absPath)) throw new Error('경로 오류')
-  if (fs.existsSync(absPath)) fs.unlinkSync(absPath)
-})
-
-// lorebook:newPath — {product}/{csvName}_{colLabel}.json 경로 생성
-ipcMain.handle('lorebook:newPath', (_event, product: string, csvName: string, colLabel: string) => {
-  const safeCsv = csvName.replace(/\.csv$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file'
-  const safeCol = colLabel.replace(/[\\/:*?"<>|]/g, '_').trim() || 'col'
-  const dir = product ? path.join(WS.lorebookRoot, product) : WS.lorebookRoot
-  return path.join(dir, `${safeCsv}_${safeCol}.json`)
-})
-
-// lorebook:getColumnComments — CSV 파일명 기준으로 색인된 칼럼의 주석 반환
-ipcMain.handle('lorebook:getColumnComments', (_event, csvName: string) => {
-  const result: Record<string, string> = {}
-  if (!fs.existsSync(WS.lorebookRoot)) return result
-  const csvBase = csvName.replace(/\.csv$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim()
-  try {
-    const entries = fs.readdirSync(WS.lorebookRoot, { withFileTypes: true })
-    for (const e of entries) {
-      if (!e.isDirectory()) continue
-      const productDir = path.join(WS.lorebookRoot, e.name)
-      const files = fs.readdirSync(productDir, { withFileTypes: true })
-        .filter(f => f.isFile() && f.name.endsWith('.json') && f.name.startsWith(`${csvBase}_`))
-      for (const f of files) {
-        try {
-          const raw = JSON.parse(fs.readFileSync(path.join(productDir, f.name), 'utf-8'))
-          if (raw.column && typeof raw.comment === 'string') {
-            result[raw.column] = raw.comment
-          }
-        } catch { /* skip corrupt files */ }
-      }
-    }
-  } catch { /* ignore */ }
-  return result
-})
-
-// product:* — 제품 폴더 목록 (local/product/{name}.json 파일 기반)
-// 제 3자 프로그램에서도 이 디렉토리를 읽어 제품 목록을 파악할 수 있음
-
-function ensureProductRoot() {
-  if (!fs.existsSync(WS.productRoot)) fs.mkdirSync(WS.productRoot, { recursive: true })
-}
-
-function listProductNames(): string[] {
-  if (!fs.existsSync(WS.productRoot)) return []
-  return fs.readdirSync(WS.productRoot)
-    .filter(f => f.endsWith('.json'))
-    .map(f => f.slice(0, -5))
-    .sort()
-}
-
-// lorebook:getCategories — local/product/*.json 열거로 목록 반환
-ipcMain.handle('lorebook:getCategories', () => {
-  return listProductNames()
-})
-
-// product:loadConfig / saveConfig — 순서 등 설정을 local/product/configure/config.json에 저장
-ipcMain.handle('product:loadConfig', () => {
-  try {
-    if (!fs.existsSync(WS.productConfigFile)) return {}
-    return JSON.parse(fs.readFileSync(WS.productConfigFile, 'utf-8'))
-  } catch { return {} }
-})
-
-ipcMain.handle('product:saveConfig', (_event, data: unknown) => {
-  if (!fs.existsSync(WS.productConfigDir)) fs.mkdirSync(WS.productConfigDir, { recursive: true })
-  fs.writeFileSync(WS.productConfigFile, JSON.stringify(data, null, 2), 'utf-8')
-})
-
-// lorebook:setCategories — 배열과 파일 시스템을 reconcile
-// 추가된 이름 → 새 .json 생성, 제거된 이름 → .json 삭제 (내용 보존 아님)
-ipcMain.handle('lorebook:setCategories', (_event, cats: string[]) => {
-  ensureProductRoot()
-  const existing = new Set(listProductNames())
-  const next = new Set(cats)
-
-  for (const name of existing) {
-    if (!next.has(name)) fs.unlinkSync(path.join(WS.productRoot, `${name}.json`))
-  }
-  for (const name of cats) {
-    if (!existing.has(name)) fs.writeFileSync(path.join(WS.productRoot, `${name}.json`), '{}', 'utf-8')
-  }
-})
+registerCore(lorebookHandlers)
 
 // ── DB 슬롯 설정 (safeStorage 암호화) ─────────────────────────────────────────
 // DB 슬롯은 4개이다. 접속 정보는 로컬 파일에만 저장한다.

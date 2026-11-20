@@ -64,7 +64,7 @@
 
 각 항목은 시험을 같이 남긴다 (`scripts/` 또는 패키지별 test).
 
-- [ ] B1. 경로 가두기 `resolveInside(ws.root, p)`: 절대 경로·`..`·심볼릭 링크 탈출 거절. **모든** 파일 핸들러가 거치게. 화면에는 절대 경로 대신 작업 폴더 기준 상대 경로만 오가게.
+- [ ] B1. (A7에서 찾은 구멍: 프리셋 이름 load/save/delete, `lorebook:setCategories` 제품 이름, `lorebook:newPath` product) 경로 가두기 `resolveInside(ws.root, p)`: 절대 경로·`..`·심볼릭 링크 탈출 거절. **모든** 파일 핸들러가 거치게. 화면에는 절대 경로 대신 작업 폴더 기준 상대 경로만 오가게.
 - [ ] B2. Web 빌드에서 SSH(`ssh2`, `sshAlias`의 `spawn`), pem 선택, Hermes, CED 보내기, 작업 폴더 고르기 경로를 **등록 자체를 안 함**. 시험: 그 경로 요청 → 404.
 - [ ] B3. DB 연결 검사 (Web): 호스트 이름 풀기 → 루프백·사설망·링크 로컬·메타데이터 주소 거절 → 검사한 IP로 그대로 연결. 읽기 전용 세션, `statement_timeout`, 연결 시간 제한, 내보내기 행 수·바이트 상한.
 - [ ] B4. Web의 DB 접속 정보는 메모리에만 (세션 끝나면 버림). 디스크 저장 경로는 데스크톱 전용.
@@ -101,6 +101,8 @@
 - 2026-11-20 A6 + A7-1(local): `core/context.ts` = `Ctx { ws, state, emit, allowOutsidePaths }`, `SessionState`, `userPath`/`resolveInside`(심볼릭 링크 실제 위치까지 확인), `Handlers` 표 타입. `core/local.ts` = sheet·local·프리셋·readFile·다운로드 목록/트리/삭제·eraseColumn 15채널. main.ts는 `desktopCtx()` + `registerCore(표)`. 데스크톱 전용(dialog:openCsv, local:importFile, local:openDownloads, workspace:*)은 main.ts에 남김. 시험 `scripts/core-local.test.cjs` 9개 (사용자별 분리, 밖 경로 거절, junction 탈출 거절) → 27/27 → 알아낸 것: ① **화면↔main이 절대 경로를 주고받음** (fileSources, 다운로드 목록의 path). Web도 같은 약속을 쓰면 서버 경로가 화면에 보임 → B1에서 "화면엔 상대 경로"로 바꿀지, `userPath`로 막기만 할지 정해야 함 (지금 판단: 막기만 + 세션 폴더 경로가 보이는 것은 낮은 위험. B1에서 다시 봄). ② **프리셋 이름(`loadPreset`, `deletePreset`, `savePreset`)에 경로 검사 없음** → `../` 통과. 데스크톱에서도 버그. B1에서 고침. ③ 진행률 `emit`은 데스크톱에서 "마지막으로 요청한 창"으로 보냄 (창이 하나라 문제없음) → 다음: A7-2 (캐시, CSV 통계).
 
 - 2026-11-20 A7-2(csv): `core/csv.ts` = cache:load/save, csv:stats + `recordSnapshotStats(ctx,...)`(DB 내보내기가 부름). 통계 캐시 `csvStatsMemory/LoadedFrom/Timer` → `ctx.state.csvStats`. 저장 타이머는 예약 시점의 작업 폴더로 고정 (예전엔 2초 뒤의 WS를 씀 → 그사이 작업 폴더를 바꾸면 새 폴더에 옛 캐시를 쓸 수 있었음, 작은 버그 같이 고침). 시험 4개 추가 → 31/31 → 다음: A7-3 (Lorebook).
+
+- 2026-11-20 A7-3(lorebook): `core/lorebook.ts` = lorebook:* 8개 + product:loadConfig/saveConfig (10채널). 이제부터 옮기기는 스크래치패드의 `move-section.cjs`(ipcMain.handle→표, WS.→ctx.ws., 도우미에 ctx 추가)와 `check-channels.cjs`(중복·빠짐 점검)로 함. **Git Bash 주의: `//`로 시작하는 인자를 `/`로 바꿈 → `MSYS_NO_PATHCONV=1` 필요** (한 번 깨져서 손으로 고침). 시험 3개 → 34/34 → 알아낸 것: **`lorebook:setCategories`의 제품 이름에 경로 검사 없음** → `../../x`로 제품 폴더 밖 .json을 만들고 **지울** 수 있음. `lorebook:newPath`의 product도 검사 없음(쓰기는 withinLorebookRoot가 막음). B1에 넣음 → 다음: A7-4 (DB 슬롯).
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
