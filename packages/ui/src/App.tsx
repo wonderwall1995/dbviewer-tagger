@@ -20,7 +20,7 @@ import { HermesModal } from './components/HermesModal'
 import { ClearModal } from './components/ClearModal'
 import { BackupModal } from './components/BackupModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
-import type { ParsedCsv, FolderItem, FileSource, PinnedColumn, KeyinfoColumnSchema, KeyinfoFolder } from '../shared/types'
+import type { ParsedCsv, FolderItem, FileSource, PinnedColumn, KeyinfoColumnSchema, KeyinfoFolder } from '@tagger/shared'
 import { api, caps } from './api'
 
 export interface PendingFileEntry {

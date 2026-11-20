@@ -12,7 +12,7 @@ import {
   FileX,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { ParsedCsv, FolderItem } from '../../shared/types'
+import type { ParsedCsv, FolderItem } from '@tagger/shared'
 import type { PendingFileEntry } from '../App'
 import { uiId } from '../ui/uiId'
 

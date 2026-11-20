@@ -5,7 +5,7 @@ import { Modal } from './Modal'
 import { LorebookCreateManyModal } from './LorebookCreateManyModal'
 import { KeyNotesPane } from './KeyNotesPane'
 import { CedSaveButton, CedDirSettings } from './CedSaveButton'
-import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '../../shared/types'
+import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '@tagger/shared'
 import { uiId } from '../ui/uiId'
 import { api, caps } from '../api'
 

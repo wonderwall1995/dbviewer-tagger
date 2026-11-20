@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Check, X, Plus, Pause, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { uiId } from '../ui/uiId'
-import type { KeyinfoColumnSchema } from '../../shared/types'
+import type { KeyinfoColumnSchema } from '@tagger/shared'
 import { api } from '../api'
 
 interface Props {

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { X, Plus, Trash2, Download, ChevronRight, ChevronDown, RefreshCw, Maximize2, RotateCcw, Folder, FolderPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { parseCsvContent } from '../hooks/useCsvParser'
-import type { ParsedCsv, FileSource } from '../../shared/types'
+import type { ParsedCsv, FileSource } from '@tagger/shared'
 
 interface Props {
   fileSources: Record<string, FileSource>

@@ -4,7 +4,7 @@ import {
   ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { ParsedCsv, ColumnMeta, PinnedColumn, KeyinfoColumnSchema } from '../../shared/types'
+import type { ParsedCsv, ColumnMeta, PinnedColumn, KeyinfoColumnSchema } from '@tagger/shared'
 import { LorebookCreateModal } from './LorebookCreateModal'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'

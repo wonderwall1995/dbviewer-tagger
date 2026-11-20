@@ -1,0 +1,8 @@
+{
+  "name": "@tagger/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "화면과 로직이 같이 쓰는 데이터 타입 (타입만 있다. 빌드 없음)",
+  "main": "src/types.ts",
+  "types": "src/types.ts"
+}

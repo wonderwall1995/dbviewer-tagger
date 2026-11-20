@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react'
-import type { ParsedCsv } from '../../shared/types'
+import type { ParsedCsv } from '@tagger/shared'
 
 type PendingEntry = {
   resolve: (v: ParsedCsv) => void

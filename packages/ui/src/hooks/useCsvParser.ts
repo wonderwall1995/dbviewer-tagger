@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import type { ParsedCsv, ColumnMeta, InferredType, DbConstraints } from '../../shared/types'
+import type { ParsedCsv, ColumnMeta, InferredType, DbConstraints } from '@tagger/shared'
 
 function inferType(samples: string[]): InferredType {
   const nonEmpty = samples.filter((v) => v !== '' && v !== null && v !== undefined)

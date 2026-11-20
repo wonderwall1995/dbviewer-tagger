@@ -1,4 +1,4 @@
-import type { ParsedCsv } from '../shared/types'
+import type { ParsedCsv } from '@tagger/shared'
 
 export {}
 

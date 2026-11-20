@@ -83,7 +83,7 @@ function createWindow() {
     win.loadURL('http://localhost:6200')
     win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'))
+    win.loadFile(path.join(__dirname, '../../packages/ui/dist/index.html'))
   }
 }
 

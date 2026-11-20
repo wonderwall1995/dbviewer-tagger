@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { Folder, FileText, ChevronRight, Loader2, Download, Search, Archive, FolderOpen, FolderCog } from 'lucide-react'
-import type { FileSource } from '../../shared/types'
+import type { FileSource } from '@tagger/shared'
 import { Modal } from './Modal'
 import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
