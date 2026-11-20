@@ -47,7 +47,7 @@
 - [x] A1. `TaggerApi` 타입 (preload 모양 그대로) + `electron.d.ts` 정리.
 - [x] A2. 화면에 `api` 모듈. `window.electronAPI.x` → `api.x` 일괄 교체. 동작 변화 없음.
 - [x] A3. `capabilities()` 추가. 환경별 버튼(작업 폴더 고르기, 폴더 열기, Hermes, SSH, CED 보내기)을 이 값으로 감쌈.
-- [ ] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
+- [x] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
 - [ ] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
 - [ ] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
 - [ ] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
@@ -91,12 +91,14 @@
 
 - 2026-11-20 A3: `api.ts`에 `caps`(workspace·revealInOs·hermes·ssh) 추가. 작업 폴더 버튼 3곳은 이미 `onOpenWorkspace &&` 구조라 App에서 넘기지 않는 것으로 끝. 첫 실행 안내도 caps로 막음. Hermes 푸터 버튼·모달, CED 보내기 버튼, DB 창 SSH 칸, Local 창 탐색기 버튼을 caps로 감쌈 → 알아낸 것: **`cedGenerate`(CED를 작업 폴더에 쓰기)는 화면 어디에서도 안 부름.** CED는 "보내기" 버튼 안에서만 만들어짐 → Web에서 hermes를 끄면 CED를 볼 방법이 없음. User 판단 필요 (질문함) → 다음: A4.
 
+- 2026-11-20 A4: `localImportFile(sourcePath)` → `importDroppedFile(file: File)`. preload에서 `webUtils.getPathForFile`로 경로를 구함 (sandbox preload에서도 webUtils 사용 가능). 경로를 받는 함수 하나를 화면 약속에서 없앰 → B1 범위가 하나 줄어듦. IPC 채널 `local:importFile`은 그대로. 끌어다 놓기 실제 동작은 User에게 확인 요청 → 다음: A5 (작업 폴더 문맥).
+
 ## 5. 우려 재점검 (코드 작업하며 갱신)
 
 | 우려 | 처음 판단 | 코드 보고 바뀐 점 | 상태 |
 |---|---|---|---|
 | 세션 분리 | 폴더만 나누면 됨 | 작업 폴더가 모듈 전역 상태라서 core 함수 시그니처를 모두 바꿔야 함 (A5) | 열림 |
-| 경로 조작 | `local:readFile` 하나 | 아직 전수 조사 안 함. 경로를 받는 핸들러 목록 필요 (B1 전에) | 열림 |
+| 경로 조작 | `local:readFile` 하나 | `localImportFile`은 A4에서 화면 약속에서 빠짐. 아직 전수 조사 안 함. 경로를 받는 핸들러 목록 필요 (B1 전에) | 열림 |
 | SSRF (DB 연결) | 앱 검사 + OS 차단 두 겹 | — | 열림 |
 | 서버 계정 권한 | 전용 사용자로 실행 | Stage D (서버 쪽) | 백로그 |
 | 메모리 | CSV 통째 읽기 | `readFileSync` 21곳, 어느 것이 큰 CSV인지 미확인 | 열림 |

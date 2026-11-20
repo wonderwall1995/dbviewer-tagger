@@ -17,7 +17,7 @@ declare global {
     localListPresets: () => Promise<Array<{ name: string; mtime: number; product?: string }>>
     localLoadPreset: (name: string) => Promise<LocalPreset | null>
     localDeletePreset: (name: string) => Promise<void>
-    localImportFile: (sourcePath: string) => Promise<{ name: string; path: string }>
+    importDroppedFile: (file: File) => Promise<{ name: string; path: string }>
     localReadFile: (filePath: string) => Promise<string>
     localGetDownloadsPath: (root: 's3' | 'db') => Promise<string>
     localListCsvTree: (root: 's3' | 'db', subPath?: string) => Promise<Array<{ segments: string[]; files: Array<{ name: string; path: string }> }>>

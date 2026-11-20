@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   openCsv: () => ipcRenderer.invoke('dialog:openCsv'),
@@ -9,7 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   localListPresets: () => ipcRenderer.invoke('local:listPresets'),
   localLoadPreset: (name: string) => ipcRenderer.invoke('local:loadPreset', name),
   localDeletePreset: (name: string) => ipcRenderer.invoke('local:deletePreset', name),
-  localImportFile: (sourcePath: string) => ipcRenderer.invoke('local:importFile', sourcePath),
+  // 끌어다 놓은 파일. 화면은 File만 넘기고, 디스크 경로는 여기서 구한다 (Electron 32부터 File.path가 없다).
+  importDroppedFile: (file: File) => ipcRenderer.invoke('local:importFile', webUtils.getPathForFile(file)),
   localReadFile: (filePath: string) => ipcRenderer.invoke('local:readFile', filePath),
   localGetDownloadsPath: (root: 's3' | 'db') => ipcRenderer.invoke('local:getDownloadsPath', root),
   localListCsvTree: (root: 's3' | 'db', subPath?: string) => ipcRenderer.invoke('local:listCsvTree', root, subPath),

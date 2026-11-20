@@ -985,8 +985,7 @@ export default function App() {
       await Promise.all(
         csvFiles.map(async (file) => {
           try {
-            const sourcePath = (file as any).path as string
-            const imported = await api.localImportFile(sourcePath)
+            const imported = await api.importDroppedFile(file)
             setPendingFiles((prev) => ({
               ...prev,
               [file.name]: {
