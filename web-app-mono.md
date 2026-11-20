@@ -199,5 +199,6 @@
 - 보고서 14개 지적(N01–N14) 모두 코드와 대조해 타당 확인 → 전부 처리. 커밋 e09efe0(서버·DB), ee8c7c8(배포·문서).
 - 주요 판단 (LLM): N05 슬롯에 `ssl` 선택(기본 꺼짐, 켜면 rejectUnauthorized + servername=원래 호스트). N06 중단 시 이미 다 받은 테이블은 남김(예전엔 지웠는데 덮인 뒤라 둘 다 잃었음). N08 메타 행은 `DB-downloads/` 아래 파일에서만 찾음(파서 캐시 키 v2), NULL=빈 칸 유지, 수식 접두사 그대로(README에 명시). N09 세션 줄 2개(files, db), 전체 DB 작업 4, SSE 3, 화면 읽기 30MB. N10 Nginx 내보내기만 30분 + 연결 끊기면 exportAborted. N12 /opt/tagger/releases/<rev> + current 링크, /var/www/tagger-releases/<rev> + /var/www/tagger 링크, 실패 시 자동 되돌림, --rollback, main 조상 검사.
 - 시험: `scripts/review-fixes.test.cjs` 12개(보고서 재현 그대로) → 전체 102/102. N01 시험은 처음에 설계가 틀렸음(작은 저장으로는 사전 검사 때문에 한도를 넘는 상태가 안 생김 → 백업 반복으로 바꿈).
-- 남은 것: 6201 포트 번호 바꾸기, 이력 정리(나) 여부 = User 결정 대기. 의존성 업그레이드, 내보내기 비동기 작업화, NULL 표기 = llms.md 백로그. 실제 EC2 확인은 deploy/README.md "첫 배포 확인 목록".
+- 남은 것: 의존성 업그레이드, 내보내기 비동기 작업화, NULL 표기 = llms.md 백로그. 실제 EC2 확인은 deploy/README.md "첫 배포 확인 목록".
 - 셸 주의(또): node -e 안의 정규식·역슬래시는 거의 늘 깨짐 → 정규식 편집은 Edit 도구로만.
+- 2026-11-20 User 결정: 개발 API 포트를 서버와 상관없는 로컬 번호 6201로 (코드 작업은 User의 PC에서, EC2는 배포만). (나) 이력 정리: 커밋을 유지한 채 이 브랜치(29077a9 이후) 47개 커밋의 내용에서 옛 포트 번호와 서버 대역 IP 예시를 바꿈 (git filter-branch --tree-filter, 단어 경계, 견본·잠금 파일 제외). 검증: 커밋 수·메시지 같음, 백업과의 차이 = 바꾼 줄뿐, 새 이력 0건, 102/102. 백업 브랜치 backup/web-app-mono-before-rewrite는 로컬에만 둠 (옛 문자열이 들어 있으므로 push 금지, User 확인 뒤 지움). push는 User 확인 대기.
