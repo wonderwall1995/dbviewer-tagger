@@ -1,6 +1,11 @@
+import { createHttpApi } from './platform/httpApi'
+
 // 화면은 이 모듈의 api만 부른다. window.electronAPI를 직접 부르지 않는다.
-// 지금은 데스크톱(preload) 구현 하나뿐이다. Web 빌드에서는 HTTP 구현을 여기에 끼운다.
-export const api: TaggerApi = window.electronAPI
+// 데스크톱(Electron)은 preload가 window.electronAPI를 넣어 준다. 없으면 Web으로 보고 HTTP 구현을 쓴다.
+// 그래서 화면 빌드 하나를 데스크톱과 Web이 같이 쓴다.
+export const isDesktop = typeof window !== 'undefined' && !!window.electronAPI
+
+export const api: TaggerApi = isDesktop ? window.electronAPI : createHttpApi()
 
 // 이 환경에서 되는 기능. 화면은 이 값을 보고 버튼을 보이거나 숨긴다.
 export interface Capabilities {
@@ -14,9 +19,6 @@ export interface Capabilities {
   ssh: boolean
 }
 
-export const caps: Capabilities = {
-  workspace: true,
-  revealInOs: true,
-  hermes: true,
-  ssh: true,
-}
+export const caps: Capabilities = isDesktop
+  ? { workspace: true, revealInOs: true, hermes: true, ssh: true }
+  : { workspace: false, revealInOs: false, hermes: false, ssh: false }

@@ -19,5 +19,9 @@ export default defineConfig({
     port: 6200,
     // Fail if the port is in use. The Electron main process needs this exact port.
     strictPort: true,
+    // Web 모드(pnpm dev:web): 화면의 /api 요청을 Web API 서버로 넘긴다. 데스크톱은 /api를 쓰지 않는다.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:6201', changeOrigin: false },
+    },
   },
 })
