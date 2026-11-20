@@ -14,7 +14,8 @@
     "dist:mac": "pnpm run build && electron-builder --mac",
     "dist:win": "pnpm run build && electron-builder --win",
     "dist:linux": "pnpm run build && electron-builder --linux",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm run build:electron && node --test scripts/*.test.cjs"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
