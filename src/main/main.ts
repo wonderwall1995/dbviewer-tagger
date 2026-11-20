@@ -14,6 +14,8 @@ import { createCedSender } from './cedTransfer'
 import { writeCedIndex } from './cedIndex'
 import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from './workspaceBackup'
 import type { BackupMeta } from './workspaceBackup'
+import { makeWorkspace } from './core/workspace'
+import type { Workspace } from './core/workspace'
 
 const isDev = !app.isPackaged
 
@@ -35,25 +37,9 @@ function readWorkspaceConfig(): string | null {
 }
 
 const CONFIGURED_WORKSPACE = readWorkspaceConfig()
-let DATA_ROOT = CONFIGURED_WORKSPACE ?? (isDev ? app.getAppPath() : DEFAULT_WORKSPACE)
+// 지금 쓰는 작업 폴더. 작업 폴더를 바꾸면 applyDataRoot가 새 묶음으로 바꾼다.
+let WS: Workspace = makeWorkspace(CONFIGURED_WORKSPACE ?? (isDev ? app.getAppPath() : DEFAULT_WORKSPACE))
 
-// 작업 폴더 아래의 경로 목록. 작업 폴더가 바뀌면 이 함수로 모든 경로를 다시 계산한다.
-function dataPaths(root: string) {
-  return {
-    localFile: path.join(root, 'local', 'presets', 'local.json'),
-    sheetSettingsFile: path.join(root, 'local', 'presets', 'sheet-settings.json'),
-    s3DownloadsRoot: path.join(root, 'S3-downloads'),
-    dbDownloadsRoot: path.join(root, 'DB-downloads'),
-    cacheDir: path.join(root, 'local', 'tmp', 'cache'),
-    lorebookRoot: path.join(root, 'docs', 'lorebook'),
-    productRoot: path.join(root, 'local', 'product'),
-    docsKeyinfoDir: path.join(root, 'docs', 'keyinfo'),
-    tmpDir: path.join(root, 'local', 'tmp'),
-    backupRoot: path.join(root, 'backups'),
-    localDir: path.join(root, 'local'),
-    keyinfoRelationsPath: path.join(root, 'docs', 'keyinfo', 'relations.json'),
-  }
-}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -96,29 +82,27 @@ app.on('window-all-closed', () => {
 })
 
 // IPC: local.json — 트리 상태 저장 / 불러오기
-let LOCAL_FILE = dataPaths(DATA_ROOT).localFile
-let SHEET_SETTINGS_FILE = dataPaths(DATA_ROOT).sheetSettingsFile
 
 // ── 프리셋 파일 경로 ──────────────────────────────────────────────────────────
 // 프리셋 JSON에는 작업 폴더 안의 파일을 작업 폴더 기준 상대경로(예: DB-downloads/웹데모/public/a.csv)로 저장한다.
 // 불러올 때는 현재 작업 폴더 기준 절대경로로 풀어서 화면에 넘긴다. 작업 폴더 밖의 파일은 절대경로 그대로 둔다.
 function toStoredPath(p: string): string {
   if (typeof p !== 'string' || !path.isAbsolute(p)) return p
-  const rel = path.relative(DATA_ROOT, p)
+  const rel = path.relative(WS.root, p)
   if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return p
   return rel.split(path.sep).join('/')
 }
 
 function fromStoredPath(p: string): string {
   if (typeof p !== 'string' || p === '') return p
-  if (!path.isAbsolute(p)) return path.resolve(DATA_ROOT, p)
+  if (!path.isAbsolute(p)) return path.resolve(WS.root, p)
   if (fs.existsSync(p)) return p
   // 예전 작업 폴더의 절대경로가 남은 경우: DB-downloads / S3-downloads 아래 같은 위치에 파일이 있으면 그것을 쓴다.
   const parts = p.split(/[\\/]+/)
   for (const root of ['DB-downloads', 'S3-downloads']) {
     const i = parts.lastIndexOf(root)
     if (i === -1) continue
-    const candidate = path.join(DATA_ROOT, root, ...parts.slice(i + 1))
+    const candidate = path.join(WS.root, root, ...parts.slice(i + 1))
     if (fs.existsSync(candidate)) return candidate
   }
   return p
@@ -138,36 +122,36 @@ function mapPresetPaths<T>(data: T, convert: (p: string) => string): T {
 }
 
 ipcMain.handle('sheet:saveSettings', (_event, data: unknown) => {
-  fs.mkdirSync(path.dirname(SHEET_SETTINGS_FILE), { recursive: true })
-  fs.writeFileSync(SHEET_SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf-8')
+  fs.mkdirSync(path.dirname(WS.sheetSettingsFile), { recursive: true })
+  fs.writeFileSync(WS.sheetSettingsFile, JSON.stringify(data, null, 2), 'utf-8')
 })
 
 ipcMain.handle('sheet:loadSettings', () => {
   try {
-    if (!fs.existsSync(SHEET_SETTINGS_FILE)) return null
-    return JSON.parse(fs.readFileSync(SHEET_SETTINGS_FILE, 'utf-8'))
+    if (!fs.existsSync(WS.sheetSettingsFile)) return null
+    return JSON.parse(fs.readFileSync(WS.sheetSettingsFile, 'utf-8'))
   } catch {
     return null
   }
 })
 
 ipcMain.handle('local:save', (_event, data: unknown) => {
-  fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true })
+  fs.mkdirSync(path.dirname(WS.localFile), { recursive: true })
   // 자동 저장은 마지막으로 보던 파일(activeFile)을 모른다. 이미 기록된 값이 있으면 그대로 이어 둔다.
   let next = data
   try {
-    if (fs.existsSync(LOCAL_FILE) && data && typeof data === 'object' && !('activeFile' in data)) {
-      const prev = JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8'))
+    if (fs.existsSync(WS.localFile) && data && typeof data === 'object' && !('activeFile' in data)) {
+      const prev = JSON.parse(fs.readFileSync(WS.localFile, 'utf-8'))
       if (typeof prev?.activeFile === 'string') next = { ...(data as object), activeFile: prev.activeFile }
     }
   } catch { /* 읽지 못하면 받은 내용 그대로 저장한다. */ }
-  fs.writeFileSync(LOCAL_FILE, JSON.stringify(mapPresetPaths(next, toStoredPath), null, 2), 'utf-8')
+  fs.writeFileSync(WS.localFile, JSON.stringify(mapPresetPaths(next, toStoredPath), null, 2), 'utf-8')
 })
 
 // 프리셋 JSON의 activeFile(마지막으로 보던 CSV)만 바꾼다. 다른 내용은 건드리지 않는다.
 ipcMain.handle('local:setActiveFile', (_event, presetName: string, fileName: string | null) => {
   if (typeof presetName !== 'string' || presetName === '' || /[\\/]/.test(presetName)) return
-  const target = path.join(DATA_ROOT, 'local', 'presets', presetName)
+  const target = path.join(WS.root, 'local', 'presets', presetName)
   try {
     if (!fs.existsSync(target)) return
     const json = JSON.parse(fs.readFileSync(target, 'utf-8'))
@@ -179,13 +163,13 @@ ipcMain.handle('local:setActiveFile', (_event, presetName: string, fileName: str
 
 ipcMain.handle('local:load', () => {
   try {
-    if (!fs.existsSync(LOCAL_FILE)) {
+    if (!fs.existsSync(WS.localFile)) {
       const empty = { folders: [], fileToFolder: {}, fileSources: {}, columnWidths: {}, pageSettings: {} }
-      fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true })
-      fs.writeFileSync(LOCAL_FILE, JSON.stringify(empty, null, 2), 'utf-8')
+      fs.mkdirSync(path.dirname(WS.localFile), { recursive: true })
+      fs.writeFileSync(WS.localFile, JSON.stringify(empty, null, 2), 'utf-8')
       return empty
     }
-    return mapPresetPaths(JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8')), fromStoredPath)
+    return mapPresetPaths(JSON.parse(fs.readFileSync(WS.localFile, 'utf-8')), fromStoredPath)
   } catch {
     return null
   }
@@ -194,7 +178,7 @@ ipcMain.handle('local:load', () => {
 // 이름 지정 저장 — 공란이면 local.json 덮어쓰기
 ipcMain.handle('local:savePreset', (_event, name: string, data: unknown) => {
   const safeName = (name.trim().replace(/\.json$/i, '') || 'local') + '.json'
-  const targetFile = path.join(DATA_ROOT, 'local', 'presets', safeName)
+  const targetFile = path.join(WS.root, 'local', 'presets', safeName)
   fs.mkdirSync(path.dirname(targetFile), { recursive: true })
   fs.writeFileSync(targetFile, JSON.stringify(mapPresetPaths(data, toStoredPath), null, 2), 'utf-8')
   return safeName
@@ -202,7 +186,7 @@ ipcMain.handle('local:savePreset', (_event, name: string, data: unknown) => {
 
 // 저장된 프리셋 목록 조회 (product 필드도 함께 반환)
 ipcMain.handle('local:listPresets', () => {
-  const dir = path.join(DATA_ROOT, 'local', 'presets')
+  const dir = path.join(WS.root, 'local', 'presets')
   try {
     if (!fs.existsSync(dir)) return []
     return fs.readdirSync(dir)
@@ -226,7 +210,7 @@ ipcMain.handle('local:listPresets', () => {
 
 // 특정 프리셋 불러오기
 ipcMain.handle('local:loadPreset', (_event, name: string) => {
-  const filePath = path.join(DATA_ROOT, 'local', 'presets', name)
+  const filePath = path.join(WS.root, 'local', 'presets', name)
   try {
     if (!fs.existsSync(filePath)) return null
     return mapPresetPaths(JSON.parse(fs.readFileSync(filePath, 'utf-8')), fromStoredPath)
@@ -238,14 +222,14 @@ ipcMain.handle('local:loadPreset', (_event, name: string) => {
 // 프리셋 삭제 — local.json은 삭제 불가
 ipcMain.handle('local:deletePreset', (_event, name: string) => {
   if (name === 'local.json') return
-  const filePath = path.join(DATA_ROOT, 'local', 'presets', name)
+  const filePath = path.join(WS.root, 'local', 'presets', name)
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
 })
 
 // 로컬 CSV → S3-downloads/local-downloads/ 비동기 복사 (content 미반환)
 async function importToLocalDownloads(sourcePath: string) {
   const filename = path.basename(sourcePath)
-  const destDir = path.join(DATA_ROOT, 'S3-downloads', 'local-downloads')
+  const destDir = path.join(WS.root, 'S3-downloads', 'local-downloads')
   await fs.promises.mkdir(destDir, { recursive: true })
   const destPath = path.join(destDir, filename)
   await fs.promises.copyFile(sourcePath, destPath)
@@ -273,18 +257,16 @@ ipcMain.handle('local:readFile', async (_event, filePath: string) => {
 })
 
 // IPC: 다운로드 디렉터리 탐색 (S3-downloads / DB-downloads)
-let S3_DOWNLOADS_ROOT = dataPaths(DATA_ROOT).s3DownloadsRoot
-let DB_DOWNLOADS_ROOT = dataPaths(DATA_ROOT).dbDownloadsRoot
 
 function getDownloadsRoot(root: 's3' | 'db'): string {
-  return root === 'db' ? DB_DOWNLOADS_ROOT : S3_DOWNLOADS_ROOT
+  return root === 'db' ? WS.dbDownloadsRoot : WS.s3DownloadsRoot
 }
 
 function withinDownloadsRoot(target: string): boolean {
   const norm = path.resolve(target)
   return (
-    norm === S3_DOWNLOADS_ROOT || norm.startsWith(S3_DOWNLOADS_ROOT + path.sep) ||
-    norm === DB_DOWNLOADS_ROOT || norm.startsWith(DB_DOWNLOADS_ROOT + path.sep)
+    norm === WS.s3DownloadsRoot || norm.startsWith(WS.s3DownloadsRoot + path.sep) ||
+    norm === WS.dbDownloadsRoot || norm.startsWith(WS.dbDownloadsRoot + path.sep)
   )
 }
 
@@ -294,7 +276,7 @@ ipcMain.handle('local:getDownloadsPath', (_event, root: 's3' | 'db' = 's3') => g
 ipcMain.handle('app:openGithub', () => shell.openExternal('https://github.com/wonderwall1995'))
 
 ipcMain.handle('workspace:get', () => ({
-  path: DATA_ROOT,
+  path: WS.root,
   defaultPath: DEFAULT_WORKSPACE,
   isDev,
   // 배포본에서 아직 작업 폴더를 정하지 않았으면 처음 실행 안내를 보여준다.
@@ -304,7 +286,7 @@ ipcMain.handle('workspace:get', () => ({
 ipcMain.handle('workspace:pick', async () => {
   const result = await dialog.showOpenDialog({
     title: '작업 폴더 선택',
-    defaultPath: DATA_ROOT,
+    defaultPath: WS.root,
     properties: ['openDirectory', 'createDirectory'],
   })
   return result.canceled ? null : result.filePaths[0]
@@ -312,20 +294,7 @@ ipcMain.handle('workspace:pick', async () => {
 
 // 작업 폴더를 바꾼 뒤 모든 저장 경로를 다시 계산한다.
 function applyDataRoot(root: string): void {
-  DATA_ROOT = root
-  const p = dataPaths(root)
-  LOCAL_FILE = p.localFile
-  SHEET_SETTINGS_FILE = p.sheetSettingsFile
-  S3_DOWNLOADS_ROOT = p.s3DownloadsRoot
-  DB_DOWNLOADS_ROOT = p.dbDownloadsRoot
-  CACHE_DIR = p.cacheDir
-  LOREBOOK_ROOT = p.lorebookRoot
-  PRODUCT_ROOT = p.productRoot
-  PRODUCT_CONFIG_DIR = path.join(PRODUCT_ROOT, 'configure')
-  DOCS_KEYINFO_DIR = p.docsKeyinfoDir
-  TMP_DIR = p.tmpDir
-  BACKUP_ROOT = p.backupRoot
-  KEYINFO_RELATIONS_PATH = p.keyinfoRelationsPath
+  WS = makeWorkspace(root)
 }
 
 // 작업 폴더를 저장하고 바로 적용한다. 지금 쓰는 폴더와 다르면 화면을 새로 불러온다.
@@ -342,7 +311,7 @@ ipcMain.handle('workspace:save', (event, dir: string) => {
     fs.rmSync(probe, { force: true })
     fs.mkdirSync(path.dirname(WORKSPACE_CONFIG_PATH), { recursive: true })
     fs.writeFileSync(WORKSPACE_CONFIG_PATH, JSON.stringify({ path: target }, null, 2), 'utf-8')
-    const changed = path.resolve(DATA_ROOT) !== target
+    const changed = path.resolve(WS.root) !== target
     if (changed) {
       applyDataRoot(target)
       // 앱 상태가 이전 폴더 기준이므로 화면을 새로 불러와 새 폴더의 파일을 읽게 한다.
@@ -356,8 +325,8 @@ ipcMain.handle('workspace:save', (event, dir: string) => {
 })
 
 ipcMain.handle('workspace:open', async () => {
-  fs.mkdirSync(DATA_ROOT, { recursive: true })
-  return shell.openPath(DATA_ROOT)
+  fs.mkdirSync(WS.root, { recursive: true })
+  return shell.openPath(WS.root)
 })
 
 // 저장된 폴더를 탐색기로 연다. 성공하면 빈 문자열, 실패하면 오류 메시지를 돌려준다.
@@ -441,7 +410,6 @@ ipcMain.handle('local:eraseColumn', async (_event, filePath: string, colKey: str
 
 // ── ParsedCsv 디스크 캐시 (local/tmp/cache/) ──────────────────────────────
 // 캐시 키: 파일명 + mtime + size → 파일 변경 시 자동 무효화
-let CACHE_DIR = dataPaths(DATA_ROOT).cacheDir
 
 function cacheKeyFor(filePath: string): string | null {
   try {
@@ -457,7 +425,7 @@ function cacheKeyFor(filePath: string): string | null {
 ipcMain.handle('cache:load', (_event, filePath: string) => {
   const key = cacheKeyFor(filePath)
   if (!key) return null
-  const cachePath = path.join(CACHE_DIR, key + '.gz')
+  const cachePath = path.join(WS.cacheDir, key + '.gz')
   if (!fs.existsSync(cachePath)) return null
   try {
     const compressed = fs.readFileSync(cachePath)
@@ -484,11 +452,11 @@ ipcMain.handle('cache:save', async (_event, filePath: string, data: any) => {
     keys.map((k) => row[k] ?? '')
   )
   const json = JSON.stringify({ fileName, columns, totalRows, keys, values })
-  await fs.promises.mkdir(CACHE_DIR, { recursive: true })
+  await fs.promises.mkdir(WS.cacheDir, { recursive: true })
   await new Promise<void>((resolve, reject) => {
     zlib.gzip(Buffer.from(json, 'utf-8'), { level: 6 }, async (err, compressed) => {
       if (err) { reject(err); return }
-      await fs.promises.writeFile(path.join(CACHE_DIR, key + '.gz'), compressed)
+      await fs.promises.writeFile(path.join(WS.cacheDir, key + '.gz'), compressed)
       resolve()
     })
   })
@@ -604,7 +572,7 @@ let csvStatsLoadedFrom = ''
 let csvStatsTimer: ReturnType<typeof setTimeout> | null = null
 
 function csvStatsFile(): string {
-  return path.join(CACHE_DIR, 'csv-stats.json')
+  return path.join(WS.cacheDir, 'csv-stats.json')
 }
 
 function loadCsvStatsCache(): void {
@@ -624,7 +592,7 @@ function scheduleCsvStatsSave(): void {
   csvStatsTimer = setTimeout(async () => {
     csvStatsTimer = null
     try {
-      await fs.promises.mkdir(CACHE_DIR, { recursive: true })
+      await fs.promises.mkdir(WS.cacheDir, { recursive: true })
       await fs.promises.writeFile(csvStatsFile(), JSON.stringify(Object.fromEntries(csvStatsMemory)), 'utf-8')
     } catch { /* 저장하지 못해도 다음에 다시 센다. */ }
   }, 2000)
@@ -668,16 +636,15 @@ ipcMain.handle('csv:stats', async (_event, filePath: string): Promise<CsvStats |
 })
 
 // ── Lorebook (docs/lorebook/) ─────────────────────────────────────────────────
-let LOREBOOK_ROOT = dataPaths(DATA_ROOT).lorebookRoot
 
 function withinLorebookRoot(target: string): boolean {
   const norm = path.resolve(target)
-  return norm === LOREBOOK_ROOT || norm.startsWith(LOREBOOK_ROOT + path.sep)
+  return norm === WS.lorebookRoot || norm.startsWith(WS.lorebookRoot + path.sep)
 }
 
 // lorebook:list — lorebook 루트 내 모든 .json 파일 목록 (재귀)
 ipcMain.handle('lorebook:list', async () => {
-  if (!fs.existsSync(LOREBOOK_ROOT)) return []
+  if (!fs.existsSync(WS.lorebookRoot)) return []
   const results: { name: string; path: string; folder: string }[] = []
   const walk = (dir: string, folder: string) => {
     const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -690,7 +657,7 @@ ipcMain.handle('lorebook:list', async () => {
       }
     }
   }
-  walk(LOREBOOK_ROOT, '')
+  walk(WS.lorebookRoot, '')
   return results
 })
 
@@ -717,20 +684,20 @@ ipcMain.handle('lorebook:delete', async (_event, absPath: string) => {
 ipcMain.handle('lorebook:newPath', (_event, product: string, csvName: string, colLabel: string) => {
   const safeCsv = csvName.replace(/\.csv$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file'
   const safeCol = colLabel.replace(/[\\/:*?"<>|]/g, '_').trim() || 'col'
-  const dir = product ? path.join(LOREBOOK_ROOT, product) : LOREBOOK_ROOT
+  const dir = product ? path.join(WS.lorebookRoot, product) : WS.lorebookRoot
   return path.join(dir, `${safeCsv}_${safeCol}.json`)
 })
 
 // lorebook:getColumnComments — CSV 파일명 기준으로 색인된 칼럼의 주석 반환
 ipcMain.handle('lorebook:getColumnComments', (_event, csvName: string) => {
   const result: Record<string, string> = {}
-  if (!fs.existsSync(LOREBOOK_ROOT)) return result
+  if (!fs.existsSync(WS.lorebookRoot)) return result
   const csvBase = csvName.replace(/\.csv$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim()
   try {
-    const entries = fs.readdirSync(LOREBOOK_ROOT, { withFileTypes: true })
+    const entries = fs.readdirSync(WS.lorebookRoot, { withFileTypes: true })
     for (const e of entries) {
       if (!e.isDirectory()) continue
-      const productDir = path.join(LOREBOOK_ROOT, e.name)
+      const productDir = path.join(WS.lorebookRoot, e.name)
       const files = fs.readdirSync(productDir, { withFileTypes: true })
         .filter(f => f.isFile() && f.name.endsWith('.json') && f.name.startsWith(`${csvBase}_`))
       for (const f of files) {
@@ -748,15 +715,14 @@ ipcMain.handle('lorebook:getColumnComments', (_event, csvName: string) => {
 
 // product:* — 제품 폴더 목록 (local/product/{name}.json 파일 기반)
 // 제 3자 프로그램에서도 이 디렉토리를 읽어 제품 목록을 파악할 수 있음
-let PRODUCT_ROOT = dataPaths(DATA_ROOT).productRoot
 
 function ensureProductRoot() {
-  if (!fs.existsSync(PRODUCT_ROOT)) fs.mkdirSync(PRODUCT_ROOT, { recursive: true })
+  if (!fs.existsSync(WS.productRoot)) fs.mkdirSync(WS.productRoot, { recursive: true })
 }
 
 function listProductNames(): string[] {
-  if (!fs.existsSync(PRODUCT_ROOT)) return []
-  return fs.readdirSync(PRODUCT_ROOT)
+  if (!fs.existsSync(WS.productRoot)) return []
+  return fs.readdirSync(WS.productRoot)
     .filter(f => f.endsWith('.json'))
     .map(f => f.slice(0, -5))
     .sort()
@@ -768,8 +734,7 @@ ipcMain.handle('lorebook:getCategories', () => {
 })
 
 // product:loadConfig / saveConfig — 순서 등 설정을 local/product/configure/config.json에 저장
-let PRODUCT_CONFIG_DIR = path.join(PRODUCT_ROOT, 'configure')
-const PRODUCT_CONFIG = path.join(PRODUCT_CONFIG_DIR, 'config.json')
+const PRODUCT_CONFIG = path.join(WS.productConfigDir, 'config.json')
 
 ipcMain.handle('product:loadConfig', () => {
   try {
@@ -779,7 +744,7 @@ ipcMain.handle('product:loadConfig', () => {
 })
 
 ipcMain.handle('product:saveConfig', (_event, data: unknown) => {
-  if (!fs.existsSync(PRODUCT_CONFIG_DIR)) fs.mkdirSync(PRODUCT_CONFIG_DIR, { recursive: true })
+  if (!fs.existsSync(WS.productConfigDir)) fs.mkdirSync(WS.productConfigDir, { recursive: true })
   fs.writeFileSync(PRODUCT_CONFIG, JSON.stringify(data, null, 2), 'utf-8')
 })
 
@@ -791,10 +756,10 @@ ipcMain.handle('lorebook:setCategories', (_event, cats: string[]) => {
   const next = new Set(cats)
 
   for (const name of existing) {
-    if (!next.has(name)) fs.unlinkSync(path.join(PRODUCT_ROOT, `${name}.json`))
+    if (!next.has(name)) fs.unlinkSync(path.join(WS.productRoot, `${name}.json`))
   }
   for (const name of cats) {
-    if (!existing.has(name)) fs.writeFileSync(path.join(PRODUCT_ROOT, `${name}.json`), '{}', 'utf-8')
+    if (!existing.has(name)) fs.writeFileSync(path.join(WS.productRoot, `${name}.json`), '{}', 'utf-8')
   }
 })
 
@@ -1266,7 +1231,7 @@ ipcMain.handle('hermes:vaultList', async () => {
 
 // 맥락 문서를 만들고(작업 폴더의 CED/<제품>/) 볼트로 보낸다.
 ipcMain.handle('ced:send', createCedSender({
-  dataRoot: () => DATA_ROOT,
+  dataRoot: () => WS.root,
   generate: generateCed,
   connect: async () => {
     const profile = activeHermesProfile()
@@ -1676,7 +1641,7 @@ function safeSegment(name: string): string {
 // 슬롯의 CSV 저장 폴더: DB-downloads/<저장 폴더 이름>
 function slotDownloadDir(slotId: SlotId): string {
   const slot = loadSlots()[slotId]
-  return path.join(DB_DOWNLOADS_ROOT, safeSegment(slot.folderName || slot.name || slotId))
+  return path.join(WS.dbDownloadsRoot, safeSegment(slot.folderName || slot.name || slotId))
 }
 
 // 내보내기 진행 위치. ti는 전체 테이블 기준 순서(0부터)이고 total은 전체 테이블 수이다.
@@ -1795,7 +1760,7 @@ function removeExportedFiles(paths: string[]): void {
   for (const dir of dirs) {
     try { fs.rmdirSync(dir) } catch { /* 다른 파일이 남아 있으면 그대로 둔다. */ }
     const parent = path.dirname(dir)
-    if (parent !== DB_DOWNLOADS_ROOT) {
+    if (parent !== WS.dbDownloadsRoot) {
       try { fs.rmdirSync(parent) } catch { /* 다른 파일이 남아 있으면 그대로 둔다. */ }
     }
   }
@@ -1904,10 +1869,9 @@ interface KeyinfoData {
   schema: Record<string, Record<string, KeyinfoColSchema>>
 }
 
-let DOCS_KEYINFO_DIR = dataPaths(DATA_ROOT).docsKeyinfoDir
 
 function getKeyinfoPath(product?: string | null): string {
-  return path.join(DOCS_KEYINFO_DIR, product?.trim() || 'none', 'keyinfo.json')
+  return path.join(WS.docsKeyinfoDir, product?.trim() || 'none', 'keyinfo.json')
 }
 
 function loadKeyinfoData(p: string): KeyinfoData {
@@ -1990,20 +1954,18 @@ function parseCsvHeaderOnly(filePath: string): {
 }
 
 // local:clearTmp — ./local/tmp 폴더 전체 삭제
-let TMP_DIR = dataPaths(DATA_ROOT).tmpDir
 ipcMain.handle('local:clearTmp', async () => {
-  if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true })
+  if (fs.existsSync(WS.tmpDir)) fs.rmSync(WS.tmpDir, { recursive: true, force: true })
 })
 
 // ── Backup ────────────────────────────────────────────────────────────────────
-let BACKUP_ROOT = dataPaths(DATA_ROOT).backupRoot
 
 ipcMain.handle('backup:list', async (): Promise<BackupMeta[]> => {
-  if (!fs.existsSync(BACKUP_ROOT)) return []
+  if (!fs.existsSync(WS.backupRoot)) return []
   const result: BackupMeta[] = []
-  for (const name of fs.readdirSync(BACKUP_ROOT)) {
+  for (const name of fs.readdirSync(WS.backupRoot)) {
     if (!name.startsWith('backup_')) continue
-    const metaPath = path.join(BACKUP_ROOT, name, 'meta.json')
+    const metaPath = path.join(WS.backupRoot, name, 'meta.json')
     if (fs.existsSync(metaPath)) {
       try { result.push(JSON.parse(fs.readFileSync(metaPath, 'utf-8'))) } catch {}
     }
@@ -2012,30 +1974,29 @@ ipcMain.handle('backup:list', async (): Promise<BackupMeta[]> => {
 })
 
 ipcMain.handle('backup:save', async (_event, title: string, comment: string): Promise<BackupMeta> => {
-  return saveWorkspaceBackup(DATA_ROOT, title, comment)
+  return saveWorkspaceBackup(WS.root, title, comment)
 })
 
 ipcMain.handle('backup:restore', async (_event, id: string) => {
-  restoreWorkspaceBackup(DATA_ROOT, id)
+  restoreWorkspaceBackup(WS.root, id)
   keyNoteMigratedFor = ''
 })
 
 ipcMain.handle('backup:delete', async (_event, id: string) => {
-  const backupDir = backupDirectory(DATA_ROOT, id)
+  const backupDir = backupDirectory(WS.root, id)
   if (fs.existsSync(backupDir)) fs.rmSync(backupDir, { recursive: true, force: true })
 })
 
 // ── Key 연관 그룹 ─────────────────────────────────────────────────────────────
-let KEYINFO_RELATIONS_PATH = dataPaths(DATA_ROOT).keyinfoRelationsPath
 
 function loadKeyinfoRelations(): unknown[] {
-  if (!fs.existsSync(KEYINFO_RELATIONS_PATH)) return []
-  try { return JSON.parse(fs.readFileSync(KEYINFO_RELATIONS_PATH, 'utf-8')) } catch { return [] }
+  if (!fs.existsSync(WS.keyinfoRelationsPath)) return []
+  try { return JSON.parse(fs.readFileSync(WS.keyinfoRelationsPath, 'utf-8')) } catch { return [] }
 }
 
 function saveKeyinfoRelations(groups: unknown[]) {
-  fs.mkdirSync(path.dirname(KEYINFO_RELATIONS_PATH), { recursive: true })
-  fs.writeFileSync(KEYINFO_RELATIONS_PATH, JSON.stringify(groups, null, 2), 'utf-8')
+  fs.mkdirSync(path.dirname(WS.keyinfoRelationsPath), { recursive: true })
+  fs.writeFileSync(WS.keyinfoRelationsPath, JSON.stringify(groups, null, 2), 'utf-8')
 }
 
 ipcMain.handle('keyinfo:listRelations', () => loadKeyinfoRelations())
@@ -2069,7 +2030,7 @@ function productDirName(product?: string | null): string {
 }
 
 function getKeyNotesPath(product?: string | null): string {
-  return path.join(DOCS_KEYINFO_DIR, productDirName(product), 'keynotes.json')
+  return path.join(WS.docsKeyinfoDir, productDirName(product), 'keynotes.json')
 }
 
 function newKeyNoteId(): string {
@@ -2164,8 +2125,8 @@ let keyNoteMigratedFor = ''
 
 function migrateLegacyRelations(): { products: string[]; notes: number } {
   const result = { products: [] as string[], notes: 0 }
-  if (keyNoteMigratedFor === DOCS_KEYINFO_DIR) return result
-  keyNoteMigratedFor = DOCS_KEYINFO_DIR
+  if (keyNoteMigratedFor === WS.docsKeyinfoDir) return result
+  keyNoteMigratedFor = WS.docsKeyinfoDir
 
   const groups = loadKeyinfoRelations() as any[]
   if (!Array.isArray(groups) || groups.length === 0) return result
@@ -2194,8 +2155,8 @@ function migrateLegacyRelations(): { products: string[]; notes: number } {
 
   // 원본 백업 (이미 있으면 그대로 둔다)
   try {
-    const backup = path.join(path.dirname(KEYINFO_RELATIONS_PATH), 'relations.legacy.json')
-    if (!fs.existsSync(backup)) fs.copyFileSync(KEYINFO_RELATIONS_PATH, backup)
+    const backup = path.join(path.dirname(WS.keyinfoRelationsPath), 'relations.legacy.json')
+    if (!fs.existsSync(backup)) fs.copyFileSync(WS.keyinfoRelationsPath, backup)
   } catch { /* 백업하지 못해도 원본은 그대로 남는다. */ }
 
   for (const [product, notes] of byProduct) {
@@ -2346,12 +2307,12 @@ function readCedDirConfig(): string | null {
 }
 
 function cedBaseDir(): string {
-  return readCedDirConfig() ?? path.join(DATA_ROOT, 'CED')
+  return readCedDirConfig() ?? path.join(WS.root, 'CED')
 }
 
 ipcMain.handle('ced:getDir', () => {
   const configured = readCedDirConfig()
-  return { path: configured ?? path.join(DATA_ROOT, 'CED'), defaultPath: path.join(DATA_ROOT, 'CED'), isDefault: configured === null }
+  return { path: configured ?? path.join(WS.root, 'CED'), defaultPath: path.join(WS.root, 'CED'), isDefault: configured === null }
 })
 
 ipcMain.handle('ced:pickDir', async () => {
@@ -2364,7 +2325,7 @@ ipcMain.handle('ced:setDir', (_event, dir: string | null) => {
   try {
     if (dir === null) {
       fs.rmSync(CED_CONFIG_PATH, { force: true })
-      return { ok: true as const, path: path.join(DATA_ROOT, 'CED') }
+      return { ok: true as const, path: path.join(WS.root, 'CED') }
     }
     if (typeof dir !== 'string' || !path.isAbsolute(dir.trim())) {
       return { ok: false as const, message: '폴더 경로가 올바르지 않습니다.' }
