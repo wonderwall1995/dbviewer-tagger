@@ -13,3 +13,6 @@ backups/
 # *.local
 .DS_Store
 Thumbs.db
+
+# 다른 도구(GPT)가 작업을 평가하려고 만드는 보고서. 커밋하지 않는다.
+report.html
