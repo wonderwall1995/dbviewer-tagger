@@ -6,6 +6,9 @@ packages:
 # shamefullyHoist: 모든 의존성을 루트 node_modules로 끌어올린다. 데스크톱 설치본(electron-builder)이 하위 의존성까지 찾게 하려는 것이다.
 shamefullyHoist: true
 autoInstallPeers: true
+# pnpm run 전에 자동으로 설치하지 않는다. 서버에서 pnpm server:up을 칠 때 Web에 필요 없는 패키지(Electron 등)까지 깔리지 않게 한다.
+# 설치는 pnpm install(개발 PC) 또는 deploy/server-up.sh(서버, Web에 필요한 것만)가 한다.
+verifyDepsBeforeRun: false
 
 allowBuilds:
   cpu-features: true

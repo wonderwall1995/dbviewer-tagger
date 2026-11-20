@@ -26,7 +26,11 @@
     "build:web": "pnpm run build:vite && pnpm run build:server",
     "build:core": "pnpm --filter @tagger/core build",
     "web:admin": "node apps/server/dist/admin.js",
-    "bundle:server": "pnpm run build:core && pnpm --filter @tagger/server run bundle"
+    "bundle:server": "pnpm run build:core && pnpm --filter @tagger/server run bundle",
+    "server:setup": "bash deploy/setup-server.sh",
+    "server:up": "bash deploy/server-up.sh",
+    "server:rollback": "bash deploy/server-up.sh --rollback",
+    "server:code": "bash deploy/tagger-admin.sh"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

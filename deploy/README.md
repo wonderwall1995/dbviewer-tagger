@@ -2,10 +2,23 @@
 
 DBViewer-tagger의 Web을 서버 한 대(Ubuntu, Nginx, Node 22)에 올리는 방법입니다. 데스크톱 설치본은 이 문서와 상관없습니다 (`pnpm dist:win`, `pnpm dist:mac`).
 
-- 서버에서 스크립트 하나(`deploy/server-up.sh`)로 배포합니다. GitHub Actions와 Release는 쓰지 않습니다.
+- 서버에서 명령 하나(`pnpm server:up` = `deploy/server-up.sh`)로 배포합니다. GitHub Actions와 Release는 쓰지 않습니다.
 - **main에 병합된 커밋만** 배포됩니다. 브랜치는 PR로 main에 병합하고, 병합 전에 개발 PC에서 `pnpm test`를 돌립니다. (서버는 시험을 돌리지 않고 빌드와 타입 검사만 합니다)
 - 이 저장소는 공개입니다. 서버 주소, 도메인, 키는 이 저장소에 쓰지 않습니다.
 - Web은 **체험판**입니다. 면접관은 공용 입장 코드로 들어오고, 작업은 24시간 쓰지 않거나 서비스를 다시 시작하면 지워집니다.
+
+## 명령 (서버에서, 저장소 폴더 안에서)
+
+| 명령 | 같은 스크립트 | 하는 일 |
+|---|---|---|
+| `pnpm server:setup <도메인>` | `deploy/setup-server.sh` | 처음 한 번: 전용 사용자, 폴더, 서비스, Nginx 사이트 |
+| `pnpm server:up` | `deploy/server-up.sh` | main을 받아 빌드하고 배포 (응답 없으면 자동 되돌림) |
+| `pnpm server:up <커밋>` | | main에 들어 있는 그 커밋으로 배포 |
+| `pnpm server:rollback` | `deploy/server-up.sh --rollback` | 빌드 없이 바로 전 버전으로 |
+| `pnpm server:code <set-code\|status\|revoke>` | `deploy/tagger-admin.sh` | 입장 코드 관리 |
+
+- 처음 `pnpm`을 실행하면 corepack이 pnpm 12를 내려받을지 묻습니다. `Y`를 누릅니다. (묻지 않게 하려면 `export COREPACK_ENABLE_DOWNLOAD_PROMPT=0`)
+- `pnpm` 명령은 실행 전에 패키지를 자동으로 설치하지 않습니다 (`pnpm-workspace.yaml`의 `verifyDepsBeforeRun: false`). 서버에는 `server:up`이 Web에 필요한 패키지만 설치합니다.
 
 ## 서버에 놓이는 것
 
@@ -33,15 +46,15 @@ DBViewer-tagger의 Web을 서버 한 대(Ubuntu, Nginx, Node 22)에 올리는 �
    ```
 3. 설치 자리를 만듭니다. (전용 사용자, 폴더, 서비스, Nginx 사이트)
    ```bash
-   deploy/setup-server.sh <도메인>
+   pnpm server:setup <도메인>
    ```
 4. 첫 배포를 합니다.
    ```bash
-   deploy/server-up.sh
+   pnpm server:up
    ```
 5. 입장 코드를 만듭니다. 코드는 이때 **한 번만** 보입니다. 면접관에게 이 코드를 건넵니다.
    ```bash
-   deploy/tagger-admin.sh set-code          # 기본 60일
+   pnpm server:code set-code              # 기본 60일
    ```
 6. HTTPS를 붙입니다. "HTTP를 HTTPS로 돌려보낼지" 물으면 돌려보내는 쪽을 고릅니다. 운영 모드의 쿠키는 HTTPS에서만 보내지므로, **HTTPS를 붙이기 전에는 입장이 되지 않습니다.**
    ```bash
@@ -52,7 +65,7 @@ DBViewer-tagger의 Web을 서버 한 대(Ubuntu, Nginx, Node 22)에 올리는 �
 ## 배포할 때마다
 
 ```bash
-cd ~/projects/tagger && deploy/server-up.sh
+cd ~/projects/tagger && pnpm server:up
 ```
 
 1. main을 받습니다.
@@ -66,9 +79,9 @@ cd ~/projects/tagger && deploy/server-up.sh
 ## 되돌리기
 
 ```bash
-deploy/server-up.sh --rollback                   # 빌드 없이 바로 전 버전으로
+pnpm server:rollback                             # 빌드 없이 바로 전 버전으로
 sudo cat /var/lib/tagger/deploy-history.log      # 배포에 성공한 커밋 목록
-deploy/server-up.sh <커밋>                        # 그 커밋으로 다시 빌드해 배포 (main에 들어 있는 커밋만)
+pnpm server:up <커밋>                            # 그 커밋으로 다시 빌드해 배포 (main에 들어 있는 커밋만)
 ```
 
 서버에는 최근 버전 몇 개만 남깁니다. 다음에 인자 없이 실행하면 다시 main의 최신 커밋을 배포합니다.
@@ -76,9 +89,9 @@ deploy/server-up.sh <커밋>                        # 그 커밋으로 다시 �
 ## 입장 코드
 
 ```bash
-deploy/tagger-admin.sh status                   # 있는지, 언제 만료되는지
-deploy/tagger-admin.sh set-code --days 30       # 새 코드 (이전 코드는 바로 못 씀)
-deploy/tagger-admin.sh revoke                   # 새 입장을 막음
+pnpm server:code status                       # 있는지, 언제 만료되는지
+pnpm server:code set-code --days 30           # 새 코드 (이전 코드는 바로 못 씀)
+pnpm server:code revoke                       # 새 입장을 막음
 ```
 
 서비스를 다시 시작할 필요는 없습니다. 코드를 바꾸거나 지워도 **이미 들어와 있는 사람의 세션은 끝나지 않습니다.** 바로 내보내야 하면 `sudo systemctl restart tagger-api`로 모든 세션을 끝냅니다.
