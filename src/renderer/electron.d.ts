@@ -65,7 +65,7 @@ declare global {
     hermesVaultTest: () => Promise<{ ok: boolean; message: string }>
     hermesVaultList: () => Promise<{ ok: true; tree: Array<{ name: string; children: string[] }> } | { ok: false; message: string }>
     cedSend: (product: string | null) => Promise<
-      | { ok: true; dir: string; skippedDrafts: number; noNotes: boolean; written: string[]; updated: string[]; unchanged: string[]; conflicts: string[]; leftover: string[] }
+      | { ok: true; dir: string; skippedDrafts: number; noNotes: boolean; written: string[]; updated: string[]; unchanged: string[]; overwritten: string[]; leftover: string[] }
       | { ok: false; message: string; dir: string }
     >
     hermesGetSessions: () => Promise<{ object: string; data: HermesSession[] }>

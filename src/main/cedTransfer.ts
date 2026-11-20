@@ -42,7 +42,7 @@ export function createCedSender(deps: Dependencies) {
     try {
       local = deps.generate(product)
       const docs = local.files.filter(f => f.toLowerCase().endsWith('.md'))
-      const base = { dir: local.dir, skippedDrafts: local.skippedDrafts, written: [] as string[], updated: [] as string[], unchanged: [] as string[], conflicts: [] as string[], leftover: [] as string[] }
+      const base = { dir: local.dir, skippedDrafts: local.skippedDrafts, written: [] as string[], updated: [] as string[], unchanged: [] as string[], overwritten: [] as string[], leftover: [] as string[] }
       log('local.generated', { documents: docs.length, skippedDrafts: local.skippedDrafts })
       if (docs.length <= 1) {
         log('transfer.completed', { noNotes: true, durationMs: Date.now() - started })
@@ -89,7 +89,7 @@ export function createCedSender(deps: Dependencies) {
         const digest = hash(buf)
         let existing: Buffer | null = null
         try { existing = await ops.readFile(remoteJoin(remoteDir, name)) } catch (error) { if (!notFound(error)) throw error }
-        let outcome: 'written' | 'updated' | 'unchanged' | 'conflicts'
+        let outcome: 'written' | 'updated' | 'unchanged' | 'overwritten'
         if (existing === null) {
           await put(name, buf); outcome = 'written'; nextState[name] = digest
         } else if (hash(existing) === digest) {
@@ -97,8 +97,8 @@ export function createCedSender(deps: Dependencies) {
         } else if (state[name] && state[name] === hash(existing)) {
           await put(name, buf); outcome = 'updated'; nextState[name] = digest
         } else {
-          outcome = 'conflicts'
-          if (state[name]) nextState[name] = state[name]
+          // 볼트에서 사람이 고친 문서이다. 이 도구의 내용이 기준이므로 덮어쓰고, 덮어쓴 목록으로 알린다.
+          await put(name, buf); outcome = 'overwritten'; nextState[name] = digest
         }
         base[outcome].push(name)
         log(`file.${outcome}`, { file: name, bytes: buf.length, sha256: digest })
@@ -109,7 +109,7 @@ export function createCedSender(deps: Dependencies) {
       log('remote.state_saved')
       log('transfer.completed', {
         noNotes: false, written: base.written.length, updated: base.updated.length,
-        unchanged: base.unchanged.length, conflicts: base.conflicts.length,
+        unchanged: base.unchanged.length, overwritten: base.overwritten.length,
         leftover: base.leftover.length, durationMs: Date.now() - started,
       })
       return { ok: true as const, ...base, noNotes: false }

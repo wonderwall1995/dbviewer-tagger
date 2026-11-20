@@ -620,7 +620,7 @@ export function KeyinfoModal({
           {/* CED Local 저장: 저장 폴더/<제품>/ 에 쓴다. 저장 폴더는 톱니에서 정한다. */}
           <CedSaveButton product={localProduct} />
           {/* 제품 맥락 문서 전송: 지금 고른 제품의 확인된 Key 노트로 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트로 보낸다.
-              볼트 경로와 SSH는 Hermes 설정에서 정한다. 볼트에서 사람이 고친 파일은 덮어쓰지 않는다. */}
+              볼트 경로와 SSH는 Hermes 설정에서 정한다. 이 도구의 내용이 기준이다. 볼트에서 사람이 고친 파일도 덮어쓰고 경고로 알린다. */}
           {caps.hermes && <button
             className={`keyinfo-export-btn${sending ? ' keyinfo-export-btn--busy' : ''}`} {...uiId('KI.export')}
             disabled={sending}
@@ -642,8 +642,8 @@ export function KeyinfoModal({
                 }
                 const sent = r.written.length + r.updated.length
                 toast.success(`볼트로 보냈어요: 새 문서 ${r.written.length}개, 갱신 ${r.updated.length}개, 변경 없음 ${r.unchanged.length}개${sent === 0 ? ' (보낼 변경이 없어요)' : ''}`, { duration: 6000 })
-                if (r.conflicts.length > 0) {
-                  toast.warning(`볼트에서 고친 문서는 덮어쓰지 않았어요: ${r.conflicts.join(', ')}`, { duration: 9000 })
+                if (r.overwritten.length > 0) {
+                  toast.warning(`볼트에서 고친 문서를 이 도구의 내용으로 덮어썼어요: ${r.overwritten.join(', ')}`, { duration: 9000 })
                 }
                 if (r.leftover.length > 0) {
                   toast.info(`앱에서 빠졌지만 볼트에 남겨 둔 문서: ${r.leftover.join(', ')}`, { duration: 9000 })

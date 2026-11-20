@@ -34,7 +34,7 @@ function fixture(t) {
   return { root, dir, files, ops, deps, logs, closed: () => closed }
 }
 
-test('resend preserves remote edits and records distinct requests', async t => {
+test('resend overwrites remote edits with the app content and records distinct requests', async t => {
   const f = fixture(t)
   const send = createCedSender(f.deps)
   assert.deepEqual((await send(null, 'sample')).written, ['key.md', 'sample.md'])
@@ -43,12 +43,15 @@ test('resend preserves remote edits and records distinct requests', async t => {
   f.files.set(remoteKey, Buffer.from('# Edited in vault\n'))
   fs.writeFileSync(path.join(f.dir, 'key.md'), '# Changed in app\n')
   const result = await send(null, 'sample')
-  assert.deepEqual(result.conflicts, ['key.md'])
-  assert.equal(f.files.get(remoteKey).toString(), '# Edited in vault\n')
-  assert.equal(f.closed(), 3)
+  // 이 도구의 내용이 기준이다. 볼트에서 고친 문서도 덮어쓰고, 덮어쓴 목록으로 알린다.
+  assert.deepEqual(result.overwritten, ['key.md'])
+  assert.equal(f.files.get(remoteKey).toString(), '# Changed in app\n')
+  // 덮어쓴 뒤 다시 보내면 변경 없음이다.
+  assert.deepEqual((await send(null, 'sample')).unchanged, ['key.md', 'sample.md'])
+  assert.equal(f.closed(), 4)
   const logs = f.logs()
-  assert.equal(new Set(logs.map(x => x.requestId)).size, 3)
-  assert.equal(logs.filter(x => x.event === 'transfer.completed').length, 3)
+  assert.equal(new Set(logs.map(x => x.requestId)).size, 4)
+  assert.equal(logs.filter(x => x.event === 'transfer.completed').length, 4)
   assert(!JSON.stringify(logs).includes(f.root))
   assert(!JSON.stringify(logs).includes('Edited in vault'))
   for (const id of new Set(logs.map(x => x.requestId))) {
