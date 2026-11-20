@@ -193,3 +193,11 @@
 | D5 | 서버 울타리 | ✅ systemd 견본에 넣음 (전용 사용자, ProtectHome, IPAddressDeny, MemoryMax). 실제 서버 확인 필요 |
 | D6 | 견본 데이터 | ✅ 웹데모 CSV 9개(가짜, users는 admin 행 없음 → 6명 모두), 전화번호 가짜로 바꿈, rwa Keyinfo·Key 노트·기본 시트 (User, 2026-11-20) |
 | D7~D9 | 이름·하위 도메인 등 | Stage D |
+
+## 6. 검토 보고서 대응 (2026-11-20, report.html @03b7284, User: "전부 한번에")
+
+- 보고서 14개 지적(N01–N14) 모두 코드와 대조해 타당 확인 → 전부 처리. 커밋 e09efe0(서버·DB), ee8c7c8(배포·문서).
+- 주요 판단 (LLM): N05 슬롯에 `ssl` 선택(기본 꺼짐, 켜면 rejectUnauthorized + servername=원래 호스트). N06 중단 시 이미 다 받은 테이블은 남김(예전엔 지웠는데 덮인 뒤라 둘 다 잃었음). N08 메타 행은 `DB-downloads/` 아래 파일에서만 찾음(파서 캐시 키 v2), NULL=빈 칸 유지, 수식 접두사 그대로(README에 명시). N09 세션 줄 2개(files, db), 전체 DB 작업 4, SSE 3, 화면 읽기 30MB. N10 Nginx 내보내기만 30분 + 연결 끊기면 exportAborted. N12 /opt/tagger/releases/<rev> + current 링크, /var/www/tagger-releases/<rev> + /var/www/tagger 링크, 실패 시 자동 되돌림, --rollback, main 조상 검사.
+- 시험: `scripts/review-fixes.test.cjs` 12개(보고서 재현 그대로) → 전체 102/102. N01 시험은 처음에 설계가 틀렸음(작은 저장으로는 사전 검사 때문에 한도를 넘는 상태가 안 생김 → 백업 반복으로 바꿈).
+- 남은 것: 6201 포트 번호 바꾸기, 이력 정리(나) 여부 = User 결정 대기. 의존성 업그레이드, 내보내기 비동기 작업화, NULL 표기 = llms.md 백로그. 실제 EC2 확인은 deploy/README.md "첫 배포 확인 목록".
+- 셸 주의(또): node -e 안의 정규식·역슬래시는 거의 늘 깨짐 → 정규식 편집은 Edit 도구로만.
