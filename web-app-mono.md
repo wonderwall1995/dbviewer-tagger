@@ -71,8 +71,8 @@
 - [x] B5. 자원 상한: 업로드 크기, 파일 통째 읽기(`readFileSync` 21곳) 중 큰 CSV 경로는 스트리밍 또는 크기 거절, 세션별 디스크 상한 검사 지점.
 - [x] B6. 세션별 작업 폴더 만들기·지우기 함수 (견본 폴더 복사, 수명 지나면 삭제). 입장 방식(초대 코드)은 Stage D — 지금은 함수와 시험만.
 - [x] B7. 오류·로그에 접속 정보, 절대 경로, 본문, 오류 원문을 남기지 않음 (`cedTransfer.ts` 규칙과 같게).
-- [ ] B8. 운영 설정 검사: 필수 환경 변수 없으면 시작 거부, 개발 모드로 공개 실행 거부.
-- [ ] B9. Stage B 확인: 🔒 시험 묶음 — 다른 세션 폴더 읽기, `../`, 절대 경로, `127.0.0.1`/메타데이터 DB 연결, 막힌 경로 요청이 모두 실패.
+- [x] B8. 운영 설정 검사: 필수 환경 변수 없으면 시작 거부, 개발 모드로 공개 실행 거부.
+- [x] B9. Stage B 확인: 🔒 시험 묶음 — 다른 세션 폴더 읽기, `../`, 절대 경로, `127.0.0.1`/메타데이터 DB 연결, 막힌 경로 요청이 모두 실패.
 
 ### 3-C. 기록 옮기기 (Stage B 뒤)
 
@@ -127,6 +127,8 @@
 - 2026-11-20 B3: `core/netguard.ts` (`isPublicAddress` IPv4 14개 범위 + IPv6 ::1/::/fc00::/7/fe80::/10/ff00::/8/::ffff:v4/64:ff9b/2001:db8, `isAllowedDbPort` = 5432 또는 1024~65535 (LLM 판단: 22·80·443 같은 서비스 두드리기 막기), `resolvePublicHost` = lookup all → 하나라도 비공인이면 거절 → 첫 주소 반환). `Ctx.dbGuard?` → `withDb`가 연결 직전에 부르고 **검사한 IP로 접속**(DNS 바꿔치기 대비). Web 옵션: connectionTimeoutMillis 8s, statement_timeout 30s, query_timeout 35s, `-c default_transaction_read_only=on`. 데스크톱은 dbGuard 없음 = 그대로. 시험 `scripts/security-db.test.cjs` 5개 (Web 서버 끝까지 127.0.0.1·localhost 거절 포함) → 60/60 → 남은 점: 호스트를 IP로 바꿔 접속하면 DB가 TLS(SNI)를 요구할 때 문제될 수 있음 — 지금은 ssl 옵션 자체를 안 씀. 면접관 DB가 TLS 필수면 Stage D에서 ssl+servername 처리 → 다음: B4.
 
 - 2026-11-20 B5·B6·B7: 서버 옵션 maxSessions(10, 넘으면 503), sessionDiskBytes(200MB), sessionIdleMs(24h), sweepIntervalMs(10분), sampleDir(새 세션에 cpSync). 용량: `ensureRoom` = 추정치로 넘치면 dirSize로 실제 재고 그래도 넘치면 507. 적용 = 업로드(content-length 먼저, 받는 상한 = min(업로드 상한, 남은 용량)), DB 내보내기 청크(`ctx.reserveDisk`), 64KB 넘는 call 본문. 작은 요청(지우기·목록)은 차도 됨. 서버 시작 때 `<dataDir>/sessions` 비움(세션은 메모리라 주인 없음). `publicError`: dataDir 문자열 + 따옴표 안 절대 경로를 가림. 잘못된 JSON → 400. httpError(status, expose)로 사용자에게 보여 줄 문구만 내보냄. 시험 `scripts/security-limits.test.cjs` 8개 → 68/68 → 남은 점: ① 세션당 메모리(sampleCache 최대 32MB 읽기, CSV 파싱)는 상한 없음 → Stage D systemd MemoryMax로 가둠 + maxSessions로 간접 제한. ② 세션을 누구나 만듦(입장 방식 Stage D) → maxSessions를 봇이 채우면 면접관이 못 들어옴 = 초대 코드가 필요한 이유. User에게 알릴 것 → 다음: B8.
+
+- 2026-11-20 B8·B9 (**Stage B 끝**): `src/server/config.ts` `loadConfig(env)` — TAGGER_PORT(1024~65535)·DATA_DIR(운영은 절대 경로 필수)·SAMPLE_DIR·MAX_SESSIONS·SESSION_MB·SESSION_IDLE_HOURS·UPLOAD_MB, 범위 밖이면 throw → index.ts가 "설정 오류" 찍고 exit 1. NODE_ENV=production이면 쿠키 Secure. 모든 JSON 응답에 Cache-Control: no-store, X-Content-Type-Options: nosniff. B9: 교차 세션 공격(A가 B의 경로로 readFile·csv:stats·eraseColumn·deleteDownload) 시험 추가. 시험 묶음: security-paths(6), security-db(5), security-limits(8), server-config(5), server(8) → 전체 74/74 → 다음: A11 (User 지시: B 다음 A11, 그 뒤 C).
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 

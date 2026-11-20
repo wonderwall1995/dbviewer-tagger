@@ -108,3 +108,19 @@ test('ced:read는 문서 내용만 돌려주고 서버 폴더 경로는 돌려�
   assert.ok(!JSON.stringify(r.body).includes(JSON.stringify(dataDir).slice(1, -1)))
   assert.ok(!JSON.stringify(r.body).includes('sessions'))
 })
+
+test('면접관 A는 면접관 B의 파일 경로를 알아도 읽거나 지우거나 고치지 못한다', async (t) => {
+  const { client } = await start(t)
+  const a = client()
+  const b = client()
+  const up = await b.upload('b-secret.csv', 'id\n42\n')
+  const bPath = up.body.value.path
+  const read = await a.call('local:readFile', bPath)
+  assert.equal(read.body.ok, false)
+  assert.ok(!JSON.stringify(read.body).includes('42'))
+  assert.equal((await a.call('csv:stats', bPath)).body.value, null)
+  assert.equal((await a.call('local:eraseColumn', bPath, 'id')).body.ok, false)
+  await a.call('local:deleteDownload', bPath)
+  // B의 파일은 그대로다
+  assert.equal((await b.call('local:readFile', bPath)).body.value, 'id\n42\n')
+})

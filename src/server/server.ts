@@ -21,6 +21,8 @@ import { isAllowedDbPort, resolvePublicHost } from '../main/core/netguard'
 // 사용자(세션)마다 작업 폴더와 메모리 상태를 따로 둔다. 데스크톱 전용 기능(SSH, Hermes, 폴더 대화상자)은 없다.
 
 export interface ServerOptions {
+  // true면 세션 쿠키에 Secure를 붙인다 (HTTPS에서만 보냄). 운영(Nginx + HTTPS 뒤)에서 켠다.
+  secureCookie?: boolean
   // 세션 작업 폴더들을 둘 폴더. 세션마다 <dataDir>/sessions/<id>/ 를 쓴다. 서버를 시작하면 sessions/ 를 비운다.
   dataDir: string
   // 새 세션을 시작할 때 복사해 넣을 견본 작업 폴더 (없으면 빈 폴더로 시작)
@@ -150,7 +152,7 @@ export function createTaggerServer(opts: ServerOptions) {
       return found
     }
     const created = newSession()
-    res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${created.id}; HttpOnly; SameSite=Lax; Path=/`)
+    res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${created.id}; HttpOnly; SameSite=Lax; Path=/${opts.secureCookie ? '; Secure' : ''}`)
     return created
   }
 
@@ -266,7 +268,13 @@ export async function webDbGuard(host: string, port: number) {
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown) {
   const data = JSON.stringify(body)
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(data) })
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': Buffer.byteLength(data),
+    // 면접관의 작업 내용이 캐시에 남지 않게 하고, 응답 형식을 브라우저가 추측하지 않게 한다.
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+  })
   res.end(data)
 }
 
