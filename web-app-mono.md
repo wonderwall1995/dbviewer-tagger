@@ -50,8 +50,8 @@
 - [x] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
 - [x] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
 - [x] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
-- [ ] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
-- [ ] A8. main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
+- [x] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
+- [~] A8. (코드 끝. 데스크톱 수동 점검은 User에게 요청함) main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
 - [ ] A9. Web 서버 뼈대 (Express. D2는 이 초안으로 진행, Stage D에서 다시 봄): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
 - [ ] A10. 화면 쪽 `httpApi` + Web용 Vite 빌드 진입점.
 - [ ] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
@@ -107,6 +107,8 @@
 - 2026-11-20 A7-4(db): `core/db.ts` = 슬롯 타입·`normalizeSlots`·`safeSegment` + db:listSlots/loadSlot/saveSlot/testConnection/listSchemas/listTables/abortExport/exportTables/exportSchemas (9채널). `Ctx`에 `slots`(저장소)와 `tunnel?`(SSH) 추가. 데스크톱은 암호화 파일 + ensureTunnel/closeTunnel, Web은 메모리 저장소 + 터널 없음 → SSH 슬롯은 "이 환경에서는 SSH 터널을 쓸 수 없습니다". 진행률은 `ctx.emit`, 중단 표시는 `ctx.state.exportAborted`. main.ts에 남은 것: 암호화 파일 읽기/쓰기, SSH 터널(Hermes도 씀), db:closeTunnel, ssh:pickPemFile. 시험 5개 → 39/39 → 알아낸 것: B3(DB 주소 검사)는 `withDb` 한 곳에 넣으면 testConnection·조회·내보내기 모두에 걸림. 연결 직전에 `ctx.connectGuard?(host, port)` 같은 부품으로 두면 데스크톱은 없음, Web은 주소 검사 → 다음: A7-5 (Keyinfo·연관·Key 노트·자동 후보).
 
 - 2026-11-20 A7-5(keyinfo): `core/keyinfo.ts` = Keyinfo·백업·연관 그룹·Key 노트·CED 생성·자동 후보·표본 행 (20채널). `Ctx.cedDir()` 추가 (데스크톱 = 톱니 설정, Web = 작업 폴더 CED/). `keyNoteMigratedFor`, `sampleCache` → `ctx.state`. 진행률 `sender`는 `{ send: ctx.emit }`. 데스크톱 전용 CED 폴더 설정(ced:getDir/pickDir/setDir/reveal)은 main.ts에 남김. main.ts 2,800줄 → 795줄. 시험 2개 → 41/41 → 알아낸 것: ① `ced-index.test.cjs`는 가짜 electron으로 main.js를 불러 `event` 없이 핸들러를 부름 → `registerCore`가 `event.sender`에서 죽음 → `event?.sender`로 고침. 이 시험은 main 연결까지 확인해 줘서 유용. ② `keynote:sampleRows`, `keyinfo:reindex/index`가 화면에서 받은 파일 경로를 그대로 읽음 → B1 목록에 추가 → 다음: A7-6 (Hermes·CED 보내기는 데스크톱 전용이라 main.ts에 그대로 둠 → 사실상 A7 끝, A8 확인).
+
+- 2026-11-20 A7·A8 마감: core에 electron/ssh2/child_process import 없음 확인. main.ts에 남은 22채널 = 모두 데스크톱 전용 (dialog:openCsv, local:importFile, app:openGithub, workspace:*, local:openDownloads, hermes:*, ced:send, ssh:pickPemFile, db:closeTunnel, ced:getDir/pickDir/setDir/reveal). core 57채널. **리팩터링이 크므로 Web 서버(A9) 전에 User에게 데스크톱 수동 점검(앱 실행, CSV 열기, DB 연결, Key 노트, CED 저장, 백업)을 부탁함** → 다음: User 점검 결과 확인 뒤 A9.
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
