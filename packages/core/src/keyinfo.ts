@@ -1,9 +1,9 @@
 import path from 'path'
 import fs from 'fs'
 import Papa from 'papaparse'
-import { writeCedIndex } from '../cedIndex'
-import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from '../workspaceBackup'
-import type { BackupMeta } from '../workspaceBackup'
+import { writeCedIndex } from './cedIndex'
+import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from './workspaceBackup'
+import type { BackupMeta } from './workspaceBackup'
 import { checkName, tryUserPath } from './context'
 import type { Ctx, Handlers } from './context'
 

@@ -3,9 +3,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { makeWorkspace } = require('../dist/main/core/workspace.js')
-const { makeSessionState, resolveInside, userPath } = require('../dist/main/core/context.js')
-const { localHandlers: h } = require('../dist/main/core/local.js')
+const { makeWorkspace } = require('../packages/core/dist/workspace.js')
+const { makeSessionState, resolveInside, userPath } = require('../packages/core/dist/context.js')
+const { localHandlers: h } = require('../packages/core/dist/local.js')
 
 function fixture(t, allowOutsidePaths = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'core-local-'))

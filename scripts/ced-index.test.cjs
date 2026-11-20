@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 const Module = require('node:module')
-const { writeCedIndex } = require('../dist/main/cedIndex.js')
+const { writeCedIndex } = require('../packages/core/dist/cedIndex.js')
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ced-index-'))

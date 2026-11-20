@@ -4,12 +4,12 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { makeWorkspace } = require('../dist/main/core/workspace.js')
-const { makeSessionState, checkName } = require('../dist/main/core/context.js')
-const { localHandlers } = require('../dist/main/core/local.js')
-const { lorebookHandlers } = require('../dist/main/core/lorebook.js')
-const { keyinfoHandlers } = require('../dist/main/core/keyinfo.js')
-const { quoteIdent } = require('../dist/main/core/db.js')
+const { makeWorkspace } = require('../packages/core/dist/workspace.js')
+const { makeSessionState, checkName } = require('../packages/core/dist/context.js')
+const { localHandlers } = require('../packages/core/dist/local.js')
+const { lorebookHandlers } = require('../packages/core/dist/lorebook.js')
+const { keyinfoHandlers } = require('../packages/core/dist/keyinfo.js')
+const { quoteIdent } = require('../packages/core/dist/db.js')
 
 function fixture(t) {
   // 작업 폴더를 한 단계 아래에 두고, 바깥 폴더(parent)에 무엇이 생기는지 본다.

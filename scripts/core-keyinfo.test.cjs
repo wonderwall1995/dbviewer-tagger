@@ -3,9 +3,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { makeWorkspace } = require('../dist/main/core/workspace.js')
-const { makeSessionState } = require('../dist/main/core/context.js')
-const { keyinfoHandlers: h } = require('../dist/main/core/keyinfo.js')
+const { makeWorkspace } = require('../packages/core/dist/workspace.js')
+const { makeSessionState } = require('../packages/core/dist/context.js')
+const { keyinfoHandlers: h } = require('../packages/core/dist/keyinfo.js')
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'core-ki-'))

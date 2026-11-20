@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { isPublicAddress, isAllowedDbPort, resolvePublicHost } = require('../dist/main/core/netguard.js')
+const { isPublicAddress, isAllowedDbPort, resolvePublicHost } = require('../packages/core/dist/netguard.js')
 const { createTaggerServer, webDbGuard } = require('../dist/server/server/server.js')
 
 test('공인 주소가 아닌 IPv4·IPv6는 막는다', () => {

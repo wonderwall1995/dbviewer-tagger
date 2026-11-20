@@ -3,9 +3,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { makeWorkspace } = require('../dist/main/core/workspace.js')
-const { makeSessionState } = require('../dist/main/core/context.js')
-const { dbHandlers: h, normalizeSlots } = require('../dist/main/core/db.js')
+const { makeWorkspace } = require('../packages/core/dist/workspace.js')
+const { makeSessionState } = require('../packages/core/dist/context.js')
+const { dbHandlers: h, normalizeSlots } = require('../packages/core/dist/db.js')
 
 // Web처럼 슬롯을 메모리에만 두는 ctx
 function memoryCtx(t) {

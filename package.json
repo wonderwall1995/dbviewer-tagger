@@ -9,17 +9,18 @@
     "dev:electron": "wait-on tcp:6200 && tsc -p tsconfig.main.json && node scripts/dev-electron.js",
     "build": "pnpm run build:vite && pnpm run build:electron",
     "build:vite": "vite build",
-    "build:electron": "tsc -p tsconfig.main.json",
+    "build:electron": "pnpm run build:core && tsc -p tsconfig.main.json",
     "dist": "pnpm run build && electron-builder",
     "dist:mac": "pnpm run build && electron-builder --mac",
     "dist:win": "pnpm run build && electron-builder --win",
     "dist:linux": "pnpm run build && electron-builder --linux",
     "typecheck": "tsc --noEmit",
     "test": "pnpm run build:electron && pnpm run build:server && node --test scripts/*.test.cjs",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "pnpm run build:core && tsc -p tsconfig.server.json",
     "start:server": "node dist/server/server/index.js",
     "dev:web": "pnpm run build:server && concurrently \"node dist/server/server/index.js\" \"vite\"",
-    "build:web": "pnpm run build:vite && pnpm run build:server"
+    "build:web": "pnpm run build:vite && pnpm run build:server",
+    "build:core": "pnpm --filter @tagger/core build"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -52,7 +53,8 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "sonner": "^2.0.7",
-    "ssh2": "^1.17.0"
+    "ssh2": "^1.17.0",
+    "@tagger/core": "workspace:*"
   },
   "build": {
     "appId": "io.github.wonderwall1995.dbviewer-tagger",

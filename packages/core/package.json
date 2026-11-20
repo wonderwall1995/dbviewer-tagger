@@ -1,0 +1,24 @@
+{
+  "name": "@tagger/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron도 HTTP도 모르는 로직. 데스크톱(IPC)과 Web 서버(HTTP)가 같이 쓴다.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "pg": "^8.22.0",
+    "papaparse": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.20.0",
+    "@types/papaparse": "^5.3.14",
+    "typescript": "^5.4.0"
+  }
+}

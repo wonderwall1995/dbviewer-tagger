@@ -2,16 +2,8 @@ import http from 'http'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
-import { makeWorkspace } from '../main/core/workspace'
-import { makeSessionState } from '../main/core/context'
-import type { Ctx, Handlers } from '../main/core/context'
-import { localHandlers } from '../main/core/local'
-import { csvHandlers } from '../main/core/csv'
-import { lorebookHandlers } from '../main/core/lorebook'
-import { dbHandlers, normalizeSlots } from '../main/core/db'
-import type { DbSlots } from '../main/core/db'
-import { keyinfoHandlers } from '../main/core/keyinfo'
-import { isAllowedDbPort, resolvePublicHost } from '../main/core/netguard'
+import { makeWorkspace, makeSessionState, localHandlers, csvHandlers, lorebookHandlers, dbHandlers, normalizeSlots, keyinfoHandlers, isAllowedDbPort, resolvePublicHost } from '@tagger/core'
+import type { Ctx, Handlers, DbSlots } from '@tagger/core'
 
 // Web API 서버. 화면(httpApi)이 부르는 경로는 넷뿐이다.
 //   GET  /api/health          살아 있는지
