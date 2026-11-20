@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onKeyinfoProgress: (cb: (data: { done: number; total: number }) => void) => ipcRenderer.on('keyinfo:progress', (_e, d) => cb(d)),
   offKeyinfoProgress: () => ipcRenderer.removeAllListeners('keyinfo:progress'),
   cedGenerate: (product: string | null) => ipcRenderer.invoke('ced:generate', product),
+  cedRead: (product: string | null) => ipcRenderer.invoke('ced:read', product),
   cedGetDir: () => ipcRenderer.invoke('ced:getDir'),
   cedPickDir: () => ipcRenderer.invoke('ced:pickDir'),
   cedSetDir: (dir: string | null) => ipcRenderer.invoke('ced:setDir', dir),

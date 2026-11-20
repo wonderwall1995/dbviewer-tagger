@@ -94,3 +94,15 @@ test('진행률 알림은 그 세션의 SSE로만 간다', async (t) => {
   const { value } = await reader.read()
   assert.match(Buffer.from(value).toString(), /"channel":"db:exportProgress"/)
 })
+
+test('ced:read는 문서 내용만 돌려주고 서버 폴더 경로는 돌려주지 않는다', async (t) => {
+  const { client, dataDir } = await start(t)
+  const c = client()
+  const note = { id: 'n1', title: '회원 ID', definition: '정의', status: 'confirmed', body: '', keywords: [], valueMeanings: '', members: [], excluded: [] }
+  await c.call('keynote:save', 'shop', [note])
+  const r = await c.call('ced:read', 'shop')
+  assert.equal(r.body.ok, true)
+  assert.equal(r.body.value.folder, 'shop')
+  assert.deepEqual(r.body.value.files.map((f) => f.name).sort(), ['shop.md', '회원 ID.md'])
+  assert.ok(!JSON.stringify(r.body).includes(dataDir.replace(/\/g, '\\')))
+})

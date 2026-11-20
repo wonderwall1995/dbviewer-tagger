@@ -5295,6 +5295,25 @@ tbody tr.row-issue:hover { background: #f59e0b0e; }
 }
 .keyinfo-export-btn:hover { background: rgba(167,139,250,0.2); }
 .keyinfo-export-btn--busy, .keyinfo-export-btn:disabled { opacity: 0.6; cursor: default; }
+/* Web의 CED 미리보기 창: 왼쪽 문서 목록, 오른쪽 마크다운 원문 */
+.ced-preview-card { width: min(980px, calc(100vw - 60px)); height: min(680px, calc(100vh - 80px)); display: flex; flex-direction: column; }
+.ced-preview-body { flex: 1; min-height: 0; display: flex; }
+.ced-preview-list { width: 240px; margin: 0; padding: 8px; list-style: none; overflow-y: auto; border-right: 1px solid var(--border); }
+.ced-preview-item {
+  width: 100%; display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+  border: none; border-radius: 5px; background: none; color: var(--text-2);
+  font-family: var(--font-ui); font-size: 12px; text-align: left; cursor: pointer;
+}
+.ced-preview-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ced-preview-item:hover { background: var(--bg-3); color: var(--text); }
+.ced-preview-item--on { background: rgba(167,139,250,0.15); color: #c4b5fd; }
+.ced-preview-text {
+  flex: 1; margin: 0; padding: 14px 18px; overflow: auto;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text);
+  white-space: pre-wrap; word-break: break-word;
+}
+.ced-preview-count { margin-right: auto; color: var(--text-3); font-size: 12px; }
+
 /* CED 저장 폴더 설정(톱니): Keyinfo 창 머리글의 제목 오른쪽. 제목 글자(14px)에 맞춘 크기. */
 .keyinfo-title { display: inline-flex; align-items: center; }
 .ced-dir { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }

@@ -63,6 +63,7 @@ export const CHANNELS: Record<string, string> = {
   keyinfoSaveLayout: 'keyinfo:saveLayout',
   keyinfoIndex: 'keyinfo:index',
   cedGenerate: 'ced:generate',
+  cedRead: 'ced:read',
   cedGetDir: 'ced:getDir',
   cedPickDir: 'ced:pickDir',
   cedSetDir: 'ced:setDir',

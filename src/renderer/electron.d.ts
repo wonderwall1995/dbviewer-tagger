@@ -78,6 +78,8 @@ declare global {
     onKeyinfoProgress: (cb: (data: { done: number; total: number }) => void) => void
     offKeyinfoProgress: () => void
     cedGenerate: (product: string | null) => Promise<{ dir: string; files: string[]; skippedDrafts: number }>
+    // CED를 만들고 문서 내용을 돌려준다 (Web의 보기 + zip). folder는 제품 폴더 이름이다.
+    cedRead: (product: string | null) => Promise<{ folder: string; skippedDrafts: number; files: Array<{ name: string; content: string }> }>
     // CED 'Local 저장' 폴더. isDefault는 작업 폴더의 CED/를 쓰는 상태이다.
     cedGetDir: () => Promise<{ path: string; defaultPath: string; isDefault: boolean }>
     cedPickDir: () => Promise<string | null>

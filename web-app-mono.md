@@ -54,7 +54,7 @@
 - [~] A8. (코드 끝. 데스크톱 수동 점검은 User에게 요청함) main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
 - [x] A9. Web 서버 뼈대 (node:http): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
 - [x] A10. 화면 쪽 `httpApi` + Web용 Vite 빌드 진입점.
-- [ ] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
+- [x] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
 - [ ] A11. 모노레포 폴더 이동 (`apps/desktop`, `apps/server`, `packages/core|shared|ui`). 스크립트 `dev:desktop|web`, `build:desktop|web`. Web 설치 시 Electron 바이너리 생략.
 - [ ] A12. Stage A 확인: 데스크톱 수동 점검 + 내 PC Web 모드에서 견본 CSV 열기·Keyinfo·CED 생성.
 
@@ -115,6 +115,8 @@
 - 2026-11-20 A9: `src/server/server.ts`(`createTaggerServer`) + `index.ts`(127.0.0.1, TAGGER_PORT 기본 6201, 포트 쓰이면 멈춤, TAGGER_DATA_DIR 기본 local/web-data). 경로 4개: health, `POST /api/call/<채널>`({args}), `GET /api/events`(SSE, 세션별), `POST /api/upload?name=`(임시 파일 → rename, 크기 제한). 채널 표 = core 5개 표만 (hasOwnProperty로 `__proto__` 등 막음). 세션 = 쿠키 `tagger_sid`(HttpOnly, SameSite=Lax; Secure는 HTTPS 붙일 때) → `<dataDir>/sessions/<id>/`, 슬롯은 세션 메모리. `tsconfig.server.json` → `dist/server`. `pnpm build:server`, `pnpm start:server`. 시험 `scripts/server.test.cjs` 6개 → 47/47 → 알아낸 것: ① 413 때 `req.destroy()`하면 브라우저가 응답을 못 받음 → 응답 뒤에 닫기로 고침. ② **core 오류 메시지에 서버 절대 경로가 들어감** (fs의 ENOENT 메시지 등) → B7에서 Web 응답의 오류 문구를 거르기. ③ 잘못된 JSON 본문 → 지금 500 → 400으로 (B8). ④ 세션을 아무나 만들 수 있음 (입장 방식은 Stage D) — 지금은 개발용. 세션 수 상한·만료 없음 → B5/B6 → 다음: A10 (화면 httpApi).
 
 - 2026-11-20 A10: `src/renderer/platform/httpApi.ts` (`createHttpApi`: 일반 = POST /api/call, 진행률 = EventSource 하나를 채널별로, openCsv = 브라우저 파일 선택 + 업로드, importDroppedFile = 업로드, openGithub = 새 탭). `platform/channels.ts` = preload에서 뽑은 함수→채널 표 79개 + 드리프트 시험 `scripts/channels.test.cjs`. **`api.ts`는 실행 중에 고른다: `window.electronAPI` 있으면 데스크톱, 없으면 Web** → 화면 빌드 하나를 둘이 같이 씀 (Web 전용 Vite 진입점 불필요). caps도 같은 방식. vite.config에 `/api` → 127.0.0.1:6201 프록시. `pnpm dev:web`(서버 + vite), `pnpm build:web`. 48/48. 실제 확인: dev:web 띄워 localhost:6200 페이지, /api/health, local:load, db:listSlots 프록시 통과, hermes:loadConfig 거절 → 알아낸 것: Vite는 IPv6 localhost에만 붙음 (127.0.0.1로 물으면 응답 없음, 서버 배포와는 무관). 브라우저 화면 조작은 User 확인 필요 → 다음: A10b (Web CED 보기 + zip).
+
+- 2026-11-20 A10b: core `ced:read`(만들고 내용 반환, folder는 제품 폴더 이름만). 화면 `platform/zip.ts`(STORE zip, UTF-8 이름 플래그 0x800, 의존성 없음) + `CedPreviewModal`(왼쪽 목록·목차 맨 위, 오른쪽 마크다운 원문, zip 내려받기). Web의 Local 저장 = 미리보기 창. 데스크톱은 그대로. zip은 python zipfile로 CRC·한글 이름·내용 확인. 서버 시험에 경로 누출 없음 확인 추가 → 49/49 → 다음: A11 (모노레포 폴더 이동) 또는 A12. **판단: A11은 B 전에 할지 User에게 물을 것** (폴더 이동은 diff가 크고, B는 지금 구조에서도 가능).
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 

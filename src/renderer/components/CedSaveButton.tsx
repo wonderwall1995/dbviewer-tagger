@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Save, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import { uiId } from '../ui/uiId'
-import { api, caps } from '../api'
+import { api, caps, isDesktop } from '../api'
+import { CedPreviewModal } from './CedPreviewModal'
 
 // CED 'Local 저장' 버튼. Key 노트 창 제품 줄의 'Obsidian Vault 전송' 버튼 바로 왼쪽.
 // 지금 고른 제품의 확인된 Key 노트로 CED를 만들어 저장 폴더/<제품>/ 에 쓴다. Hermes로 보내지 않는다.
 export function CedSaveButton({ product }: { product: string | null }) {
   const [saving, setSaving] = useState(false)
+  // Web: 만든 문서를 보여 주는 창
+  const [preview, setPreview] = useState<{ folder: string; files: Array<{ name: string; content: string }> } | null>(null)
 
   const save = async () => {
     if (!product || product === '__null__') {
@@ -16,6 +19,13 @@ export function CedSaveButton({ product }: { product: string | null }) {
     }
     setSaving(true)
     try {
+      // Web은 서버 폴더에 저장하는 의미가 없으므로, 만든 문서를 화면에서 보여 주고 zip으로 내려받게 한다.
+      if (!isDesktop) {
+        const r = await api.cedRead(product)
+        if (r.files.length <= 1) toast.warning(`확인된 Key 노트가 없어요. 목차만 만들었어요.${r.skippedDrafts > 0 ? ` (초안 ${r.skippedDrafts}개는 빠짐)` : ''}`)
+        setPreview({ folder: r.folder, files: r.files })
+        return
+      }
       const r = await api.cedGenerate(product)
       const docs = r.files.length - 1 // 제품 목차 파일 1개를 뺀 Key 노트 문서 수
       const drafts = r.skippedDrafts > 0 ? ` (초안 ${r.skippedDrafts}개는 빠짐)` : ''
@@ -37,6 +47,8 @@ export function CedSaveButton({ product }: { product: string | null }) {
   }
 
   return (
+    <>
+    {preview && <CedPreviewModal folder={preview.folder} files={preview.files} onClose={() => setPreview(null)} />}
     <button
       className={`keyinfo-export-btn${saving ? ' keyinfo-export-btn--busy' : ''}`} {...uiId('KI.ced-save')}
       disabled={saving}
@@ -46,6 +58,7 @@ export function CedSaveButton({ product }: { product: string | null }) {
       <Save size={12} />
       {saving ? '저장 중…' : 'Local 저장'}
     </button>
+    </>
   )
 }
 

@@ -451,6 +451,17 @@ export function generateCed(ctx: Ctx, product: string | null | undefined): { dir
 
 H['ced:generate'] = (ctx: Ctx, product: string | null) => generateCed(ctx, product)
 
+// CED를 만들고 문서 내용을 돌려준다. Web의 'Local 저장'(화면에서 보기 + zip 내려받기)이 쓴다.
+// 서버의 폴더 경로는 돌려주지 않는다. folder는 제품 폴더 이름뿐이다.
+H['ced:read'] = (ctx: Ctx, product: string | null) => {
+  const r = generateCed(ctx, product)
+  return {
+    folder: path.basename(r.dir),
+    skippedDrafts: r.skippedDrafts,
+    files: r.files.map((name) => ({ name, content: fs.readFileSync(path.join(r.dir, name), 'utf-8') })),
+  }
+}
+
 // ── Key 자동 후보 ───────────────────────────────────────────────────────────────
 // 자동 색인(keyinfo.json의 schema)에서 Key 후보를 제안한다. 후보는 제안일 뿐이고, 사람이 수락해야 초안 노트가 된다.
 //  1. FK 체인: FK로 이어진 컬럼은 하나의 후보로 묶는다. (예: users.id, transactions.sender_id, comments.user_id)

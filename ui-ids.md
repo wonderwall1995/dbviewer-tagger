@@ -204,6 +204,10 @@
 | KI.ced-dir | KI.ced-dir-gear | Keyinfo 창 머리글의 제목 오른쪽 톱니. CED 저장 폴더 설정. 이 PC의 폴더를 고를 수 있는 환경에서만 보임 | `ced-dir-btn` | |
 | KI.ced-dir-panel | KI.ced-dir-popover | 톱니로 여는 작은 창: 지금 폴더, 폴더 고르기, 기본값으로 | `ced-dir-panel` | |
 | KI.export | KI.send-context | 제품 줄 오른쪽 "Obsidian Vault 전송" 버튼. 지금 고른 제품의 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트 CED 폴더로 SFTP 전송 (볼트에서 고친 파일도 덮어쓰고 경고로 알림) | `keyinfo-export-btn` | |
+| CP.frame | CP.root | Web의 CED 미리보기 창 (Local 저장을 누르면 열림). CP.title, CP.close 포함 | `ced-preview-card` | |
+| CP.list | CP.files | 왼쪽 문서 목록 (목차가 맨 위) | `ced-preview-list` | |
+| CP.text | CP.content | 오른쪽 마크다운 원문 | `ced-preview-text` | |
+| CP.download | CP.zip | "zip 내려받기" 버튼. 제품 폴더 하나로 묶은 zip | `modal-btn--save` | |
 | KI.product-bar | KI.products | 위쪽 제품 선택 칩 줄 | `keyinfo-product-bar` | |
 | KI.product-chip | KI.product | 제품 칩 하나 (반복, 현재 제품은 점 표시) | `keyinfo-product-bar` 안의 버튼 | |
 | KI.issue-count | KI.warn-count | 제품 미지정 핀 경고 수 | `keyinfo-issue-count` | |
