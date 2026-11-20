@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Modal } from './Modal'
 import { LorebookCreateManyModal } from './LorebookCreateManyModal'
 import { KeyNotesPane } from './KeyNotesPane'
-import { CedSaveButton } from './CedSaveButton'
+import { CedSaveButton, CedDirSettings } from './CedSaveButton'
 import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '../../shared/types'
 import { uiId } from '../ui/uiId'
 import { api, caps } from '../api'
@@ -576,7 +576,7 @@ export function KeyinfoModal({
   return (
     <>
       <Modal
-        title="Keyinfo"
+        title={<span className="keyinfo-title">Keyinfo<CedDirSettings /></span>}
         uiCode="KI" onClose={onClose} cardClassName="keyinfo-modal-card" floating>
 
         {/* ── 제품 선택 바 + 연관 편집 토글 (항상 표시) ── */}
@@ -657,7 +657,7 @@ export function KeyinfoModal({
             title="지금 고른 제품의 맥락 문서를 만들어 Hermes 서버의 Obsidian 볼트(CED 폴더)로 보냅니다"
           >
             <Upload size={12} />
-            {sending ? '전송 중…' : '제품 맥락 문서 전송'}
+            {sending ? '전송 중…' : 'Obsidian Vault 전송'}
           </button>}
         </div>
 
