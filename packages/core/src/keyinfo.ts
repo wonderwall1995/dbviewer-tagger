@@ -4,7 +4,7 @@ import Papa from 'papaparse'
 import { writeCedIndex } from './cedIndex'
 import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from './workspaceBackup'
 import type { BackupMeta } from './workspaceBackup'
-import { checkName, tryUserPath } from './context'
+import { checkName, tryUserPath, isDbExportPath } from './context'
 import type { Ctx, Handlers } from './context'
 
 const H: Handlers = {}
@@ -94,8 +94,10 @@ function parseCsvHeaderOnly(filePath: string): {
   const constraints: Record<string, KeyinfoColSchema> = {}
   const dbTypes: Record<string, string> = {}
 
+  // 제약 행·타입 행은 DB에서 내보낸 CSV에만 있다. 일반 CSV는 찾지 않는다.
+  const allowMeta = isDbExportPath(filePath)
   let idx = 1
-  if (lines[idx] && /^\s*"?\[/.test(lines[idx])) {
+  if (allowMeta && lines[idx] && /^\s*"?\[/.test(lines[idx])) {
     const cells = parseRow(lines[idx])
     columns.forEach((col, i) => {
       const cell = (cells[i] ?? '').trim().replace(/^"|"$/g, '')
@@ -104,7 +106,7 @@ function parseCsvHeaderOnly(filePath: string): {
     idx++
   }
 
-  if (lines[idx] && /^\s*"?\{/.test(lines[idx])) {
+  if (allowMeta && lines[idx] && /^\s*"?\{/.test(lines[idx])) {
     const cells = parseRow(lines[idx])
     columns.forEach((col, i) => {
       const cell = (cells[i] ?? '').trim().replace(/^"|"$/g, '')
@@ -800,8 +802,10 @@ H['keynote:sampleRows'] = (ctx: Ctx, filePath: unknown, columnKeys: unknown, lim
         let start = 1
         const isConstraintRow = (r: string[]) => r.some((c) => c.trim()) && r.every((c) => !c.trim() || /^\[.*\]$/.test(c.trim()))
         const isTypeRow = (r: string[]) => r.some((c) => c.trim()) && r.every((c) => !c.trim() || /^\{.*\}$/.test(c.trim()))
-        if (all[start] && isConstraintRow(all[start])) start++
-        if (all[start] && isTypeRow(all[start])) start++
+        // 제약 행·타입 행은 DB에서 내보낸 CSV에만 있다. 일반 CSV의 첫 행이 {..} 모양이어도 데이터로 둔다.
+        const allowMeta = isDbExportPath(filePath)
+        if (allowMeta && all[start] && isConstraintRow(all[start])) start++
+        if (allowMeta && all[start] && isTypeRow(all[start])) start++
         const columns = wanted.filter((k) => header.includes(k))
         const idx = columns.map((k) => header.indexOf(k))
         const rows = all.slice(start).map((r) => idx.map((i) => String(r[i] ?? '')))

@@ -230,6 +230,8 @@ declare global {
     user: string
     password: string
     ssh: SshConfig
+    // true면 TLS로 연결하고 서버 인증서를 확인한다.
+    ssl: boolean
   }
 
   // 불러오기 결과. 비밀번호 값은 포함하지 않는다.

@@ -24,11 +24,19 @@ function writeCsv(root, name, text) {
   return file
 }
 
-test('csv:stats: 행 수와 열 수를 세고, 제약 행과 타입 행은 빼며, 없는 파일은 실종으로 알린다', async (t) => {
+test('csv:stats: DB에서 내보낸 CSV는 제약 행과 타입 행을 빼고 세며, 없는 파일은 실종으로 알린다', async (t) => {
   const { root, ctx } = fixture(t)
-  const file = writeCsv(root, 'a.csv', 'id,name\n[PK],\n{integer},{text}\n1,"x\ny"\n2,z\n')
+  const file = path.join(root, 'DB-downloads', 'db', 'public', 'a.csv')
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, 'id,name\n[PK],\n{integer},{text}\n1,"x\ny"\n2,z\n')
   assert.deepEqual(await h['csv:stats'](ctx, file), { rows: 2, columns: 2, partial: false })
   assert.deepEqual(await h['csv:stats'](ctx, path.join(root, 'S3-downloads', 'none.csv')), { rows: 0, columns: 0, partial: false, missing: true })
+})
+
+test('csv:stats: 일반 CSV는 첫 행이 {..}나 [..] 모양이어도 데이터로 센다 (보고서 N08)', async (t) => {
+  const { root, ctx } = fixture(t)
+  const file = writeCsv(root, 'plain.csv', 'value\n{real_data}\nnormal\n')
+  assert.deepEqual(await h['csv:stats'](ctx, file), { rows: 2, columns: 1, partial: false })
 })
 
 test('csv:stats 캐시는 사용자마다 따로 있다', async (t) => {

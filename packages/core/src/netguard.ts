@@ -33,23 +33,75 @@ const BLOCKED_V4 = [
   '240.0.0.0/4',     // 예약 (255.255.255.255 포함)
 ]
 
-export function isPublicAddress(ip: string): boolean {
-  const family = net.isIP(ip)
-  if (family === 4) return !BLOCKED_V4.some((c) => inV4(ip, c))
-  if (family === 6) {
-    const lower = ip.toLowerCase()
-    // IPv4를 담은 IPv6 (::ffff:a.b.c.d)는 안의 IPv4로 판단한다.
-    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)
-    if (mapped) return isPublicAddress(mapped[1])
-    if (lower === '::' || lower === '::1') return false
-    const first = parseInt(lower.split(':')[0] || '0', 16)
-    if ((first & 0xfe00) === 0xfc00) return false // fc00::/7 고유 로컬
-    if ((first & 0xffc0) === 0xfe80) return false // fe80::/10 링크 로컬
-    if ((first & 0xff00) === 0xff00) return false // ff00::/8 멀티캐스트
-    if (lower.startsWith('64:ff9b:') || lower.startsWith('2001:db8:')) return false // 변환용, 문서용
-    return true
+// IPv6 주소를 16바이트로 푼다. 표기가 달라도(축약 안 함, ::, 끝의 IPv4 표기) 같은 주소면 같은 바이트가 된다.
+// 문자열 모양으로 판정하면 0:0:0:0:0:0:0:1 이나 ::ffff:7f00:1 같은 같은 주소의 다른 표기를 놓친다.
+export function ipv6ToBytes(ip: string): number[] | null {
+  let s = ip.toLowerCase()
+  const zone = s.indexOf('%')
+  if (zone >= 0) s = s.slice(0, zone)
+  if (net.isIPv6(s) === false) return null
+  // 끝이 IPv4 표기면 16비트 두 묶음으로 바꾼다.
+  const v4tail = s.match(/(\d+\.\d+\.\d+\.\d+)$/)
+  if (v4tail) {
+    const n = v4ToInt(v4tail[1])
+    s = s.slice(0, -v4tail[1].length) + ((n >>> 16) & 0xffff).toString(16) + ':' + (n & 0xffff).toString(16)
   }
-  return false
+  const [head, tail] = s.includes('::') ? s.split('::') : [s, null]
+  const h = head ? head.split(':') : []
+  const t = tail ? tail.split(':') : []
+  const groups = tail === null ? h : [...h, ...Array(8 - h.length - t.length).fill('0'), ...t]
+  if (groups.length !== 8) return null
+  const bytes: number[] = []
+  for (const g of groups) {
+    const v = parseInt(g || '0', 16)
+    if (!Number.isInteger(v) || v < 0 || v > 0xffff) return null
+    bytes.push((v >> 8) & 0xff, v & 0xff)
+  }
+  return bytes
+}
+
+function startsWith(bytes: number[], prefix: number[], bits: number): boolean {
+  for (let i = 0; i < bits; i++) {
+    const byte = i >> 3
+    const mask = 0x80 >> (i & 7)
+    if ((bytes[byte] & mask) !== (prefix[byte] & mask)) return false
+  }
+  return true
+}
+
+const V6 = (s: string) => ipv6ToBytes(s) as number[]
+// 공인 주소가 아니거나 다른 주소를 감싸 내부로 갈 수 있는 IPv6 범위
+const BLOCKED_V6: Array<[number[], number]> = [
+  [V6('::'), 128],            // 지정 안 됨
+  [V6('::1'), 128],           // 루프백
+  [V6('64:ff9b::'), 96],      // NAT64 (IPv4를 감쌈)
+  [V6('64:ff9b:1::'), 48],    // 로컬 NAT64
+  [V6('100::'), 64],          // 버림용
+  [V6('2001::'), 32],         // Teredo 터널
+  [V6('2001:db8::'), 32],     // 문서용
+  [V6('fc00::'), 7],          // 고유 로컬 (사설망)
+  [V6('fe80::'), 10],         // 링크 로컬
+  [V6('fec0::'), 10],         // 사이트 로컬 (폐지됨)
+  [V6('ff00::'), 8],          // 멀티캐스트
+]
+
+function v4FromBytes(b: number[], at: number): string {
+  return `${b[at]}.${b[at + 1]}.${b[at + 2]}.${b[at + 3]}`
+}
+
+export function isPublicAddress(ip: string): boolean {
+  if (typeof ip !== 'string') return false
+  if (net.isIPv4(ip)) return !BLOCKED_V4.some((c) => inV4(ip, c))
+  const b = ipv6ToBytes(ip)
+  if (!b) return false
+  // IPv4를 담은 IPv6는 안의 IPv4로 판단한다: ::ffff:a.b.c.d (mapped), ::a.b.c.d (호환, 폐지됨), 2002:aabb:ccdd:: (6to4)
+  const first10Zero = b.slice(0, 10).every((x) => x === 0)
+  if (first10Zero && b[10] === 0xff && b[11] === 0xff) return isPublicAddress(v4FromBytes(b, 12))
+  if (first10Zero && b[10] === 0 && b[11] === 0 && !(b.slice(12).every((x) => x === 0) || (b.slice(12, 15).every((x) => x === 0) && b[15] === 1))) {
+    return isPublicAddress(v4FromBytes(b, 12))
+  }
+  if (b[0] === 0x20 && b[1] === 0x02) return isPublicAddress(v4FromBytes(b, 2))
+  return !BLOCKED_V6.some(([prefix, bits]) => startsWith(b, prefix, bits))
 }
 
 // DB 포트: PostgreSQL 기본 포트와 1024 이상만. 서버를 다른 서비스(22, 80 등) 두드리는 데 쓰지 못하게 한다.

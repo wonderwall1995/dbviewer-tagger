@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import { Client } from 'pg'
+import { Client, types as pgTypes } from 'pg'
 import { recordSnapshotStats } from './csv'
 import type { Ctx, Handlers } from './context'
 
@@ -25,6 +25,8 @@ export interface DbSlotConfig {
   user: string
   password: string
   ssh: SshConfig
+  // true면 TLS로 연결하고 서버 인증서를 반드시 확인한다 (원래 호스트 이름 기준). 공인망의 DB는 켜는 것을 권한다.
+  ssl: boolean
   // 연결 확인을 통과한 상태. 접속 값이 바뀌면 false로 되돌린다.
   verified: boolean
 }
@@ -46,6 +48,7 @@ function emptySlot(id: SlotId): DbSlotConfig {
     user: '',
     password: '',
     ssh: { ...EMPTY_SSH },
+    ssl: false,
     verified: false,
   }
 }
@@ -103,6 +106,7 @@ H['db:saveSlot'] = (ctx: Ctx, id: SlotId, cfg: Omit<DbSlotConfig, 'verified'>) =
       username: text(cfg.ssh?.username),
       pemPath: text(cfg.ssh?.pemPath),
     },
+    ssl: cfg.ssl === true,
     verified: current.verified,
   }
   const connectionChanged =
@@ -114,12 +118,17 @@ H['db:saveSlot'] = (ctx: Ctx, id: SlotId, cfg: Omit<DbSlotConfig, 'verified'>) =
     next.ssh.host !== current.ssh.host ||
     next.ssh.port !== current.ssh.port ||
     next.ssh.username !== current.ssh.username ||
-    next.ssh.pemPath !== current.ssh.pemPath
+    next.ssh.pemPath !== current.ssh.pemPath ||
+    next.ssl !== current.ssl
   if (connectionChanged) next.verified = false
   all[id] = next
   ctx.slots.save(all)
   if (connectionChanged) ctx.tunnel?.close(id)
   return next.verified
+}
+
+function isIpLiteral(host: string): boolean {
+  return /^[0-9.]+$/.test(host) || host.includes(':')
 }
 
 // requireVerified가 true이면 연결 확인을 통과한 슬롯만 사용할 수 있다.
@@ -128,12 +137,15 @@ async function withDb<T>(
   slotId: SlotId,
   fn: (client: Client) => Promise<T>,
   requireVerified = true,
+  types?: { getTypeParser: (oid: number, format?: 'text' | 'binary') => (value: string) => unknown },
 ): Promise<T> {
   if (!isSlotId(slotId)) throw new Error('잘못된 DB 슬롯입니다.')
   const slot = ctx.slots.load()[slotId]
   if (!slot.host || !slot.database) throw new Error('접속 정보가 비어 있습니다.')
   if (requireVerified && !slot.verified) throw new Error('연결 확인을 먼저 통과해야 합니다.')
 
+  // TLS 서버 신원은 사용자가 적은 원래 호스트 이름으로 확인한다. (터널이나 검사한 IP로 접속해도 같다)
+  const serverName = slot.host
   let host = slot.host
   let port = parseInt(slot.port) || 5432
 
@@ -154,6 +166,9 @@ async function withDb<T>(
     user: slot.user,
     password: slot.password || undefined,
     ...(guarded?.clientOptions ?? {}),
+    ...(types ? { types } : {}),
+    // rejectUnauthorized를 끄지 않는다. 인증서를 확인하지 않는 TLS는 중간자 공격을 막지 못한다.
+    ...(slot.ssl ? { ssl: { rejectUnauthorized: true, servername: isIpLiteral(serverName) ? undefined : serverName } } : {}),
   })
   await client.connect()
   try {
@@ -261,7 +276,7 @@ async function queryTypeRow(
   return headers.map(col => {
     const t = typeMap.get(col)
     return t ? `{${t}}` : ''
-  }).join(',')
+  }).map(csvCell).join(',')
 }
 
 // 선택된 테이블들을 CSV로 내보내기 — 청크 페이지네이션으로 DB 보호
@@ -345,16 +360,37 @@ async function queryConstraintRow(
     return parts.length > 0 ? `[${parts.join('|')}]` : ''
   })
 
-  return cells.join(',')
+  return cells.map(csvCell).join(',')
 }
 
 H['db:abortExport'] = (ctx: Ctx) => { ctx.state.exportAborted = true }
 
-const escape = (v: unknown): string => {
+// CSV 칸 하나. 쉼표, 큰따옴표, 줄바꿈, 앞뒤 공백이 있으면 큰따옴표로 감싼다. 머리글과 메타 행에도 같은 규칙을 쓴다.
+export function csvCell(s: string): string {
+  return /[",\r\n]/.test(s) || /^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+// DB 값 하나를 CSV 칸으로 바꾼다.
+// - NULL은 빈 칸이다. (빈 문자열과 구분하지 않는다. 이 도구의 CSV 형식이 정한 제한이다)
+// - 날짜·시간은 DB가 준 글자 그대로 쓴다 (아래 rawDateTypes). 예전에는 PC의 지역 설정에 따라 바뀌는 글자였다.
+// - JSON, 배열 같은 객체는 JSON 글자로, 바이너리는 \x 16진수로 쓴다. 예전에는 [object Object]가 되었다.
+// - =, + 로 시작하는 값도 그대로 둔다. 이 CSV는 이 도구가 읽는 자료이고, 바꾸면 원래 값이 달라진다.
+//   스프레드시트 프로그램으로 열 때는 수식으로 해석될 수 있으니 주의한다.
+export function csvValue(v: unknown): string {
   if (v === null || v === undefined) return ''
-  const s = String(v)
-  return s.includes(',') || s.includes('"') || s.includes('\n')
-    ? `"${s.replace(/"/g, '""')}"` : s
+  let s: string
+  if (v instanceof Date) s = Number.isNaN(v.getTime()) ? '' : v.toISOString()
+  else if (Buffer.isBuffer(v)) s = '\\x' + v.toString('hex')
+  else if (typeof v === 'object') s = JSON.stringify(v)
+  else s = String(v)
+  return csvCell(s)
+}
+
+// 날짜·시간 타입은 JS Date로 바꾸지 않고 DB의 글자를 그대로 받는다. (date, time, timestamp, timestamptz, timetz)
+const RAW_DATE_OIDS = new Set([1082, 1083, 1114, 1184, 1266])
+const exportTypes = {
+  getTypeParser: (oid: number, format?: 'text' | 'binary') =>
+    RAW_DATE_OIDS.has(oid) ? (value: string) => value : pgTypes.getTypeParser(oid, format as 'text'),
 }
 
 // 폴더나 파일 이름으로 쓸 문자열을 안전하게 바꾼다.
@@ -385,7 +421,10 @@ function slotDownloadDir(ctx: Ctx, slotId: SlotId): string {
 interface ExportPosition { ti: number; total: number; schema: string }
 
 // 테이블 하나를 CSV로 쓴다. 저장한 파일 경로를 돌려준다. 저장할 내용이 없으면 null이다.
-// 파일을 처음 쓰는 순간 state.wrote를 true로 바꾼다.
+// - 한 테이블은 읽기 전용 스냅샷 트랜잭션 안에서 커서로 읽는다. 읽는 동안 원본이 바뀌어도 행이 빠지거나 겹치지 않고,
+//   LIMIT/OFFSET처럼 뒤로 갈수록 느려지지 않는다.
+// - 이 실행만의 임시 파일에 끝까지 쓴 뒤, 다 쓰면 원래 이름으로 바꿔 끼운다.
+//   중간에 실패하거나 중단해도 이전에 받아 둔 같은 CSV는 그대로 남는다. 정리는 임시 파일만 한다.
 async function writeTableCsv(
   client: Client,
   ctx: Ctx,
@@ -393,82 +432,70 @@ async function writeTableCsv(
   table: string,
   baseDir: string,
   pos: ExportPosition,
-  state: { wrote: boolean; rows: number; columns: number },
+  state: { rows: number; columns: number; tmpPath: string | null },
 ): Promise<string | null> {
   if (ctx.state.exportAborted) throw new Error('EXPORT_ABORTED')
 
-  const countRes = await client.query(`SELECT COUNT(*) FROM ${quoteIdent(schema)}.${quoteIdent(table)}`)
-  const totalRows = parseInt(countRes.rows[0].count, 10)
+  const qualified = `${quoteIdent(schema)}.${quoteIdent(table)}`
   const csvPath = path.join(baseDir, `${safeSegment(table)}.csv`)
+  const tmpPath = `${csvPath}.part-${process.pid}-${Date.now()}`
   const sendProgress = (rowsDone: number, total: number) =>
     ctx.emit('db:exportProgress', { ...pos, table, rowsDone, totalRows: total })
 
-  if (totalRows === 0) {
-    const headerRes = await client.query(`SELECT * FROM ${quoteIdent(schema)}.${quoteIdent(table)} LIMIT 0`)
-    const headers = headerRes.fields.map((f: { name: string }) => f.name)
-    let saved: string | null = null
-    if (headers.length > 0) {
-      const constraintRow = await queryConstraintRow(client, schema, table, headers)
-      const typeRow = await queryTypeRow(client, schema, table, headers)
-      state.wrote = true
-      fs.writeFileSync(csvPath, headers.join(',') + '\n' + constraintRow + '\n' + typeRow + '\n', 'utf-8')
-      state.columns = headers.length
-      state.rows = 0
-      saved = csvPath
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
+  try {
+    const countRes = await client.query(`SELECT COUNT(*) FROM ${qualified}`)
+    const totalRows = parseInt(countRes.rows[0].count, 10)
+    await client.query(`DECLARE tagger_export NO SCROLL CURSOR FOR SELECT * FROM ${qualified}`)
+
+    // 열 이름은 첫 FETCH 결과에서 얻는다. 행이 없는 테이블도 열 이름은 돌려준다.
+    let result = await client.query(`FETCH FORWARD ${CHUNK_SIZE} FROM tagger_export`)
+    const headers: string[] = result.fields.map((f: { name: string }) => f.name)
+    if (headers.length === 0) {
+      sendProgress(0, 0)
+      await client.query('COMMIT')
+      return null
     }
-    sendProgress(0, 0)
-    return saved
+    const constraintRow = await queryConstraintRow(client, schema, table, headers)
+    const typeRow = await queryTypeRow(client, schema, table, headers)
+    const head = headers.map(csvCell).join(',') + '\n' + constraintRow + '\n' + typeRow + '\n'
+    ctx.reserveDisk?.(Buffer.byteLength(head, 'utf-8'))
+    state.tmpPath = tmpPath
+    fs.writeFileSync(tmpPath, head, 'utf-8')
+    state.columns = headers.length
+
+    let rowsDone = 0
+    sendProgress(0, totalRows)
+    while (result.rows.length > 0) {
+      if (ctx.state.exportAborted) throw new Error('EXPORT_ABORTED')
+      const chunkText = result.rows.map((row: Record<string, unknown>) => headers.map((h) => csvValue(row[h])).join(',')).join('\n') + '\n'
+      // Web: 세션 용량 상한을 넘으면 여기서 멈춘다 (큰 DB를 통째로 내려받아 서버 디스크를 채우지 못하게).
+      ctx.reserveDisk?.(Buffer.byteLength(chunkText, 'utf-8'))
+      fs.appendFileSync(tmpPath, chunkText, 'utf-8')
+      rowsDone += result.rows.length
+      state.rows = rowsDone
+      sendProgress(rowsDone, Math.max(totalRows, rowsDone))
+      if (result.rows.length < CHUNK_SIZE) break
+      // 다음 청크 전에 잠시 쉰다 (DB 부하 분산)
+      await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS))
+      result = await client.query(`FETCH FORWARD ${CHUNK_SIZE} FROM tagger_export`)
+    }
+    await client.query('CLOSE tagger_export')
+    await client.query('COMMIT')
+
+    // 다 썼으면 원래 이름으로 바꿔 끼운다.
+    fs.renameSync(tmpPath, csvPath)
+    state.tmpPath = null
+    if (rowsDone === 0) sendProgress(0, 0)
+    return csvPath
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw e
   }
-
-  let headers: string[] = []
-  let rowsDone = 0
-  let firstChunk = true
-
-  sendProgress(0, totalRows)
-
-  while (rowsDone < totalRows) {
-    if (ctx.state.exportAborted) throw new Error('EXPORT_ABORTED')
-
-    const result = await client.query(
-      `SELECT * FROM ${quoteIdent(schema)}.${quoteIdent(table)} LIMIT $1 OFFSET $2`,
-      [CHUNK_SIZE, rowsDone]
-    )
-    if (result.rows.length === 0) break
-
-    if (firstChunk) {
-      headers = result.fields.map((f: { name: string }) => f.name)
-      const constraintRow = await queryConstraintRow(client, schema, table, headers)
-      const typeRow = await queryTypeRow(client, schema, table, headers)
-      state.wrote = true
-      fs.writeFileSync(csvPath, headers.join(',') + '\n' + constraintRow + '\n' + typeRow + '\n', 'utf-8')
-      state.columns = headers.length
-      firstChunk = false
-    }
-
-    const lines = result.rows.map((row: Record<string, unknown>) =>
-      headers.map(h => escape(row[h])).join(',')
-    )
-    const chunkText = lines.join('\n') + '\n'
-    // Web: 세션 용량 상한을 넘으면 여기서 멈춘다 (큰 DB를 통째로 내려받아 서버 디스크를 채우지 못하게).
-    ctx.reserveDisk?.(Buffer.byteLength(chunkText, 'utf-8'))
-    fs.appendFileSync(csvPath, chunkText, 'utf-8')
-
-    rowsDone += result.rows.length
-    state.rows = rowsDone
-    sendProgress(rowsDone, totalRows)
-
-    // 마지막 청크가 아니면 대기 (DB 부하 분산)
-    if (rowsDone < totalRows) {
-      await new Promise(r => setTimeout(r, CHUNK_DELAY_MS))
-    }
-  }
-
-  return firstChunk ? null : csvPath
 }
 
-// 테이블 하나를 CSV로 저장한다. 중간에 실패하거나 중단되면 저장하다 멈춘 불완전한 파일은 지운다.
-// 이번 실행에서 파일을 쓰기 전에 실패한 경우에는 기존 파일을 건드리지 않는다.
-async function exportOneTable(
+// 테이블 하나를 CSV로 저장한다. 중간에 실패하거나 중단되면 이 실행의 임시 파일만 지운다.
+export async function exportOneTable(
   client: Client,
   ctx: Ctx,
   schema: string,
@@ -476,61 +503,38 @@ async function exportOneTable(
   baseDir: string,
   pos: ExportPosition,
 ): Promise<string | null> {
-  const state = { wrote: false, rows: 0, columns: 0 }
+  const state: { rows: number; columns: number; tmpPath: string | null } = { rows: 0, columns: 0, tmpPath: null }
   try {
     const saved = await writeTableCsv(client, ctx, schema, table, baseDir, pos, state)
     if (saved) void recordSnapshotStats(ctx, saved, state.rows, state.columns)
     return saved
   } catch (e) {
-    if (state.wrote) {
-      try { fs.rmSync(path.join(baseDir, `${safeSegment(table)}.csv`), { force: true }) } catch { /* 삭제 실패는 무시한다. */ }
+    if (state.tmpPath) {
+      try { fs.rmSync(state.tmpPath, { force: true }) } catch { /* 삭제 실패는 무시한다. */ }
     }
     throw e
   }
 }
 
-// 저장을 중단했을 때 이번 실행에서 완성한 파일을 모두 지운다. 비게 된 폴더도 함께 지운다.
-function removeExportedFiles(ctx: Ctx, paths: string[]): void {
-  const dirs = new Set<string>()
-  for (const p of paths) {
-    try { fs.rmSync(p, { force: true }) } catch { /* 삭제 실패는 무시한다. */ }
-    dirs.add(path.dirname(p))
-  }
-  // rmdirSync는 폴더가 비어 있을 때만 지운다. 스키마 폴더를 지운 뒤 비게 된 DB 폴더도 지운다.
-  for (const dir of dirs) {
-    try { fs.rmdirSync(dir) } catch { /* 다른 파일이 남아 있으면 그대로 둔다. */ }
-    const parent = path.dirname(dir)
-    if (parent !== ctx.ws.dbDownloadsRoot) {
-      try { fs.rmdirSync(parent) } catch { /* 다른 파일이 남아 있으면 그대로 둔다. */ }
-    }
-  }
-}
-
 // 선택한 테이블들을 CSV로 내보낸다. 오류가 나면 즉시 중단한다.
-// 중단하면 이번 실행에서 만든 파일을 모두 지운다.
+// 중단하거나 실패하면 그때 쓰던 테이블의 임시 파일만 지운다. 이미 다 받은 테이블은 새 파일로 남는다.
+// (예전에는 이번 실행에서 받은 파일을 모두 지웠는데, 받기 전의 파일이 이미 덮인 뒤라 둘 다 잃었다)
 H['db:exportTables'] = async (ctx: Ctx, slot: SlotId, schema: string, tables: string[]) => {
   ctx.state.exportAborted = false
   return withDb(ctx, slot, async (client) => {
     const baseDir = path.join(slotDownloadDir(ctx, slot), safeSegment(schema))
     fs.mkdirSync(baseDir, { recursive: true })
     const savedPaths: string[] = []
-
-    try {
-      for (let ti = 0; ti < tables.length; ti++) {
-        const saved = await exportOneTable(client, ctx, schema, tables[ti], baseDir, {
-          ti,
-          total: tables.length,
-          schema,
-        })
-        if (saved) savedPaths.push(saved)
-      }
-    } catch (e: unknown) {
-      if (e instanceof Error && e.message === 'EXPORT_ABORTED') removeExportedFiles(ctx, savedPaths)
-      throw e
+    for (let ti = 0; ti < tables.length; ti++) {
+      const saved = await exportOneTable(client, ctx, schema, tables[ti], baseDir, {
+        ti,
+        total: tables.length,
+        schema,
+      })
+      if (saved) savedPaths.push(saved)
     }
-
     return savedPaths
-  })
+  }, true, exportTypes)
 }
 
 // 선택한 스키마의 테이블 전체를 CSV로 내보낸다.
@@ -577,11 +581,10 @@ H['db:exportSchemas'] = async (ctx: Ctx, slot: SlotId, schemas: string[]) => {
         }
       }
     } catch (e: unknown) {
-      // 중단하면 이번 실행에서 만든 파일을 모두 지운다.
-      if (e instanceof Error && e.message === 'EXPORT_ABORTED') removeExportedFiles(ctx, saved)
+      // 중단하면 그때 쓰던 테이블의 임시 파일만 지운다 (exportOneTable). 이미 다 받은 테이블은 남긴다.
       throw e
     }
 
     return { saved, failed }
-  })
+  }, true, exportTypes)
 }

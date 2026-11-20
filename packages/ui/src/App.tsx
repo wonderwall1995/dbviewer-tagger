@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { isDbExportPath } from './hooks/useCsvParser'
 import { Toaster, toast } from 'sonner'
 import { Bot, Loader2, Pin } from 'lucide-react'
 import { useCsvWorker } from './hooks/useCsvWorker'
@@ -811,7 +812,7 @@ export default function App() {
       })
 
       const parsed = await Promise.all(
-        newFiles.map((f) => parseCsv(f.name, f.content))
+        newFiles.map((f) => parseCsv(f.name, f.content, isDbExportPath(f.source?.type === 'local' ? f.source.path : null)))
       )
       recordSources(newFiles.map((f) => ({ name: f.name, source: f.source })))
 
@@ -899,7 +900,7 @@ export default function App() {
         }
 
         const content = await api.localReadFile(pending.path)
-        let parsed = await parseCsv(name, content)
+        let parsed = await parseCsv(name, content, isDbExportPath(pending.path))
         // JSON에 기록된 삭제 칼럼이 CSV에 재등장했다면 재삭제
         const deletions = allColumnDeletionsRef.current[name] ?? []
         const toDelete = deletions.filter(dk => parsed.columns.some(c => c.key === dk))
@@ -908,7 +909,7 @@ export default function App() {
             await api.localEraseColumn(pending.path, dk)
           }
           const fresh = await api.localReadFile(pending.path)
-          parsed = await parseCsv(name, fresh)
+          parsed = await parseCsv(name, fresh, isDbExportPath(pending.path))
         }
         updatePane(paneId, { activeFileParsed: parsed })
         setParsedMap(prev => ({ ...prev, [name]: parsed }))
@@ -1240,7 +1241,7 @@ export default function App() {
     }
     await api.localEraseColumn(source.path, colKey)
     const content = await api.localReadFile(source.path)
-    const reparsed = await parseCsv(activeFile, content)
+    const reparsed = await parseCsv(activeFile, content, isDbExportPath(source.path))
     updatePane(focusedPaneIdRef.current, { activeFileParsed: reparsed })
     setParsedMap(prev => ({ ...prev, [activeFile]: reparsed }))
     api.cacheSave(source.path, reparsed)

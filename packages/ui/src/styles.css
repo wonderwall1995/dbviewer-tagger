@@ -6597,3 +6597,7 @@ select.kn-input { cursor: pointer; }
   font-family: var(--font-ui); font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .web-gate-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* DB 슬롯 창의 SSL/TLS 선택 칸 */
+.db-ssl-row { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.db-ssl-row input { margin: 0; }

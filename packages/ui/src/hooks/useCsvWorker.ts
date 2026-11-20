@@ -30,11 +30,12 @@ export function useCsvWorker() {
   }, [])
 
   const parseCsv = useCallback(
-    (name: string, content: string): Promise<ParsedCsv> =>
+    // allowMeta: DB에서 내보낸 CSV(DB-downloads 아래)일 때만 true. 제약 행·타입 행을 찾는다.
+    (name: string, content: string, allowMeta = false): Promise<ParsedCsv> =>
       new Promise((resolve, reject) => {
         const id = ++counter.current
         pending.current.set(id, { resolve, reject })
-        getWorker().postMessage({ id, name, content })
+        getWorker().postMessage({ id, name, content, allowMeta })
       }),
     [getWorker]
   )

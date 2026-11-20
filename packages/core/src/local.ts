@@ -181,7 +181,14 @@ export const localHandlers: Handlers = {
 
   // 로컬 파일 내용 읽기 (on-demand, 비동기)
   'local:readFile': async (ctx, filePath: string) => {
-    return await fs.promises.readFile(userPath(ctx, filePath), 'utf-8')
+    const file = userPath(ctx, filePath)
+    if (ctx.maxReadBytes) {
+      const size = (await fs.promises.stat(file)).size
+      if (size > ctx.maxReadBytes) {
+        throw new Error(`파일이 너무 커서 화면에서 열 수 없어요. (최대 ${Math.round(ctx.maxReadBytes / 1024 / 1024)}MB)`)
+      }
+    }
+    return await fs.promises.readFile(file, 'utf-8')
   },
 
   'local:getDownloadsPath': (ctx, root: 's3' | 'db' = 's3') => getDownloadsRoot(ctx, root),

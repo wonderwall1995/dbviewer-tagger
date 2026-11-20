@@ -65,7 +65,13 @@ function parseConstraintCell(cell: string): DbConstraints {
   return c
 }
 
-export function parseCsvContent(fileName: string, content: string): ParsedCsv {
+// 제약 행과 타입 행은 이 도구가 DB에서 내보낸 CSV(DB-downloads 아래)에만 있다. allowMeta가 false면 찾지 않는다.
+// (일반 CSV의 첫 데이터 행이 {..} 나 [..] 모양이면 메타 행으로 오인해 빠지던 문제를 막는다)
+export function isDbExportPath(filePath: string | null | undefined): boolean {
+  return !!filePath && /(^|[\\/])DB-downloads[\\/]/.test(filePath)
+}
+
+export function parseCsvContent(fileName: string, content: string, allowMeta = true): ParsedCsv {
   const result = Papa.parse<Record<string, string>>(content, {
     header: true,
     skipEmptyLines: true,
@@ -77,7 +83,7 @@ export function parseCsvContent(fileName: string, content: string): ParsedCsv {
 
   // 제약 행([PK], [FK→...]) 분리
   let constraintMap: Map<string, DbConstraints> | null = null
-  if (rows.length > 0 && isConstraintRow(rows[0])) {
+  if (allowMeta && rows.length > 0 && isConstraintRow(rows[0])) {
     constraintMap = new Map()
     for (const [key, val] of Object.entries(rows[0])) {
       if (val.trim() && CONSTRAINT_CELL_RE.test(val.trim())) {
@@ -89,7 +95,7 @@ export function parseCsvContent(fileName: string, content: string): ParsedCsv {
 
   // 타입 행({integer}, {varchar} 등) 분리
   let typeMap: Map<string, string> | null = null
-  if (rows.length > 0 && Object.values(rows[0]).filter(v => v.trim()).every(v => TYPE_CELL_RE.test(v.trim()))) {
+  if (allowMeta && rows.length > 0 && Object.values(rows[0]).filter(v => v.trim()).every(v => TYPE_CELL_RE.test(v.trim()))) {
     typeMap = new Map()
     for (const [key, val] of Object.entries(rows[0])) {
       if (val.trim() && TYPE_CELL_RE.test(val.trim())) {

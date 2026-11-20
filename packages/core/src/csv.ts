@@ -1,7 +1,8 @@
 import path from 'path'
 import fs from 'fs'
 import zlib from 'zlib'
-import { userPath } from './context'
+import { promisify } from 'util'
+import { userPath, isDbExportPath } from './context'
 import type { Ctx, Handlers } from './context'
 
 // ── ParsedCsv 디스크 캐시 (local/tmp/cache/) ──────────────────────────────
@@ -11,7 +12,8 @@ function cacheKeyFor(filePath: string): string | null {
   try {
     const stat = fs.statSync(filePath)
     const base = path.basename(filePath).replace(/[^a-zA-Z0-9._-]/g, '_')
-    return `${base}_${stat.mtimeMs.toFixed(0)}_${stat.size}`
+    // v2: 메타 행을 DB 내보내기 파일에서만 찾도록 바뀐 뒤의 캐시. 예전 캐시는 쓰지 않는다.
+    return `v2_${base}_${stat.mtimeMs.toFixed(0)}_${stat.size}`
   } catch {
     return null
   }
@@ -48,15 +50,23 @@ const cacheSave = async (ctx: Ctx, filePath: string, data: any) => {
     keys.map((k) => row[k] ?? '')
   )
   const json = JSON.stringify({ fileName, columns, totalRows, keys, values })
+  // 압축과 쓰기를 차례로 await한다. (예전에는 gzip 콜백 안에서 쓰기 오류가 나면 바깥으로 전달되지 않아
+  // 처리되지 않은 거부(unhandled rejection)로 서버 프로세스 전체가 끝났다)
+  const compressed = await gzipAsync(Buffer.from(json, 'utf-8'), { level: 6 })
   await fs.promises.mkdir(ctx.ws.cacheDir, { recursive: true })
-  await new Promise<void>((resolve, reject) => {
-    zlib.gzip(Buffer.from(json, 'utf-8'), { level: 6 }, async (err, compressed) => {
-      if (err) { reject(err); return }
-      await fs.promises.writeFile(path.join(ctx.ws.cacheDir, key + '.gz'), compressed)
-      resolve()
-    })
-  })
+  // 임시 파일에 쓴 뒤 이름을 바꾼다. 쓰다 실패해도 반쯤 쓴 캐시가 남지 않는다.
+  const target = path.join(ctx.ws.cacheDir, key + '.gz')
+  const tmp = `${target}.tmp-${process.pid}-${Date.now()}`
+  try {
+    await fs.promises.writeFile(tmp, compressed)
+    await fs.promises.rename(tmp, target)
+  } catch (e) {
+    await fs.promises.rm(tmp, { force: true }).catch(() => {})
+    throw e
+  }
 }
+
+const gzipAsync = promisify(zlib.gzip) as (buf: Buffer, opts: zlib.ZlibOptions) => Promise<Buffer>
 
 // ── CSV 통계: 행 수, 열 수 (파일을 파싱하지 않는다) ──────────────────────────
 // 사이드바에 파일을 열기 전에도 "N행 · M열"을 보여주기 위해, 파일을 스트림으로 한 번 훑으며 레코드 수만 센다.
@@ -148,13 +158,15 @@ async function computeCsvStats(filePath: string): Promise<CsvStats | null> {
   if (first.length === 0) return { rows: 0, columns: 0, partial }
 
   const nonEmpty = (cells: string[]) => cells.map((c) => c.trim()).filter(Boolean)
+  // 제약 행·타입 행은 DB에서 내보낸 CSV에만 있다. 일반 CSV는 모든 행을 데이터로 센다.
+  const allowMeta = isDbExportPath(filePath)
   let meta = 0
   let idx = 1
-  if (first[idx]) {
+  if (allowMeta && first[idx]) {
     const v = nonEmpty(first[idx])
     if (v.length > 0 && v.every((c) => /^\[.*\]$/.test(c))) { meta++; idx++ }
   }
-  if (first[idx]) {
+  if (allowMeta && first[idx]) {
     const v = nonEmpty(first[idx])
     if (v.every((c) => /^\{.*\}$/.test(c))) meta++
   }

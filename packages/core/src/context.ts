@@ -39,6 +39,8 @@ export interface Ctx {
   dbGuard?: (host: string, port: number) => Promise<{ host: string; clientOptions: Record<string, unknown> }>
   // 디스크에 bytes만큼 더 써도 되는지 확인하고 사용량에 더한다. 넘으면 throw. Web만 있다 (세션별 용량 상한).
   reserveDisk?: (bytes: number) => void
+  // 화면으로 파일을 통째로 보낼 때(local:readFile)의 최대 크기. Web만 있다. 없으면 제한하지 않는다(데스크톱).
+  maxReadBytes?: number
   // SSH 터널. 데스크톱만 있다. 없으면 SSH를 쓰는 슬롯은 연결하지 않는다.
   tunnel?: { open(key: string, ssh: SshConfig, host: string, port: number): Promise<number>; close(key: string): void }
   // true면 작업 폴더 밖의 경로도 받는다 (데스크톱: 사용자 PC의 파일). Web은 false.
@@ -63,6 +65,11 @@ export function checkName(name: unknown, label = '이름'): string {
     throw new Error(`${label}이(가) 올바르지 않습니다.`)
   }
   return s
+}
+
+// DB에서 내보낸 CSV인지 (작업 폴더의 DB-downloads 아래). 제약 행·타입 행은 이런 파일에만 있다.
+export function isDbExportPath(filePath: string | null | undefined): boolean {
+  return !!filePath && /(^|[\\/])DB-downloads[\\/]/.test(filePath)
 }
 
 // 경로가 실제로 쓸 수 있는 파일이면 그 경로를, 아니면 null을 돌려준다. (경로 정책을 어기는 경우 포함)

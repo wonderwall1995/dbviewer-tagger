@@ -324,6 +324,7 @@
 | DB.conn-database | DB.db-name | DB 이름 입력 | `db-ssh-field` (접속 3번째) | |
 | DB.conn-user | DB.db-user | DB 사용자 이름 입력 | `db-ssh-field--grow` (접속) | |
 | DB.conn-password | DB.db-password | DB 비밀번호 입력 | `db-ssh-field--grow` (접속) | |
+| DB.conn-ssl | DB.tls | "SSL/TLS로 연결 (서버 인증서 확인)" 선택 칸. 켜면 TLS로 연결하고 인증서를 확인함 | `db-ssl-row` | |
 | DB.ssh | DB.tunnel | SSH 터널 소제목 | `db-conn-sub` | |
 | DB.ssh-host | DB.host | SSH 호스트 입력 | `db-ssh-field--grow` | |
 | DB.ssh-port | DB.port | SSH 포트 입력 | `db-ssh-field--port` | |

@@ -17,7 +17,7 @@ interface DBBrowserProps {
 
 const EMPTY_SSH: SshConfig = { host: '', port: '22', username: '', pemPath: '' }
 const EMPTY_FORM: DbSlotView = {
-  name: '', folderName: '', host: '', port: '5432', database: '', user: '', hasPassword: false, verified: false, ssh: EMPTY_SSH,
+  name: '', folderName: '', host: '', port: '5432', database: '', user: '', hasPassword: false, verified: false, ssh: EMPTY_SSH, ssl: false,
 }
 const DEFAULT_SLOTS: DbSlotSummary[] = (['db1', 'db2', 'db3', 'db4'] as DbSlotId[]).map(id => ({
   id, name: id.toUpperCase(), configured: false,
@@ -706,6 +706,15 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                       />
                     </div>
                   </div>
+
+                  <label className="db-ssl-row" {...uiId('DB.conn-ssl')} title="켜면 암호화(TLS)로 연결하고 DB 서버의 인증서를 확인합니다. 클라우드 DB(RDS 등)는 보통 켜야 연결됩니다.">
+                    <input
+                      type="checkbox"
+                      checked={!!form.ssl}
+                      onChange={e => updateForm({ ssl: e.target.checked })}
+                    />
+                    <span>SSL/TLS로 연결 (서버 인증서 확인)</span>
+                  </label>
 
                   {caps.ssh && <>
                   <div className="db-conn-sub" {...uiId('DB.ssh')}>SSH 터널 (선택)</div>
