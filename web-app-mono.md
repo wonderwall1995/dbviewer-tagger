@@ -133,6 +133,7 @@
 - 2026-11-20 A11 (User 결정: (나) 패키지까지 나누기, 루트 명령은 그대로): 4단계 커밋. ① packages/core (@tagger/core, main/types=dist, deps pg·papaparse, index.ts 배럴) ② apps/server (@tagger/server) ③ packages/ui (@tagger/ui, vite root=src, outDir=packages/ui/dist) + packages/shared (@tagger/shared, 타입만, main=src/types.ts) ④ apps/desktop (@tagger/desktop, deps core·ssh2). **설치본은 루트 package.json이 앱**: main=apps/desktop/dist/main.js, build.files = desktop dist·core dist·ui dist·node_modules. 루트 스크립트는 pnpm --filter <pkg>... run build로 위임. **알아낸 것: pnpm 12는 .npmrc의 shamefully-hoist를 안 읽음 → 그동안 끌어올림이 꺼져 있었음 (publicHoistPattern [])** → pnpm-workspace.yaml에 shamefullyHoist: true, autoInstallPeers: true로 옮기고 .npmrc 삭제. 그 전 설치본은 pg-protocol·asn1 등 하위 의존성이 빠져 있었을 것 (llms.md To-do 2 "설치본 확인"이 안 된 이유일 수 있음). 확인: electron-builder --win --dir → asar에 core·pg(+pg-protocol/pool/types/pgpass)·ssh2(+asn1/bcrypt-pbkdf)·papaparse 있음, electron/react/vite/typescript 없음 (5.8MB). 설치본 exe를 ELECTRON_RUN_AS_NODE=1로 돌려 asar 안에서 모듈 require 성공. TaskStop은 Windows에서 자식(vite, server)을 안 죽임 → 포트 주인 확인 후 직접 종료. report.html(11:44, User 또는 다른 도구가 만든 보고서)은 커밋 안 함. 74/74 → 다음: Stage C (llms.md 기록 옮기기) → Stage D 의논.
 
 - 2026-11-20 Stage C: llms.md To-do 8~12에 User 고민 [IMPORTANT] 5줄, To-do 6·7에 [진행함] 표시, Backlogs에 역제안 8줄, Done 7줄, Bugs 2줄([고침]). 서버 구성 세부(같은 서버의 다른 프로젝트, IP, 도메인)는 쓰지 않음 → **Stage D 의논 시작.** User에게 채팅으로 요약함.
+- 2026-11-20 (1시간 쉼, 할당량) Stage D-1 입장 방식. **User 결정: 공용 비밀번호(입장 코드) 하나, 만료 전 여러 번 입장(매번 새 견본), 기본 60일.** report.html은 .gitignore (GPT 평가용). 구현: `apps/server/src/access.ts` (코드 = 헷갈리는 글자 뺀 31자 알파벳 4×3, scrypt 해시+salt만 `<dataDir>/access.json` 600, timingSafeEqual, 입력 정규화, `LoginLimiter` 10분 10번), `admin.ts` (set-code [--days], status, revoke; 코드는 set-code 때 한 번만 출력; 루트 `pnpm web:admin`). 서버: `openAccess`(개발 + 코드 파일 없음일 때만 true), `GET /api/session`(세션 안 만듦), `POST /api/login`, 세션 없으면 401. 실패 집계 키 = 루프백이면 X-Real-IP → **Nginx 견본에 X-Real-IP 넣기 필수**. 화면: `platform/WebGate.tsx` (입장 화면, 401이면 tagger:need-login 이벤트로 다시 띄움). 시험 `scripts/server-access.test.cjs` 8개 → 82/82. 고친 것: 없는 채널 404 때 본문을 안 읽고 답해 keep-alive 연결이 가끔 꼬임 → req.resume() 후 답함, 4회 연속 통과. headless 캡처는 첫 Vite 로딩이 느려 --timeout 15000 필요. node -e 안에 작은따옴표 든 문장을 넣지 말 것(또 실패) → 다음: D-4 배포 방식 (CI, Release, pnpm ship).
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
@@ -185,4 +186,5 @@
 |---|---|---|
 | D1 | `apps/`+`packages/`로 완전히 나눔. 코드 분리 먼저, 폴더 이동은 나중에 한 번에 | ✅ 2026-11-20 |
 | D2 | Web 서버 프레임워크 | node:http로 진행 (LLM 판단, 2026-11-20). Stage D에서 다시 봄 |
-| D3~D9 | 6장 마지막 줄 참고 | Stage D |
+| D3 | 입장 방식 | ✅ 공용 입장 코드 하나, 60일, 여러 번 입장 (User, 2026-11-20). 관리자 = 서버 명령줄(admin.ts) |
+| D4~D9 | 6장 마지막 줄 참고 | Stage D |

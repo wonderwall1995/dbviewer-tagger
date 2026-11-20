@@ -41,7 +41,7 @@ test('설정 오류가 있으면 서버 프로세스가 종료 코드 1로 멈�
 
 test('Secure 쿠키와 응답 머리글(no-store, nosniff)', async (t) => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cfg-'))
-  const { server } = createTaggerServer({ dataDir, secureCookie: true })
+  const { server } = createTaggerServer({ openAccess: true, dataDir, secureCookie: true })
   await new Promise((r) => server.listen(0, '127.0.0.1', r))
   t.after(() => new Promise((r) => { server.closeAllConnections?.(); server.close(r); fs.rmSync(dataDir, { recursive: true, force: true }) }))
   const res = await fetch(`http://127.0.0.1:${server.address().port}/api/call/local:load`, { method: 'POST', body: '{"args":[]}' })

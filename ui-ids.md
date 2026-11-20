@@ -208,6 +208,11 @@
 | CP.list | CP.files | 왼쪽 문서 목록 (목차가 맨 위) | `ced-preview-list` | |
 | CP.text | CP.content | 오른쪽 마크다운 원문 | `ced-preview-text` | |
 | CP.download | CP.zip | "zip 내려받기" 버튼. 제품 폴더 하나로 묶은 zip | `modal-btn--save` | |
+| WG.frame | WG.root | Web 입장 화면 전체 (입장 전에만). 데스크톱에는 없음 | `web-gate` | |
+| WG.card | WG.form | 입장 카드 (제목, 안내, 코드 칸, 버튼) | `web-gate-card` | |
+| WG.code | WG.input | 입장 코드 칸 | `web-gate-input` | |
+| WG.error | WG.message | 입장 실패 문구 (틀림, 만료, 여러 번 틀림, 세션 끝남) | `web-gate-error` | |
+| WG.enter | WG.submit | "들어가기" 버튼 | `web-gate-btn` | |
 | KI.product-bar | KI.products | 위쪽 제품 선택 칩 줄 | `keyinfo-product-bar` | |
 | KI.product-chip | KI.product | 제품 칩 하나 (반복, 현재 제품은 점 표시) | `keyinfo-product-bar` 안의 버튼 | |
 | KI.issue-count | KI.warn-count | 제품 미지정 핀 경고 수 | `keyinfo-issue-count` | |

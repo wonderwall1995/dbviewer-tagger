@@ -20,7 +20,8 @@
     "start:server": "node apps/server/dist/index.js",
     "dev:web": "pnpm run build:server && concurrently \"node apps/server/dist/index.js\" \"pnpm --filter @tagger/ui dev\"",
     "build:web": "pnpm run build:vite && pnpm run build:server",
-    "build:core": "pnpm --filter @tagger/core build"
+    "build:core": "pnpm --filter @tagger/core build",
+    "web:admin": "node apps/server/dist/admin.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

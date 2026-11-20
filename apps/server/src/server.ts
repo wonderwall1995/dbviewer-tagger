@@ -4,6 +4,7 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { makeWorkspace, makeSessionState, localHandlers, csvHandlers, lorebookHandlers, dbHandlers, normalizeSlots, keyinfoHandlers, isAllowedDbPort, resolvePublicHost } from '@tagger/core'
 import type { Ctx, Handlers, DbSlots } from '@tagger/core'
+import { LoginLimiter, checkCode, readAccess } from './access'
 
 // Web API 서버. 화면(httpApi)이 부르는 경로는 넷뿐이다.
 //   GET  /api/health          살아 있는지
@@ -15,6 +16,8 @@ import type { Ctx, Handlers, DbSlots } from '@tagger/core'
 export interface ServerOptions {
   // true면 세션 쿠키에 Secure를 붙인다 (HTTPS에서만 보냄). 운영(Nginx + HTTPS 뒤)에서 켠다.
   secureCookie?: boolean
+  // true면 입장 코드 없이 처음 요청에 세션을 만든다 (개발용). 운영은 false: /api/login 으로만 들어온다.
+  openAccess?: boolean
   // 세션 작업 폴더들을 둘 폴더. 세션마다 <dataDir>/sessions/<id>/ 를 쓴다. 서버를 시작하면 sessions/ 를 비운다.
   dataDir: string
   // 새 세션을 시작할 때 복사해 넣을 견본 작업 폴더 (없으면 빈 폴더로 시작)
@@ -136,17 +139,28 @@ export function createTaggerServer(opts: ServerOptions) {
     return session
   }
 
-  function sessionFor(req: http.IncomingMessage, res: http.ServerResponse): Session {
+  function findSession(req: http.IncomingMessage): Session | undefined {
     const sid = parseCookies(req.headers.cookie)[SESSION_COOKIE]
     const found = sid ? sessions.get(sid) : undefined
-    if (found) {
-      found.lastSeen = Date.now()
-      return found
-    }
+    if (found) found.lastSeen = Date.now()
+    return found
+  }
+
+  function startSession(res: http.ServerResponse): Session {
     const created = newSession()
     res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${created.id}; HttpOnly; SameSite=Lax; Path=/${opts.secureCookie ? '; Secure' : ''}`)
     return created
   }
+
+  // 입장 코드를 쓰는 서버는 /api/login 으로 들어온 세션만 받는다. 열린 서버(개발용)는 처음 요청에 세션을 만든다.
+  function sessionFor(req: http.IncomingMessage, res: http.ServerResponse): Session {
+    const found = findSession(req)
+    if (found) return found
+    if (!opts.openAccess) throw httpError(401, '입장 코드를 넣어 주세요.')
+    return startSession(res)
+  }
+
+  const limiter = new LoginLimiter()
 
   // 오래 쓰지 않은 세션을 지운다.
   function sweep(now = Date.now()) {
@@ -164,10 +178,36 @@ export function createTaggerServer(opts: ServerOptions) {
       return sendJson(res, 200, { ok: true })
     }
 
+    // 지금 들어와 있는지. 세션을 만들지 않는다. 화면은 이 답을 보고 입장 화면을 띄운다.
+    if (req.method === 'GET' && url.pathname === '/api/session') {
+      return sendJson(res, 200, { ok: true, value: { loggedIn: !!findSession(req), open: !!opts.openAccess } })
+    }
+
+    // 입장: 공용 입장 코드가 맞으면 새 세션(새 견본)을 시작한다.
+    if (req.method === 'POST' && url.pathname === '/api/login') {
+      const who = clientKey(req)
+      if (limiter.blocked(who)) return sendJson(res, 429, { ok: false, error: '여러 번 틀렸어요. 10분 뒤에 다시 해 주세요.' })
+      const body = await readBody(req, 1024)
+      let code: unknown = null
+      try { code = JSON.parse(body.toString('utf8'))?.code } catch { /* 아래에서 wrong */ }
+      const result = checkCode(readAccess(opts.dataDir), code)
+      if (result === 'no-code') return sendJson(res, 503, { ok: false, error: '아직 입장 코드가 정해지지 않았어요.' })
+      if (result !== 'ok') {
+        limiter.fail(who)
+        return sendJson(res, 401, { ok: false, error: result === 'expired' ? '입장 코드가 만료되었어요.' : '입장 코드가 맞지 않아요.' })
+      }
+      limiter.clear(who)
+      const existing = findSession(req)
+      if (existing) return sendJson(res, 200, { ok: true })
+      startSession(res)
+      return sendJson(res, 200, { ok: true })
+    }
+
     if (req.method === 'POST' && url.pathname.startsWith('/api/call/')) {
       const channel = decodeURIComponent(url.pathname.slice('/api/call/'.length))
       const fn = Object.prototype.hasOwnProperty.call(webHandlers, channel) ? webHandlers[channel] : undefined
-      if (!fn) return sendJson(res, 404, { ok: false, error: '없는 기능입니다.' })
+      // 본문을 읽지 않고 답하면 같은 연결의 다음 요청이 꼬일 수 있어서, 본문을 버리고 답한다.
+      if (!fn) { req.resume(); return sendJson(res, 404, { ok: false, error: '없는 기능입니다.' }) }
       const session = sessionFor(req, res)
       const body = await readBody(req, maxJson)
       let args: unknown[] = []
@@ -212,6 +252,7 @@ export function createTaggerServer(opts: ServerOptions) {
       return sendJson(res, 200, { ok: true, value: { name, path: dest } })
     }
 
+    req.resume()
     return sendJson(res, 404, { ok: false, error: '없는 경로입니다.' })
   }
 
@@ -256,6 +297,15 @@ export async function webDbGuard(host: string, port: number) {
       options: '-c default_transaction_read_only=on',
     },
   }
+}
+
+// 입장 실패를 셀 때 쓰는 접속자 구분값. 서버는 127.0.0.1에만 묶여 Nginx를 거쳐 오므로,
+// 바로 앞이 루프백이면 Nginx가 넣은 X-Real-IP를 쓴다. (바깥에서 이 머리글을 넣어도 Nginx가 덮어쓴다)
+function clientKey(req: http.IncomingMessage): string {
+  const remote = req.socket.remoteAddress ?? ''
+  const isLoopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
+  const real = req.headers['x-real-ip']
+  return isLoopback && typeof real === 'string' && real !== '' ? real : remote
 }
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown) {

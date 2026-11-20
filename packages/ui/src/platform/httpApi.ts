@@ -13,6 +13,11 @@ async function call(channel: string, args: unknown[]): Promise<unknown> {
     credentials: 'same-origin',
     body: JSON.stringify({ args }),
   })
+  if (res.status === 401) {
+    // 세션이 끝났다. 입장 화면(WebGate)을 다시 띄운다.
+    window.dispatchEvent(new Event('tagger:need-login'))
+    throw new Error('다시 입장해 주세요.')
+  }
   if (res.status === 404) throw new Error('Web에서는 쓸 수 없는 기능입니다.')
   if (res.status === 413) throw new Error('요청이 너무 큽니다.')
   const body = await res.json().catch(() => null) as { ok: boolean; value?: unknown; error?: string } | null

@@ -7,7 +7,7 @@ const { createTaggerServer } = require('../apps/server/dist/server.js')
 
 async function start(t, opts = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tagger-web-'))
-  const { server, sessions } = createTaggerServer({ dataDir, ...opts })
+  const { server, sessions } = createTaggerServer({ openAccess: true, dataDir, ...opts })
   await new Promise((r) => server.listen(0, '127.0.0.1', r))
   t.after(() => new Promise((r) => { server.closeAllConnections?.(); server.close(r); fs.rmSync(dataDir, { recursive: true, force: true }) }))
   const base = `http://127.0.0.1:${server.address().port}`

@@ -6577,3 +6577,23 @@ select.kn-input { cursor: pointer; }
 /* Hermes 설정: 볼트 구조 보기 (폴더 이름만) */
 .hermes-vault-tree { margin: 4px 0 0; padding: 6px 10px; list-style: none; font-size: 11px; font-family: var(--font-mono, inherit); color: var(--text-2); background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; max-height: 160px; overflow: auto; }
 .hermes-vault-tree ul { margin: 0 0 0 14px; padding: 0; list-style: none; color: var(--text-3); }
+
+/* Web 입장 화면 (WebGate). 데스크톱에서는 쓰지 않는다. */
+.web-gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+.web-gate-card {
+  width: 360px; padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.web-gate-title { font-family: 'Pixelify Sans Variable', var(--font-ui); font-size: 22px; color: var(--text); }
+.web-gate-desc { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-2); }
+.web-gate-input {
+  padding: 9px 12px; border-radius: 7px; border: 1px solid var(--border-2); background: var(--bg-3); color: var(--text);
+  font-family: var(--font-mono); font-size: 15px; letter-spacing: 1px; text-align: center; text-transform: uppercase; outline: none;
+}
+.web-gate-input:focus { border-color: rgba(167,139,250,0.7); }
+.web-gate-error { font-size: 12px; color: #f87171; }
+.web-gate-btn {
+  padding: 8px 0; border-radius: 7px; border: none; background: #8b5cf6; color: #fff;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.web-gate-btn:disabled { opacity: 0.5; cursor: default; }

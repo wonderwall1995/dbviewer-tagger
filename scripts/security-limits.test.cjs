@@ -8,7 +8,7 @@ const { createTaggerServer, publicError } = require('../apps/server/dist/server.
 
 async function start(t, opts = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-lim-'))
-  const made = createTaggerServer({ dataDir, ...opts })
+  const made = createTaggerServer({ openAccess: true, dataDir, ...opts })
   await new Promise((r) => made.server.listen(0, '127.0.0.1', r))
   t.after(() => new Promise((r) => { made.server.closeAllConnections?.(); made.server.close(r); fs.rmSync(dataDir, { recursive: true, force: true }) }))
   const base = `http://127.0.0.1:${made.server.address().port}`
@@ -93,7 +93,7 @@ test('서버를 다시 시작하면 주인 없는 예전 세션 폴더를 비운
   fs.mkdirSync(old, { recursive: true })
   const keep = path.join(dataDir, 'keep.txt')
   fs.writeFileSync(keep, 'x')
-  const { server } = createTaggerServer({ dataDir })
+  const { server } = createTaggerServer({ openAccess: true, dataDir })
   server.close()
   assert.equal(fs.existsSync(old), false)
   assert.ok(fs.existsSync(keep))

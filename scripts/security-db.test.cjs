@@ -36,7 +36,7 @@ test('webDbGuard: 검사한 IP와 읽기 전용·시간 제한 옵션을 돌려�
 
 test('Web 서버: 127.0.0.1(같은 서버의 DB)로 연결 확인을 하면 거절된다', async (t) => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-db-'))
-  const { server } = createTaggerServer({ dataDir })
+  const { server } = createTaggerServer({ openAccess: true, dataDir })
   await new Promise((r) => server.listen(0, '127.0.0.1', r))
   t.after(() => new Promise((r) => { server.closeAllConnections?.(); server.close(r); fs.rmSync(dataDir, { recursive: true, force: true }) }))
   const base = `http://127.0.0.1:${server.address().port}`
