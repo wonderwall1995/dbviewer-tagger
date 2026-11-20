@@ -120,6 +120,8 @@
 
 - 2026-11-20 실수 기록: 시험 결과를 grep으로만 보고 `&&`로 커밋까지 이어서, 서버 시험 파일 문법 오류(heredoc 안 역슬래시가 Bash 도구에서 줄어듦)인 채로 e1f0b71 커밋됨 → 바로 fix 커밋. **앞으로: 시험과 커밋을 한 명령에 잇지 않는다. 역슬래시가 든 코드는 heredoc 말고 Write/Edit 도구로.** 49/49.
 
+- 2026-11-20 버그(User 보고: Web 흰 화면): vite 프록시 키 `/api`가 앞부분 일치라 화면 모듈 `/api.ts`까지 서버로 넘김 → 404 → 화면 못 뜸. 키를 `/api/`로. 배포 Nginx는 `location /api/`라 무관. **디버그 방법(기억):** 브라우저 조작 도구가 없을 때 → ① 모듈 주소를 curl로 하나씩 요청해 상태 코드 보기 ② headless Edge `msedge.exe --headless=new --screenshot=<png> --timeout=8000 --window-size=1400,850 --user-data-dir=<scratchpad>` 를 `timeout 25`로 감싸 실행하고 PNG를 Read로 봄 (`--dump-dom --virtual-time-budget`은 SSE 때문에 끝나지 않음). User가 띄운 dev:web(12:42 시작)은 끄지 않고 그대로 씀. 확인: Web 화면 뜸, Hermes 버튼 숨김 → 다음: B단계 (User 지시: B 먼저, 그 뒤 A11).
+
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
 | 상태 | 줄(대략) | Web에서 | 처리 |
