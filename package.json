@@ -2,14 +2,14 @@
   "name": "dbviewer-tagger",
   "version": "0.1.0",
   "description": "Context Enrichment Docs authoring tool",
-  "main": "dist/main/main.js",
+  "main": "apps/desktop/dist/main.js",
   "scripts": {
     "dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
     "dev:vite": "pnpm --filter @tagger/ui dev",
-    "dev:electron": "wait-on tcp:6200 && tsc -p tsconfig.main.json && node scripts/dev-electron.js",
+    "dev:electron": "wait-on tcp:6200 && pnpm run build:electron && node scripts/dev-electron.js",
     "build": "pnpm run build:vite && pnpm run build:electron",
     "build:vite": "pnpm --filter @tagger/ui build",
-    "build:electron": "pnpm run build:core && tsc -p tsconfig.main.json",
+    "build:electron": "pnpm --filter @tagger/desktop... run build",
     "dist": "pnpm run build && electron-builder",
     "dist:mac": "pnpm run build && electron-builder --mac",
     "dist:win": "pnpm run build && electron-builder --win",
@@ -24,15 +24,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/pg": "^8.20.0",
-    "@types/ssh2": "^1.15.5",
     "concurrently": "^8.0.0",
     "electron": "^30.0.0",
     "electron-builder": "^24.0.0",
     "typescript": "^5.4.0",
     "vite": "^5.0.0",
     "vite-plugin-electron": "^0.28.0",
-    "wait-on": "^7.0.0"
+    "wait-on": "^7.0.0",
+    "@tagger/ui": "workspace:*"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.14",
@@ -40,7 +39,7 @@
     "pg": "^8.22.0",
     "ssh2": "^1.17.0",
     "@tagger/core": "workspace:*",
-    "@tagger/ui": "workspace:*"
+    "@tagger/desktop": "workspace:*"
   },
   "build": {
     "appId": "io.github.wonderwall1995.dbviewer-tagger",
@@ -50,7 +49,10 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*",
+      "apps/desktop/dist/**/*",
+      "packages/core/dist/**/*",
+      "packages/core/package.json",
+      "packages/ui/dist/**/*",
       "node_modules/**/*",
       "package.json"
     ],

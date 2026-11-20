@@ -11,9 +11,9 @@ importers:
       '@tagger/core':
         specifier: workspace:*
         version: link:packages/core
-      '@tagger/ui':
+      '@tagger/desktop':
         specifier: workspace:*
-        version: link:packages/ui
+        version: link:apps/desktop
       '@types/papaparse':
         specifier: ^5.3.14
         version: 5.5.2
@@ -27,15 +27,12 @@ importers:
         specifier: ^1.17.0
         version: 1.17.0
     devDependencies:
+      '@tagger/ui':
+        specifier: workspace:*
+        version: link:packages/ui
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.43
-      '@types/pg':
-        specifier: ^8.20.0
-        version: 8.20.0
-      '@types/ssh2':
-        specifier: ^1.15.5
-        version: 1.15.5
       concurrently:
         specifier: ^8.0.0
         version: 8.2.2
@@ -57,6 +54,28 @@ importers:
       wait-on:
         specifier: ^7.0.0
         version: 7.2.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
+
+  apps/desktop:
+    dependencies:
+      '@tagger/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      ssh2:
+        specifier: ^1.17.0
+        version: 1.17.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      '@types/ssh2':
+        specifier: ^1.15.5
+        version: 1.15.5
+      electron:
+        specifier: ^30.0.0
+        version: 30.5.1(supports-color@8.1.1)
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
 
   apps/server:
     dependencies:

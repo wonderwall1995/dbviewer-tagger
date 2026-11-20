@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { createCedSender } = require('../dist/main/cedTransfer.js')
+const { createCedSender } = require('../apps/desktop/dist/cedTransfer.js')
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ced-test-'))

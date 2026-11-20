@@ -3,9 +3,6 @@ import type { WebContents } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import net from 'net'
-import zlib from 'zlib'
-import Papa from 'papaparse'
-import { Client } from 'pg'
 import { Client as SshClient } from 'ssh2'
 import type { SFTPWrapper, Stats, FileEntryWithStats } from 'ssh2'
 import { isSafeAlias, makeExecOps, sshRunner, startAliasTunnel } from './sshAlias'
@@ -83,7 +80,7 @@ function createWindow() {
     win.loadURL('http://localhost:6200')
     win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '../../packages/ui/dist/index.html'))
+    win.loadFile(path.join(__dirname, '../../../packages/ui/dist/index.html'))
   }
 }
 

@@ -27,7 +27,7 @@ function fixture(t) {
     }
     return original.call(this, id, parent, isMain)
   }
-  const main = require.resolve('../dist/main/main.js')
+  const main = require.resolve('../apps/desktop/dist/main.js')
   try { delete require.cache[main]; require(main) }
   finally { Module._load = original; delete require.cache[main] }
   const generate = () => handlers.get('ced:generate')(undefined, 'sample')

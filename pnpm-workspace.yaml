@@ -2,6 +2,11 @@ packages:
   - apps/*
   - packages/*
 
+# pnpm 12는 .npmrc의 pnpm 설정을 읽지 않는다. 여기서 정한다.
+# shamefullyHoist: 모든 의존성을 루트 node_modules로 끌어올린다. 데스크톱 설치본(electron-builder)이 하위 의존성까지 찾게 하려는 것이다.
+shamefullyHoist: true
+autoInstallPeers: true
+
 allowBuilds:
   cpu-features: true
   electron: true
