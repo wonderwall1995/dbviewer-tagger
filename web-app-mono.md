@@ -48,7 +48,7 @@
 - [x] A2. 화면에 `api` 모듈. `window.electronAPI.x` → `api.x` 일괄 교체. 동작 변화 없음.
 - [x] A3. `capabilities()` 추가. 환경별 버튼(작업 폴더 고르기, 폴더 열기, Hermes, SSH, CED 보내기)을 이 값으로 감쌈.
 - [x] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
-- [ ] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
+- [x] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
 - [ ] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
 - [ ] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
 - [ ] A8. main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
@@ -96,11 +96,26 @@
 
 - 2026-11-20 (A 중간 끼워 넣기, User 요청) CED "Local 저장" 버튼 + 톱니 저장 폴더 설정. Hermes 전송 버튼 바로 왼쪽. 설정은 `userData/ced.json` (백업에 안 들어감), 없으면 작업 폴더 `CED/`. `generateCed`가 `cedBaseDir()`을 씀 → Hermes 전송도 이 폴더에 먼저 만든 파일을 보냄. IPC `ced:getDir|pickDir|setDir|reveal` (reveal은 경로를 화면에서 받지 않음). Hermes 전송 설정 건은 `llms.md` Backlogs에 한 줄 (User 요청) → 알아낸 것: 지우기는 manifest에 있던 파일만이라 사용자 폴더를 골라도 안전. 다만 `<폴더>/<제품>/`에 같은 이름 .md가 이미 있으면 덮어씀 (User에게 알림) → 다음: A5.
 
+- 2026-11-20 A5: `src/main/core/workspace.ts` (`Workspace`, `makeWorkspace`). 전역 경로 변수 13개(약 80곳) → `WS.<경로>`. `applyDataRoot`는 `WS = makeWorkspace(root)` 한 줄. 동작 변화 없음, 시험 18/18 → 알아낸 것: ① **기존 버그** `PRODUCT_CONFIG`가 시작 때 한 번만 계산돼 작업 폴더를 바꿔도 이전 폴더에 저장 → `WS.productConfigFile`로 고침 (fix 커밋 따로). ② 경로 말고도 **모듈 전역 상태**가 있음 → 아래 "세션 상태 목록". A7에서 core로 옮길 때 `ctx = { ws, state, platform }`로 넘긴다. 셸 주의: Bash 도구에서 `node -e` 안 `\b` 이스케이프가 깨짐 → 정규식은 스크립트 파일 + 역슬래시 없는 lookaround로. → 다음: A6 (Platform + 세션 상태 묶음).
+
+### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
+
+| 상태 | 줄(대략) | Web에서 | 처리 |
+|---|---|---|---|
+| `csvStatsMemory`, `csvStatsLoadedFrom`, `csvStatsTimer` | 570 | 작업 폴더별 캐시 | ctx.state로 |
+| `exportAborted` | 1616 | **한 사람이 중단하면 모두 중단됨** | ctx.state로 (필수) |
+| `keyNoteMigratedFor` | 2122 | 작업 폴더별 1회 이전 표시 | ctx.state로 |
+| `sampleCache` | 2647 | 파일별 표본 캐시 | ctx.state로 (메모리 상한 고려) |
+| `activeTunnels`, `pendingAliasTunnels` | 1316, 1370 | SSH = 데스크톱 전용 | 데스크톱에 남김 |
+| `hermesVerified` | 862 | Hermes = 데스크톱 전용 | 데스크톱에 남김 |
+| DB 슬롯 설정 (`userData` 파일, safeStorage) | 801~ | **PC 하나에 하나 = 모든 면접관 공유가 됨** | Web은 ctx.state 메모리 (B4) |
+| `KEY_NAME_EXCLUDED` | 2370 | 상수 | 그대로 |
+
 ## 5. 우려 재점검 (코드 작업하며 갱신)
 
 | 우려 | 처음 판단 | 코드 보고 바뀐 점 | 상태 |
 |---|---|---|---|
-| 세션 분리 | 폴더만 나누면 됨 | 작업 폴더가 모듈 전역 상태라서 core 함수 시그니처를 모두 바꿔야 함 (A5) | 열림 |
+| 세션 분리 | 폴더만 나누면 됨 | 경로는 A5에서 `WS` 하나로 모음. 경로 말고 전역 상태 7종 더 있음 (세션 상태 목록). 특히 `exportAborted`, DB 슬롯 | 진행 중 |
 | 경로 조작 | `local:readFile` 하나 | `localImportFile`은 A4에서 화면 약속에서 빠짐. 아직 전수 조사 안 함. 경로를 받는 핸들러 목록 필요 (B1 전에) | 열림 |
 | SSRF (DB 연결) | 앱 검사 + OS 차단 두 겹 | — | 열림 |
 | 서버 계정 권한 | 전용 사용자로 실행 | Stage D (서버 쪽) | 백로그 |
