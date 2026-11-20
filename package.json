@@ -30,7 +30,10 @@
     "server:setup": "bash deploy/setup-server.sh",
     "server:up": "bash deploy/server-up.sh",
     "server:rollback": "bash deploy/server-up.sh --rollback",
-    "server:code": "bash deploy/tagger-admin.sh"
+    "server:code": "bash deploy/tagger-admin.sh",
+    "server:status": "bash deploy/status.sh",
+    "server:logs": "sudo journalctl -u tagger-api -n 80 --no-pager",
+    "server:help": "bash deploy/help.sh"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

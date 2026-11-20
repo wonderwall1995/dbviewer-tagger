@@ -16,6 +16,12 @@ DBViewer-tagger의 Web을 서버 한 대(Ubuntu, Nginx, Node 22)에 올리는 �
 | `pnpm server:up <커밋>` | | main에 들어 있는 그 커밋으로 배포 |
 | `pnpm server:rollback` | `deploy/server-up.sh --rollback` | 빌드 없이 바로 전 버전으로 |
 | `pnpm server:code <set-code\|status\|revoke>` | `deploy/tagger-admin.sh` | 입장 코드 관리 |
+| `pnpm server:status` | `deploy/status.sh` | 상태 한눈에 보기 (주소, 지금 버전, 응답, 세션 수, 입장 코드 만료, 메모리·디스크) |
+| `pnpm server:logs` | | 서비스 로그 80줄 |
+| `pnpm server:help` | `deploy/help.sh` | 이 명령 목록 |
+
+- `pnpm server:setup`은 도메인을 기억합니다(`/etc/tagger/domain`). 두 번째부터는 도메인 없이 쳐도 됩니다.
+- `pnpm server:up`은 main을 직접 받습니다. `git pull`을 따로 하지 않아도 됩니다. 받아 온 main에서 배포 스크립트가 바뀌었으면 새 스크립트로 스스로 다시 실행합니다.
 
 - 처음 `pnpm`을 실행하면 corepack이 pnpm 12를 내려받을지 묻습니다. `Y`를 누릅니다. (묻지 않게 하려면 `export COREPACK_ENABLE_DOWNLOAD_PROMPT=0`)
 - `pnpm` 명령은 실행 전에 패키지를 자동으로 설치하지 않습니다 (`pnpm-workspace.yaml`의 `verifyDepsBeforeRun: false`). 서버에는 `server:up`이 Web에 필요한 패키지만 설치합니다.
@@ -64,9 +70,13 @@ DBViewer-tagger의 Web을 서버 한 대(Ubuntu, Nginx, Node 22)에 올리는 �
 
 ## 배포할 때마다
 
+PR을 main에 병합한 뒤, EC2의 저장소 폴더에서 이것 하나만 칩니다.
+
 ```bash
-cd ~/projects/tagger && pnpm server:up
+pnpm server:up
 ```
+
+끝에 `배포했습니다: <커밋>`이 나오면 성공입니다. 확인은 `pnpm server:status`.
 
 1. main을 받습니다.
 2. Web에 필요한 패키지만 설치합니다 (Electron 제외).

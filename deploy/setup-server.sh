@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 처음 한 번만 실행한다: 이 서버에 DBViewer-tagger Web을 올릴 자리를 만든다.
-#   사용법: deploy/setup-server.sh <도메인>
+#   사용법: deploy/setup-server.sh <도메인>     (pnpm server:setup <도메인>)
+#           deploy/setup-server.sh              지난번 도메인을 다시 쓴다 (/etc/tagger/domain)
 # 하는 일 (여러 번 실행해도 안전하다):
 #   1. 자원 점검 결과를 보여 준다 (메모리, 디스크)
 #   2. 전용 사용자 tagger 를 만든다 (로그인 불가, sudo 없음)
@@ -10,10 +11,23 @@
 set -euo pipefail
 
 DOMAIN="${1:-}"
+# 도메인을 안 넣으면 지난번에 쓴 도메인을 쓴다. 기록이 없으면 지금 Nginx 사이트의 이름을 읽는다.
+if [[ -z "$DOMAIN" ]]; then
+  DOMAIN="$(cat /etc/tagger/domain 2>/dev/null || true)"
+fi
+if [[ -z "$DOMAIN" && -f /etc/nginx/sites-available/tagger ]]; then
+  DOMAIN="$(grep -m1 -oP 'server_name\s+\K[^; ]+' /etc/nginx/sites-available/tagger || true)"
+  [[ "$DOMAIN" == "tagger.local" || "$DOMAIN" == "localhost" ]] && DOMAIN=""
+fi
 if [[ -z "$DOMAIN" ]]; then
   echo "사용법: $0 <도메인>   (예: $0 tagger.example.com)" >&2
   exit 1
 fi
+# https:// 나 끝의 / 를 붙여 넣어도 이름만 쓴다.
+DOMAIN="${DOMAIN#http://}"
+DOMAIN="${DOMAIN#https://}"
+DOMAIN="${DOMAIN%%/*}"
+echo "도메인: $DOMAIN"
 if [[ ! "$DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
   echo "도메인에 쓸 수 없는 글자가 있습니다: $DOMAIN" >&2
   exit 1
@@ -86,12 +100,14 @@ fi
 sudo ln -sfn /etc/nginx/sites-available/tagger /etc/nginx/sites-enabled/tagger
 sudo nginx -t
 sudo systemctl reload nginx
+# 다음에 도메인 없이 실행해도 같은 도메인을 쓰도록 기록한다. (pnpm server:status 도 이 값을 쓴다)
+echo "$DOMAIN" | sudo tee /etc/tagger/domain >/dev/null
 
 cat <<EOF
 
 설치 자리를 만들었습니다. 다음 순서로 진행하세요.
-  1. 배포:            deploy/server-up.sh
-  2. 입장 코드:        deploy/tagger-admin.sh set-code
-  3. HTTPS:           sudo certbot --nginx -d $DOMAIN
-  4. 확인:            curl -I https://$DOMAIN
+  1. 배포:            pnpm server:up
+  2. HTTPS:           sudo certbot --nginx -d $DOMAIN
+  3. 입장 코드:        pnpm server:code set-code
+  4. 확인:            pnpm server:status
 EOF
