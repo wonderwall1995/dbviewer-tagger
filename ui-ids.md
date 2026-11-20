@@ -210,6 +210,7 @@
 | CP.download | CP.zip | "zip 내려받기" 버튼. 제품 폴더 하나로 묶은 zip | `modal-btn--save` | |
 | WG.frame | WG.root | Web 입장 화면 전체 (입장 전에만). 데스크톱에는 없음 | `web-gate` | |
 | WG.card | WG.form | 입장 카드 (제목, 안내, 코드 칸, 버튼) | `web-gate-card` | |
+| WG.notice | WG.trial-notice | 체험판 안내 (24시간·점검 시 삭제, zip으로 받기, DB 접속 정보는 메모리·읽기 전용) | `web-gate-notice` | |
 | WG.code | WG.input | 입장 코드 칸 | `web-gate-input` | |
 | WG.error | WG.message | 입장 실패 문구 (틀림, 만료, 여러 번 틀림, 세션 끝남) | `web-gate-error` | |
 | WG.enter | WG.submit | "들어가기" 버튼 | `web-gate-btn` | |

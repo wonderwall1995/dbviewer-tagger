@@ -4,7 +4,7 @@
 # 하는 일 (여러 번 실행해도 안전하다):
 #   1. 자원 점검 결과를 보여 준다 (메모리, 디스크)
 #   2. 전용 사용자 tagger 를 만든다 (로그인 불가, sudo 없음)
-#   3. /opt/tagger(서버 파일), /var/www/tagger(화면), /var/lib/tagger(데이터), /etc/tagger(설정)를 만든다
+#   3. /opt/tagger/releases(서버 파일, 버전별), /var/www/tagger-releases(화면, 버전별), /var/lib/tagger(데이터), /etc/tagger(설정)를 만든다
 #   4. systemd 서비스와 Nginx 사이트를 설치한다 (서비스 시작은 server-up.sh 가 한다)
 # 하지 않는 일: 인증서 발급(certbot), 입장 코드 만들기, 보안 그룹 변경. 끝에 다음 할 일을 알려 준다.
 set -euo pipefail
@@ -49,7 +49,7 @@ else
 fi
 
 echo "== 3. 폴더"
-sudo install -d -o root -g root -m 0755 /opt/tagger /var/www/tagger /etc/tagger
+sudo install -d -o root -g root -m 0755 /opt/tagger /opt/tagger/releases /var/www/tagger-releases /etc/tagger
 sudo install -d -o tagger -g www-data -m 0700 /var/lib/tagger
 if [[ ! -f /etc/tagger/tagger.env ]]; then
   sudo install -o root -g tagger -m 0640 "$DEPLOY_DIR/tagger.env.example" /etc/tagger/tagger.env
@@ -57,10 +57,18 @@ if [[ ! -f /etc/tagger/tagger.env ]]; then
 else
   echo "/etc/tagger/tagger.env 는 이미 있어 그대로 둡니다"
 fi
-# 화면 폴더가 비어 있으면 Nginx의 try_files가 500을 낸다. 첫 배포 전까지 안내 페이지를 둔다.
-if [[ ! -f /var/www/tagger/index.html ]]; then
-  echo '<!doctype html><meta charset="utf-8"><title>준비 중</title><p>준비 중입니다.</p>' | sudo tee /var/www/tagger/index.html >/dev/null
+# 버전별 폴더 + 링크 구조. /var/www/tagger 와 /opt/tagger/current 는 지금 버전을 가리키는 링크다.
+# 예전 방식으로 만든 진짜 폴더가 있으면 첫 버전(initial)으로 옮긴다.
+if [[ -d /var/www/tagger && ! -L /var/www/tagger ]]; then
+  sudo mv /var/www/tagger /var/www/tagger-releases/initial
 fi
+# 화면 폴더가 비어 있으면 Nginx의 try_files가 500을 낸다. 첫 배포 전까지 안내 페이지를 둔다.
+sudo install -d -o root -g root -m 0755 /var/www/tagger-releases/initial /opt/tagger/releases/initial
+if [[ ! -f /var/www/tagger-releases/initial/index.html ]]; then
+  echo '<!doctype html><meta charset="utf-8"><title>준비 중</title><p>준비 중입니다.</p>' | sudo tee /var/www/tagger-releases/initial/index.html >/dev/null
+fi
+[[ -e /var/www/tagger ]] || sudo ln -s /var/www/tagger-releases/initial /var/www/tagger
+[[ -e /opt/tagger/current ]] || sudo ln -s /opt/tagger/releases/initial /opt/tagger/current
 
 echo "== 4. systemd 서비스"
 sudo install -o root -g root -m 0644 "$DEPLOY_DIR/tagger-api.service" /etc/systemd/system/tagger-api.service

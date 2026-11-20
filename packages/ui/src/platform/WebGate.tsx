@@ -57,6 +57,11 @@ export function WebGate({ children }: { children: ReactNode }) {
       <form className="web-gate-card" onSubmit={submit} {...uiId('WG.card')}>
         <div className="web-gate-title">DBViewer-tagger</div>
         <p className="web-gate-desc">받으신 입장 코드를 넣어 주세요. 들어올 때마다 같은 견본 데이터로 새로 시작해요.</p>
+        <ul className="web-gate-notice" {...uiId('WG.notice')}>
+          <li>체험판이에요. 작업 내용은 <b>24시간 동안 쓰지 않거나 서버를 점검하면 지워져요.</b> 앱 안의 백업도 함께 지워져요.</li>
+          <li>남기고 싶은 결과는 Key 노트 창의 <b>Local 저장</b>에서 zip으로 내려받아 두세요.</li>
+          <li>직접 연결한 DB의 접속 정보는 서버 메모리에만 두고, 세션이 끝나면 함께 사라져요. DB는 읽기 전용으로 연결해요.</li>
+        </ul>
         <input
           className="web-gate-input" {...uiId('WG.code')}
           value={code}

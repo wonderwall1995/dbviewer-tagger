@@ -6601,3 +6601,6 @@ select.kn-input { cursor: pointer; }
 /* DB 슬롯 창의 SSL/TLS 선택 칸 */
 .db-ssl-row { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; font-size: 12px; color: var(--text-2); cursor: pointer; }
 .db-ssl-row input { margin: 0; }
+.web-gate-notice { margin: 0; padding: 8px 10px 8px 22px; border-radius: 7px; background: var(--bg-3); color: var(--text-3); font-size: 11px; line-height: 1.55; }
+.web-gate-notice li + li { margin-top: 3px; }
+.web-gate-notice b { color: var(--text-2); font-weight: 600; }

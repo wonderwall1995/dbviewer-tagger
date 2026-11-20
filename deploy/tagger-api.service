@@ -17,7 +17,7 @@ User=tagger
 # 소켓 파일의 그룹을 Nginx(www-data)로 해서 Nginx만 쓸 수 있게 한다.
 Group=www-data
 EnvironmentFile=/etc/tagger/tagger.env
-ExecStart=/usr/bin/node --max-old-space-size=320 /opt/tagger/tagger-server.js
+ExecStart=/usr/bin/node --max-old-space-size=320 /opt/tagger/current/tagger-server.js
 Restart=always
 RestartSec=3
 

@@ -6,11 +6,11 @@
 # 코드를 바꿔도 서비스를 다시 시작할 필요는 없다.
 set -euo pipefail
 
-if [[ ! -f /opt/tagger/tagger-admin.js ]]; then
-  echo "/opt/tagger/tagger-admin.js 가 없습니다. deploy/server-up.sh 를 먼저 실행하세요." >&2
+if [[ ! -f /opt/tagger/current/tagger-admin.js ]]; then
+  echo "/opt/tagger/current/tagger-admin.js 가 없습니다. deploy/server-up.sh 를 먼저 실행하세요." >&2
   exit 1
 fi
 
 # 설정 파일의 KEY=VALUE 줄만 환경 변수로 넘긴다 (주석과 빈 줄은 뺀다).
 mapfile -t ENV_LINES < <(sudo grep -E '^[A-Z_]+=' /etc/tagger/tagger.env)
-exec sudo -u tagger env "${ENV_LINES[@]}" /usr/bin/node /opt/tagger/tagger-admin.js "$@"
+exec sudo -u tagger env "${ENV_LINES[@]}" /usr/bin/node /opt/tagger/current/tagger-admin.js "$@"
