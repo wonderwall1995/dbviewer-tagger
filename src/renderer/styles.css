@@ -5295,6 +5295,40 @@ tbody tr.row-issue:hover { background: #f59e0b0e; }
 }
 .keyinfo-export-btn:hover { background: rgba(167,139,250,0.2); }
 .keyinfo-export-btn--busy, .keyinfo-export-btn:disabled { opacity: 0.6; cursor: default; }
+/* CED 'Local 저장' 버튼과 저장 폴더 설정(톱니). Hermes 전송 버튼 바로 왼쪽. */
+.ced-save { position: relative; display: inline-flex; align-items: center; margin-left: 6px; }
+.ced-save .ced-save-btn { margin-left: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ced-save .ced-save-btn:last-child { border-radius: 6px; }
+.ced-dir-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 100%; padding: 3px 6px;
+  border: 1px solid rgba(167,139,250,0.4); border-left: none;
+  border-radius: 0 6px 6px 0;
+  background: rgba(167,139,250,0.1); color: #a78bfa; cursor: pointer;
+  align-self: stretch;
+}
+.ced-dir-btn:hover, .ced-dir-btn--on { background: rgba(167,139,250,0.2); }
+.ced-dir-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+  width: 320px; padding: 10px 12px;
+  background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  font-family: var(--font-ui); font-size: 12px; color: var(--text);
+}
+.ced-dir-title { font-weight: 600; margin-bottom: 6px; }
+.ced-dir-path {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+  padding: 5px 7px; background: var(--bg-3); border-radius: 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left;
+}
+.ced-dir-hint { margin-top: 6px; color: var(--text-3); font-size: 11px; line-height: 1.4; }
+.ced-dir-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+.ced-dir-action {
+  padding: 3px 10px; border-radius: 5px; border: 1px solid var(--border-2);
+  background: var(--bg-3); color: var(--text); font-size: 12px; cursor: pointer;
+}
+.ced-dir-action:hover:not(:disabled) { border-color: rgba(167,139,250,0.6); }
+.ced-dir-action:disabled { opacity: 0.45; cursor: default; }
 .keyinfo-export-soon {
   padding: 0 5px;
   border-radius: 6px;

@@ -200,6 +200,10 @@
 
 | 추천 | 대안 | 위치/설명 | 코드 | 선택 |
 |---|---|---|---|---|
+| KI.ced-save-group | KI.ced-save-wrap | Hermes 전송 버튼 바로 왼쪽의 CED Local 저장 묶음 (저장 버튼 + 톱니) | `ced-save` | |
+| KI.ced-save | KI.save-context | "Local 저장" 버튼. 지금 고른 제품의 CED를 저장 폴더/<제품>/ 에 씀 (Hermes로 보내지 않음) | `ced-save-btn` | |
+| KI.ced-dir | KI.ced-dir-gear | CED 저장 폴더 설정 톱니. 이 PC의 폴더를 고를 수 있는 환경에서만 보임 | `ced-dir-btn` | |
+| KI.ced-dir-panel | KI.ced-dir-popover | 톱니로 여는 작은 창: 지금 폴더, 폴더 고르기, 기본값으로 | `ced-dir-panel` | |
 | KI.export | KI.send-context | 제품 줄 오른쪽 "제품 맥락 문서 전송" 버튼. 지금 고른 제품의 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트 CED 폴더로 SFTP 전송 (볼트에서 고친 파일은 덮어쓰지 않음) | `keyinfo-export-btn` | |
 | KI.product-bar | KI.products | 위쪽 제품 선택 칩 줄 | `keyinfo-product-bar` | |
 | KI.product-chip | KI.product | 제품 칩 하나 (반복, 현재 제품은 점 표시) | `keyinfo-product-bar` 안의 버튼 | |

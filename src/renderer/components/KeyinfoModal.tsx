@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Modal } from './Modal'
 import { LorebookCreateManyModal } from './LorebookCreateManyModal'
 import { KeyNotesPane } from './KeyNotesPane'
+import { CedSaveButton } from './CedSaveButton'
 import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '../../shared/types'
 import { uiId } from '../ui/uiId'
 import { api, caps } from '../api'
@@ -616,6 +617,8 @@ export function KeyinfoModal({
               {noteProgress.total > 0 && <span className="keyinfo-tab-count">{noteProgress.confirmed}/{noteProgress.total}</span>}
             </button>
           </div>
+          {/* CED Local 저장: 저장 폴더/<제품>/ 에 쓴다. 저장 폴더는 톱니에서 정한다. */}
+          <CedSaveButton product={localProduct} />
           {/* 제품 맥락 문서 전송: 지금 고른 제품의 확인된 Key 노트로 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트로 보낸다.
               볼트 경로와 SSH는 Hermes 설정에서 정한다. 볼트에서 사람이 고친 파일은 덮어쓰지 않는다. */}
           {caps.hermes && <button

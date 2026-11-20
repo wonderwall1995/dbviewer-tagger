@@ -2274,7 +2274,7 @@ function generateCed(product: string | null | undefined): { dir: string; files: 
   const all = loadKeyNotes(product)
   const notes = all.filter((n) => n.status === 'confirmed')
   const schema = loadKeyinfoData(getKeyinfoPath(product)).schema
-  const outDir = path.join(DATA_ROOT, 'CED', cedFileStem(dirName))
+  const outDir = path.join(cedBaseDir(), cedFileStem(dirName))
   fs.mkdirSync(outDir, { recursive: true })
 
   const indexStem = cedFileStem(dirName)
@@ -2329,6 +2329,65 @@ function generateCed(product: string | null | undefined): { dir: string; files: 
 }
 
 ipcMain.handle('ced:generate', (_event, product: string | null) => generateCed(product))
+
+// ── CED 저장 폴더 ─────────────────────────────────────────────────────────────
+// 'Local 저장' 버튼이 CED를 쓰는 폴더. 제품마다 이 폴더 아래 <제품>/ 폴더를 만든다.
+// 설정은 이 PC의 userData/ced.json에 둔다 (작업 폴더 백업에 들어가지 않는다). 설정이 없으면 작업 폴더의 CED/를 쓴다.
+// Hermes 전송도 이 폴더에 먼저 만든 파일을 보낸다.
+const CED_CONFIG_PATH = path.join(app.getPath('userData'), 'ced.json')
+
+function readCedDirConfig(): string | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CED_CONFIG_PATH, 'utf-8'))
+    return typeof parsed?.dir === 'string' && path.isAbsolute(parsed.dir) ? parsed.dir : null
+  } catch {
+    return null
+  }
+}
+
+function cedBaseDir(): string {
+  return readCedDirConfig() ?? path.join(DATA_ROOT, 'CED')
+}
+
+ipcMain.handle('ced:getDir', () => {
+  const configured = readCedDirConfig()
+  return { path: configured ?? path.join(DATA_ROOT, 'CED'), defaultPath: path.join(DATA_ROOT, 'CED'), isDefault: configured === null }
+})
+
+ipcMain.handle('ced:pickDir', async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], defaultPath: cedBaseDir() })
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+})
+
+// dir가 null이면 기본값(작업 폴더의 CED/)으로 되돌린다.
+ipcMain.handle('ced:setDir', (_event, dir: string | null) => {
+  try {
+    if (dir === null) {
+      fs.rmSync(CED_CONFIG_PATH, { force: true })
+      return { ok: true as const, path: path.join(DATA_ROOT, 'CED') }
+    }
+    if (typeof dir !== 'string' || !path.isAbsolute(dir.trim())) {
+      return { ok: false as const, message: '폴더 경로가 올바르지 않습니다.' }
+    }
+    const target = path.resolve(dir.trim())
+    fs.mkdirSync(target, { recursive: true })
+    const probe = path.join(target, '.dbviewer-write-test')
+    fs.writeFileSync(probe, '')
+    fs.rmSync(probe, { force: true })
+    fs.mkdirSync(path.dirname(CED_CONFIG_PATH), { recursive: true })
+    fs.writeFileSync(CED_CONFIG_PATH, JSON.stringify({ dir: target }, null, 2), 'utf-8')
+    return { ok: true as const, path: target }
+  } catch (e: unknown) {
+    return { ok: false as const, message: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 제품의 CED 폴더를 탐색기로 연다. 경로는 화면에서 받지 않고 여기서 계산한다.
+ipcMain.handle('ced:reveal', async (_event, product: string | null) => {
+  const dir = path.join(cedBaseDir(), cedFileStem(productDirName(product)))
+  fs.mkdirSync(dir, { recursive: true })
+  return shell.openPath(dir)
+})
 
 // ── Key 자동 후보 ───────────────────────────────────────────────────────────────
 // 자동 색인(keyinfo.json의 schema)에서 Key 후보를 제안한다. 후보는 제안일 뿐이고, 사람이 수락해야 초안 노트가 된다.

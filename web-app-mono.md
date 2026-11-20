@@ -54,6 +54,7 @@
 - [ ] A8. main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
 - [ ] A9. Web 서버 뼈대 (Express. D2는 이 초안으로 진행, Stage D에서 다시 봄): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
 - [ ] A10. 화면 쪽 `httpApi` + Web용 Vite 빌드 진입점.
+- [ ] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
 - [ ] A11. 모노레포 폴더 이동 (`apps/desktop`, `apps/server`, `packages/core|shared|ui`). 스크립트 `dev:desktop|web`, `build:desktop|web`. Web 설치 시 Electron 바이너리 생략.
 - [ ] A12. Stage A 확인: 데스크톱 수동 점검 + 내 PC Web 모드에서 견본 CSV 열기·Keyinfo·CED 생성.
 
@@ -92,6 +93,8 @@
 - 2026-11-20 A3: `api.ts`에 `caps`(workspace·revealInOs·hermes·ssh) 추가. 작업 폴더 버튼 3곳은 이미 `onOpenWorkspace &&` 구조라 App에서 넘기지 않는 것으로 끝. 첫 실행 안내도 caps로 막음. Hermes 푸터 버튼·모달, CED 보내기 버튼, DB 창 SSH 칸, Local 창 탐색기 버튼을 caps로 감쌈 → 알아낸 것: **`cedGenerate`(CED를 작업 폴더에 쓰기)는 화면 어디에서도 안 부름.** CED는 "보내기" 버튼 안에서만 만들어짐 → Web에서 hermes를 끄면 CED를 볼 방법이 없음. User 판단 필요 (질문함) → 다음: A4.
 
 - 2026-11-20 A4: `localImportFile(sourcePath)` → `importDroppedFile(file: File)`. preload에서 `webUtils.getPathForFile`로 경로를 구함 (sandbox preload에서도 webUtils 사용 가능). 경로를 받는 함수 하나를 화면 약속에서 없앰 → B1 범위가 하나 줄어듦. IPC 채널 `local:importFile`은 그대로. 끌어다 놓기 실제 동작은 User에게 확인 요청 → 다음: A5 (작업 폴더 문맥).
+
+- 2026-11-20 (A 중간 끼워 넣기, User 요청) CED "Local 저장" 버튼 + 톱니 저장 폴더 설정. Hermes 전송 버튼 바로 왼쪽. 설정은 `userData/ced.json` (백업에 안 들어감), 없으면 작업 폴더 `CED/`. `generateCed`가 `cedBaseDir()`을 씀 → Hermes 전송도 이 폴더에 먼저 만든 파일을 보냄. IPC `ced:getDir|pickDir|setDir|reveal` (reveal은 경로를 화면에서 받지 않음). Hermes 전송 설정 건은 `llms.md` Backlogs에 한 줄 (User 요청) → 알아낸 것: 지우기는 manifest에 있던 파일만이라 사용자 폴더를 골라도 안전. 다만 `<폴더>/<제품>/`에 같은 이름 .md가 이미 있으면 덮어씀 (User에게 알림) → 다음: A5.
 
 ## 5. 우려 재점검 (코드 작업하며 갱신)
 
