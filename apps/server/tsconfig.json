@@ -6,11 +6,10 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist/server",
-    "rootDir": "src",
-    "resolveJsonModule": true
+    "outDir": "dist",
+    "rootDir": "src"
   },
   "include": [
-    "src/server"
+    "src"
   ]
 }

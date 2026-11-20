@@ -100,6 +100,19 @@ importers:
         specifier: ^7.0.0
         version: 7.2.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
 
+  apps/server:
+    dependencies:
+      '@tagger/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
   packages/core:
     dependencies:
       papaparse:

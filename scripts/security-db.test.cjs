@@ -5,7 +5,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 const { isPublicAddress, isAllowedDbPort, resolvePublicHost } = require('../packages/core/dist/netguard.js')
-const { createTaggerServer, webDbGuard } = require('../dist/server/server/server.js')
+const { createTaggerServer, webDbGuard } = require('../apps/server/dist/server.js')
 
 test('공인 주소가 아닌 IPv4·IPv6는 막는다', () => {
   const blocked = ['127.0.0.1', '127.1.2.3', '10.0.0.5', '172.16.0.1', '172.31.255.255', '192.168.1.10', '169.254.169.254',

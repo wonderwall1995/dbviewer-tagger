@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const { createTaggerServer, publicError } = require('../dist/server/server/server.js')
+const { createTaggerServer, publicError } = require('../apps/server/dist/server.js')
 
 async function start(t, opts = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-lim-'))

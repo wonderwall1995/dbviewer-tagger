@@ -5,8 +5,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 const { spawnSync } = require('node:child_process')
-const { loadConfig } = require('../dist/server/server/config.js')
-const { createTaggerServer } = require('../dist/server/server/server.js')
+const { loadConfig } = require('../apps/server/dist/config.js')
+const { createTaggerServer } = require('../apps/server/dist/server.js')
 
 test('기본값 (개발)', () => {
   const c = loadConfig({}, '/work')
@@ -34,7 +34,7 @@ test('숫자 설정이 범위를 벗어나면 시작하지 않는다', () => {
 })
 
 test('설정 오류가 있으면 서버 프로세스가 종료 코드 1로 멈춘다', () => {
-  const r = spawnSync(process.execPath, ['dist/server/server/index.js'], { env: { ...process.env, NODE_ENV: 'production', TAGGER_DATA_DIR: '' }, encoding: 'utf8', timeout: 10_000 })
+  const r = spawnSync(process.execPath, ['apps/server/dist/index.js'], { env: { ...process.env, NODE_ENV: 'production', TAGGER_DATA_DIR: '' }, encoding: 'utf8', timeout: 10_000 })
   assert.equal(r.status, 1)
   assert.match(r.stderr, /설정 오류/)
 })
