@@ -11,6 +11,7 @@ import { lorebookHandlers } from '../main/core/lorebook'
 import { dbHandlers, normalizeSlots } from '../main/core/db'
 import type { DbSlots } from '../main/core/db'
 import { keyinfoHandlers } from '../main/core/keyinfo'
+import { isAllowedDbPort, resolvePublicHost } from '../main/core/netguard'
 
 // Web API 서버. 화면(httpApi)이 부르는 경로는 넷뿐이다.
 //   GET  /api/health          살아 있는지
@@ -70,6 +71,7 @@ export function createTaggerServer(opts: ServerOptions) {
         // DB 접속 정보는 이 세션의 메모리에만 둔다. 디스크에 쓰지 않는다.
         slots: { load: () => structuredClone(slots), save: (next) => { slots = structuredClone(next) } },
         cedDir: () => path.join(root, 'CED'),
+        dbGuard: webDbGuard,
         allowOutsidePaths: false,
       },
     }
@@ -151,6 +153,22 @@ export function createTaggerServer(opts: ServerOptions) {
   })
 
   return { server, sessions }
+}
+
+// Web의 DB 연결 규칙: 공인 주소와 허용 포트만, 검사한 IP로 접속, 읽기 전용, 시간 제한.
+export async function webDbGuard(host: string, port: number) {
+  if (!isAllowedDbPort(port)) throw new Error('이 환경에서는 5432 또는 1024 이상의 포트만 쓸 수 있습니다.')
+  const ip = await resolvePublicHost(host)
+  return {
+    host: ip,
+    clientOptions: {
+      connectionTimeoutMillis: 8000,
+      statement_timeout: 30000,
+      query_timeout: 35000,
+      // 이 연결의 모든 트랜잭션을 읽기 전용으로 연다. (면접관 DB를 바꾸지 않는다)
+      options: '-c default_transaction_read_only=on',
+    },
+  }
 }
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown) {

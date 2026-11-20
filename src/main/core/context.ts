@@ -35,6 +35,8 @@ export interface Ctx {
   slots: { load(): DbSlots; save(slots: DbSlots): void }
   // CED 'Local 저장' 폴더. 데스크톱은 사용자가 정한 폴더, Web은 작업 폴더의 CED/.
   cedDir: () => string
+  // DB 연결 직전 검사. Web만 있다: 주소를 검사해 접속할 IP와 pg 연결 옵션(읽기 전용, 시간 제한)을 돌려준다. 어기면 throw.
+  dbGuard?: (host: string, port: number) => Promise<{ host: string; clientOptions: Record<string, unknown> }>
   // SSH 터널. 데스크톱만 있다. 없으면 SSH를 쓰는 슬롯은 연결하지 않는다.
   tunnel?: { open(key: string, ssh: SshConfig, host: string, port: number): Promise<number>; close(key: string): void }
   // true면 작업 폴더 밖의 경로도 받는다 (데스크톱: 사용자 PC의 파일). Web은 false.

@@ -144,12 +144,16 @@ async function withDb<T>(
     port = localPort
   }
 
+  // Web: 연결 직전에 주소를 검사하고(공인 주소만), 검사한 IP로 접속하며, 읽기 전용·시간 제한을 건다. 데스크톱은 없음.
+  const guarded = ctx.dbGuard ? await ctx.dbGuard(host, port) : null
+
   const client = new Client({
-    host,
+    host: guarded?.host ?? host,
     port,
     database: slot.database,
     user: slot.user,
     password: slot.password || undefined,
+    ...(guarded?.clientOptions ?? {}),
   })
   await client.connect()
   try {
