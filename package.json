@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Context Enrichment Docs authoring tool",
   "main": "apps/desktop/dist/main.js",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
     "dev:vite": "pnpm --filter @tagger/ui dev",
