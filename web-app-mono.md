@@ -52,7 +52,7 @@
 - [x] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
 - [x] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
 - [~] A8. (코드 끝. 데스크톱 수동 점검은 User에게 요청함) main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
-- [ ] A9. Web 서버 뼈대 (Express. D2는 이 초안으로 진행, Stage D에서 다시 봄): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
+- [x] A9. Web 서버 뼈대 (node:http): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
 - [ ] A10. 화면 쪽 `httpApi` + Web용 Vite 빌드 진입점.
 - [ ] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
 - [ ] A11. 모노레포 폴더 이동 (`apps/desktop`, `apps/server`, `packages/core|shared|ui`). 스크립트 `dev:desktop|web`, `build:desktop|web`. Web 설치 시 Electron 바이너리 생략.
@@ -110,6 +110,10 @@
 
 - 2026-11-20 A7·A8 마감: core에 electron/ssh2/child_process import 없음 확인. main.ts에 남은 22채널 = 모두 데스크톱 전용 (dialog:openCsv, local:importFile, app:openGithub, workspace:*, local:openDownloads, hermes:*, ced:send, ssh:pickPemFile, db:closeTunnel, ced:getDir/pickDir/setDir/reveal). core 57채널. **리팩터링이 크므로 Web 서버(A9) 전에 User에게 데스크톱 수동 점검(앱 실행, CSV 열기, DB 연결, Key 노트, CED 저장, 백업)을 부탁함** → 다음: User 점검 결과 확인 뒤 A9.
 
+- 2026-11-20 User 확인: 데스크톱 "대강 잘 동작". User 요청 3건 처리 → ① 톱니를 Keyinfo 창 머리글 제목 오른쪽으로 (CedSaveButton / CedDirSettings로 나눔, 머리글은 끌기 손잡이라 설정 창 안 mousedown 막음) ② 전송 버튼 이름 "Obsidian Vault 전송" ③ **방침 변경: 이 도구가 기준. 볼트에서 사람이 고친 문서도 덮어쓰고 `overwritten` 경고** (cedTransfer, 시험, llms.md 백로그에 [결정함] 표시) → A9 시작. D2 결정(LLM 판단): Express 대신 node:http (경로 4개뿐, 의존성·메모리·공격면 줄임). Stage D에서 다시 봄.
+
+- 2026-11-20 A9: `src/server/server.ts`(`createTaggerServer`) + `index.ts`(127.0.0.1, TAGGER_PORT 기본 6201, 포트 쓰이면 멈춤, TAGGER_DATA_DIR 기본 local/web-data). 경로 4개: health, `POST /api/call/<채널>`({args}), `GET /api/events`(SSE, 세션별), `POST /api/upload?name=`(임시 파일 → rename, 크기 제한). 채널 표 = core 5개 표만 (hasOwnProperty로 `__proto__` 등 막음). 세션 = 쿠키 `tagger_sid`(HttpOnly, SameSite=Lax; Secure는 HTTPS 붙일 때) → `<dataDir>/sessions/<id>/`, 슬롯은 세션 메모리. `tsconfig.server.json` → `dist/server`. `pnpm build:server`, `pnpm start:server`. 시험 `scripts/server.test.cjs` 6개 → 47/47 → 알아낸 것: ① 413 때 `req.destroy()`하면 브라우저가 응답을 못 받음 → 응답 뒤에 닫기로 고침. ② **core 오류 메시지에 서버 절대 경로가 들어감** (fs의 ENOENT 메시지 등) → B7에서 Web 응답의 오류 문구를 거르기. ③ 잘못된 JSON 본문 → 지금 500 → 400으로 (B8). ④ 세션을 아무나 만들 수 있음 (입장 방식은 Stage D) — 지금은 개발용. 세션 수 상한·만료 없음 → B5/B6 → 다음: A10 (화면 httpApi).
+
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
 | 상태 | 줄(대략) | Web에서 | 처리 |
@@ -160,5 +164,5 @@
 | ID | 내용 | 결정 |
 |---|---|---|
 | D1 | `apps/`+`packages/`로 완전히 나눔. 코드 분리 먼저, 폴더 이동은 나중에 한 번에 | ✅ 2026-11-20 |
-| D2 | Web 서버 프레임워크 | 초안 Express로 진행, Stage D에서 다시 봄 |
+| D2 | Web 서버 프레임워크 | node:http로 진행 (LLM 판단, 2026-11-20). Stage D에서 다시 봄 |
 | D3~D9 | 6장 마지막 줄 참고 | Stage D |

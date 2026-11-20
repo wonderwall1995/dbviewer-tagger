@@ -15,7 +15,9 @@
     "dist:win": "pnpm run build && electron-builder --win",
     "dist:linux": "pnpm run build && electron-builder --linux",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run build:electron && node --test scripts/*.test.cjs"
+    "test": "pnpm run build:electron && pnpm run build:server && node --test scripts/*.test.cjs",
+    "build:server": "tsc -p tsconfig.server.json",
+    "start:server": "node dist/server/server/index.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
