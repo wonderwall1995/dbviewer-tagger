@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
 import { toast } from 'sonner'
-import { api } from '../api'
+import { api, demoBlocked } from '../api'
 
 interface Props {
   onClose: () => void
@@ -49,6 +49,8 @@ export function BackupModal({ onClose }: Props) {
 
   const handleSaveConfirm = async () => {
     if (saving) return
+    // Web(시연): 창은 그대로 두고 저장만 막는다.
+    if (demoBlocked()) { setMode('list'); return }
     setSaving(true)
     try {
       const meta = await api.backupSave(title, comment)
@@ -62,6 +64,7 @@ export function BackupModal({ onClose }: Props) {
 
   const handleRestore = async () => {
     if (!confirmRestore || restoring) return
+    if (demoBlocked()) { setConfirmRestore(null); return }
     setRestoring(true)
     try {
       await api.backupRestore(confirmRestore.id)
@@ -75,6 +78,7 @@ export function BackupModal({ onClose }: Props) {
 
   const handleDelete = async () => {
     if (!confirmDelete) return
+    if (demoBlocked()) { setConfirmDelete(null); return }
     setDeleting(true)
     try {
       await api.backupDelete(confirmDelete.id)

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
-import { api } from '../api'
+import { api, demoBlocked } from '../api'
 
 interface Props {
   onClose: () => void
@@ -13,6 +13,8 @@ export function ClearModal({ onClose }: Props) {
 
   const handleClearTmp = async () => {
     if (clearing || done) return
+    // Web(시연): 창은 그대로 두고 삭제만 막는다.
+    if (demoBlocked()) return
     setClearing(true)
     try {
       await api.localClearTmp()
