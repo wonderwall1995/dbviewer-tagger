@@ -16,6 +16,9 @@ import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from './
 import type { BackupMeta } from './workspaceBackup'
 import { makeWorkspace } from './core/workspace'
 import type { Workspace } from './core/workspace'
+import { makeSessionState } from './core/context'
+import type { Ctx, Handlers } from './core/context'
+import { localHandlers, importToLocalDownloads, getDownloadsRoot, withinDownloadsRoot } from './core/local'
 
 const isDev = !app.isPackaged
 
@@ -39,6 +42,29 @@ function readWorkspaceConfig(): string | null {
 const CONFIGURED_WORKSPACE = readWorkspaceConfig()
 // 지금 쓰는 작업 폴더. 작업 폴더를 바꾸면 applyDataRoot가 새 묶음으로 바꾼다.
 let WS: Workspace = makeWorkspace(CONFIGURED_WORKSPACE ?? (isDev ? app.getAppPath() : DEFAULT_WORKSPACE))
+
+// 데스크톱의 사용자는 하나다. 상태도 하나, 작업 폴더도 지금 WS 하나.
+const DESKTOP_STATE = makeSessionState()
+let desktopSender: WebContents | null = null
+
+function desktopCtx(): Ctx {
+  return {
+    ws: WS,
+    state: DESKTOP_STATE,
+    emit: (channel, data) => { if (desktopSender && !desktopSender.isDestroyed()) desktopSender.send(channel, data) },
+    allowOutsidePaths: true,
+  }
+}
+
+// core의 처리 함수 표를 IPC에 연결한다. 알림은 마지막으로 요청한 창으로 보낸다.
+function registerCore(handlers: Handlers): void {
+  for (const [channel, fn] of Object.entries(handlers)) {
+    ipcMain.handle(channel, (event, ...args) => {
+      desktopSender = event.sender
+      return fn(desktopCtx(), ...args)
+    })
+  }
+}
 
 
 function createWindow() {
@@ -81,161 +107,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-// IPC: local.json — 트리 상태 저장 / 불러오기
-
-// ── 프리셋 파일 경로 ──────────────────────────────────────────────────────────
-// 프리셋 JSON에는 작업 폴더 안의 파일을 작업 폴더 기준 상대경로(예: DB-downloads/웹데모/public/a.csv)로 저장한다.
-// 불러올 때는 현재 작업 폴더 기준 절대경로로 풀어서 화면에 넘긴다. 작업 폴더 밖의 파일은 절대경로 그대로 둔다.
-function toStoredPath(p: string): string {
-  if (typeof p !== 'string' || !path.isAbsolute(p)) return p
-  const rel = path.relative(WS.root, p)
-  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return p
-  return rel.split(path.sep).join('/')
-}
-
-function fromStoredPath(p: string): string {
-  if (typeof p !== 'string' || p === '') return p
-  if (!path.isAbsolute(p)) return path.resolve(WS.root, p)
-  if (fs.existsSync(p)) return p
-  // 예전 작업 폴더의 절대경로가 남은 경우: DB-downloads / S3-downloads 아래 같은 위치에 파일이 있으면 그것을 쓴다.
-  const parts = p.split(/[\\/]+/)
-  for (const root of ['DB-downloads', 'S3-downloads']) {
-    const i = parts.lastIndexOf(root)
-    if (i === -1) continue
-    const candidate = path.join(WS.root, root, ...parts.slice(i + 1))
-    if (fs.existsSync(candidate)) return candidate
-  }
-  return p
-}
-
-function mapPresetPaths<T>(data: T, convert: (p: string) => string): T {
-  const sources = (data as { fileSources?: Record<string, unknown> } | null)?.fileSources
-  if (!sources || typeof sources !== 'object') return data
-  const next: Record<string, unknown> = {}
-  for (const [name, src] of Object.entries(sources)) {
-    const s = src as { type?: string; path?: string; localPath?: string } | null
-    if (s?.type === 'local' && typeof s.path === 'string') next[name] = { ...s, path: convert(s.path) }
-    else if (s?.type === 's3' && typeof s.localPath === 'string') next[name] = { ...s, localPath: convert(s.localPath) }
-    else next[name] = src
-  }
-  return { ...data, fileSources: next }
-}
-
-ipcMain.handle('sheet:saveSettings', (_event, data: unknown) => {
-  fs.mkdirSync(path.dirname(WS.sheetSettingsFile), { recursive: true })
-  fs.writeFileSync(WS.sheetSettingsFile, JSON.stringify(data, null, 2), 'utf-8')
-})
-
-ipcMain.handle('sheet:loadSettings', () => {
-  try {
-    if (!fs.existsSync(WS.sheetSettingsFile)) return null
-    return JSON.parse(fs.readFileSync(WS.sheetSettingsFile, 'utf-8'))
-  } catch {
-    return null
-  }
-})
-
-ipcMain.handle('local:save', (_event, data: unknown) => {
-  fs.mkdirSync(path.dirname(WS.localFile), { recursive: true })
-  // 자동 저장은 마지막으로 보던 파일(activeFile)을 모른다. 이미 기록된 값이 있으면 그대로 이어 둔다.
-  let next = data
-  try {
-    if (fs.existsSync(WS.localFile) && data && typeof data === 'object' && !('activeFile' in data)) {
-      const prev = JSON.parse(fs.readFileSync(WS.localFile, 'utf-8'))
-      if (typeof prev?.activeFile === 'string') next = { ...(data as object), activeFile: prev.activeFile }
-    }
-  } catch { /* 읽지 못하면 받은 내용 그대로 저장한다. */ }
-  fs.writeFileSync(WS.localFile, JSON.stringify(mapPresetPaths(next, toStoredPath), null, 2), 'utf-8')
-})
-
-// 프리셋 JSON의 activeFile(마지막으로 보던 CSV)만 바꾼다. 다른 내용은 건드리지 않는다.
-ipcMain.handle('local:setActiveFile', (_event, presetName: string, fileName: string | null) => {
-  if (typeof presetName !== 'string' || presetName === '' || /[\\/]/.test(presetName)) return
-  const target = path.join(WS.root, 'local', 'presets', presetName)
-  try {
-    if (!fs.existsSync(target)) return
-    const json = JSON.parse(fs.readFileSync(target, 'utf-8'))
-    if (fileName) json.activeFile = fileName
-    else delete json.activeFile
-    fs.writeFileSync(target, JSON.stringify(json, null, 2), 'utf-8')
-  } catch { /* 기록하지 못해도 작업에는 영향이 없다. */ }
-})
-
-ipcMain.handle('local:load', () => {
-  try {
-    if (!fs.existsSync(WS.localFile)) {
-      const empty = { folders: [], fileToFolder: {}, fileSources: {}, columnWidths: {}, pageSettings: {} }
-      fs.mkdirSync(path.dirname(WS.localFile), { recursive: true })
-      fs.writeFileSync(WS.localFile, JSON.stringify(empty, null, 2), 'utf-8')
-      return empty
-    }
-    return mapPresetPaths(JSON.parse(fs.readFileSync(WS.localFile, 'utf-8')), fromStoredPath)
-  } catch {
-    return null
-  }
-})
-
-// 이름 지정 저장 — 공란이면 local.json 덮어쓰기
-ipcMain.handle('local:savePreset', (_event, name: string, data: unknown) => {
-  const safeName = (name.trim().replace(/\.json$/i, '') || 'local') + '.json'
-  const targetFile = path.join(WS.root, 'local', 'presets', safeName)
-  fs.mkdirSync(path.dirname(targetFile), { recursive: true })
-  fs.writeFileSync(targetFile, JSON.stringify(mapPresetPaths(data, toStoredPath), null, 2), 'utf-8')
-  return safeName
-})
-
-// 저장된 프리셋 목록 조회 (product 필드도 함께 반환)
-ipcMain.handle('local:listPresets', () => {
-  const dir = path.join(WS.root, 'local', 'presets')
-  try {
-    if (!fs.existsSync(dir)) return []
-    return fs.readdirSync(dir)
-      .filter((f) => f.endsWith('.json'))
-      .map((name) => {
-        const filePath = path.join(dir, name)
-        const stat = fs.statSync(filePath)
-        let product: string | undefined
-        try {
-          const raw = fs.readFileSync(filePath, 'utf-8')
-          const parsed = JSON.parse(raw)
-          if (parsed?.product) product = parsed.product
-        } catch {}
-        return { name, mtime: stat.mtimeMs, product }
-      })
-      .sort((a, b) => b.mtime - a.mtime)
-  } catch {
-    return []
-  }
-})
-
-// 특정 프리셋 불러오기
-ipcMain.handle('local:loadPreset', (_event, name: string) => {
-  const filePath = path.join(WS.root, 'local', 'presets', name)
-  try {
-    if (!fs.existsSync(filePath)) return null
-    return mapPresetPaths(JSON.parse(fs.readFileSync(filePath, 'utf-8')), fromStoredPath)
-  } catch {
-    return null
-  }
-})
-
-// 프리셋 삭제 — local.json은 삭제 불가
-ipcMain.handle('local:deletePreset', (_event, name: string) => {
-  if (name === 'local.json') return
-  const filePath = path.join(WS.root, 'local', 'presets', name)
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-})
-
-// 로컬 CSV → S3-downloads/local-downloads/ 비동기 복사 (content 미반환)
-async function importToLocalDownloads(sourcePath: string) {
-  const filename = path.basename(sourcePath)
-  const destDir = path.join(WS.root, 'S3-downloads', 'local-downloads')
-  await fs.promises.mkdir(destDir, { recursive: true })
-  const destPath = path.join(destDir, filename)
-  await fs.promises.copyFile(sourcePath, destPath)
-  return { name: filename, path: destPath }
-}
-
 // IPC: 파일 선택 다이얼로그 — 복사만, content 미반환
 ipcMain.handle('dialog:openCsv', async () => {
   const result = await dialog.showOpenDialog({
@@ -243,34 +114,15 @@ ipcMain.handle('dialog:openCsv', async () => {
     filters: [{ name: 'CSV Files', extensions: ['csv'] }],
   })
   if (result.canceled) return null
-  return await Promise.all(result.filePaths.map(importToLocalDownloads))
+  return await Promise.all(result.filePaths.map((p) => importToLocalDownloads(desktopCtx(), p)))
 })
 
 // IPC: DnD 파일 경로 → local-downloads 에 복사, path만 반환
 ipcMain.handle('local:importFile', (_event, sourcePath: string) => {
-  return importToLocalDownloads(sourcePath)
+  return importToLocalDownloads(desktopCtx(), sourcePath)
 })
 
-// IPC: 로컬 파일 내용 읽기 (on-demand, 비동기)
-ipcMain.handle('local:readFile', async (_event, filePath: string) => {
-  return await fs.promises.readFile(filePath, 'utf-8')
-})
-
-// IPC: 다운로드 디렉터리 탐색 (S3-downloads / DB-downloads)
-
-function getDownloadsRoot(root: 's3' | 'db'): string {
-  return root === 'db' ? WS.dbDownloadsRoot : WS.s3DownloadsRoot
-}
-
-function withinDownloadsRoot(target: string): boolean {
-  const norm = path.resolve(target)
-  return (
-    norm === WS.s3DownloadsRoot || norm.startsWith(WS.s3DownloadsRoot + path.sep) ||
-    norm === WS.dbDownloadsRoot || norm.startsWith(WS.dbDownloadsRoot + path.sep)
-  )
-}
-
-ipcMain.handle('local:getDownloadsPath', (_event, root: 's3' | 'db' = 's3') => getDownloadsRoot(root))
+registerCore(localHandlers)
 
 // 헤더의 GitHub 버튼: 기본 브라우저로 고정된 주소만 연다.
 ipcMain.handle('app:openGithub', () => shell.openExternal('https://github.com/wonderwall1995'))
@@ -331,81 +183,14 @@ ipcMain.handle('workspace:open', async () => {
 
 // 저장된 폴더를 탐색기로 연다. 성공하면 빈 문자열, 실패하면 오류 메시지를 돌려준다.
 ipcMain.handle('local:openDownloads', async (_event, root: 's3' | 'db' = 'db', subPath?: string) => {
-  const downloadsRoot = getDownloadsRoot(root)
+  const ctx = desktopCtx()
+  const downloadsRoot = getDownloadsRoot(ctx, root)
   const target = subPath ? path.resolve(downloadsRoot, subPath) : downloadsRoot
-  if (!withinDownloadsRoot(target)) return '잘못된 경로입니다.'
+  if (!withinDownloadsRoot(ctx, target)) return '잘못된 경로입니다.'
   // 아직 저장한 적이 없어도 최상위 폴더는 열 수 있게 만든다.
   if (target === downloadsRoot) fs.mkdirSync(downloadsRoot, { recursive: true })
   if (!fs.existsSync(target)) return '폴더를 찾을 수 없습니다.'
   return shell.openPath(target)
-})
-
-ipcMain.handle('local:listDownloads', async (_event, root: 's3' | 'db', subPath?: string) => {
-  const downloadsRoot = getDownloadsRoot(root)
-  const target = subPath ? path.resolve(downloadsRoot, subPath) : downloadsRoot
-  if (!withinDownloadsRoot(target)) return { folders: [], files: [] }
-  if (!fs.existsSync(target)) return { folders: [], files: [] }
-  const entries = fs.readdirSync(target, { withFileTypes: true })
-  const folders = entries
-    .filter((e) => e.isDirectory())
-    .map((e) => ({ name: e.name, path: path.join(target, e.name) }))
-  const files = entries
-    .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.csv'))
-    .map((e) => {
-      const fp = path.join(target, e.name)
-      const stat = fs.statSync(fp)
-      return { name: e.name, path: fp, mtime: stat.mtimeMs, size: stat.size }
-    })
-  return { folders, files }
-})
-
-// 폴더 아래의 CSV를 폴더별로 묶어 돌려준다. segments는 저장 루트 기준의 폴더 경로이다.
-// 하위 폴더는 3단계까지 찾는다. (DB 폴더 / 스키마 폴더 / CSV)
-const CSV_TREE_MAX_DEPTH = 3
-
-ipcMain.handle('local:listCsvTree', (_event, root: 's3' | 'db' = 'db', subPath = '') => {
-  const downloadsRoot = getDownloadsRoot(root)
-  const start = path.resolve(downloadsRoot, subPath)
-  if (!withinDownloadsRoot(start) || !fs.existsSync(start)) return []
-
-  const groups: Array<{ segments: string[]; files: Array<{ name: string; path: string }> }> = []
-  const walk = (dir: string, depth: number) => {
-    const entries = fs.readdirSync(dir, { withFileTypes: true })
-    const files = entries
-      .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.csv'))
-      .map((e) => ({ name: e.name, path: path.join(dir, e.name) }))
-    if (files.length > 0) {
-      const rel = path.relative(downloadsRoot, dir)
-      groups.push({ segments: rel === '' ? [] : rel.split(path.sep), files })
-    }
-    if (depth >= CSV_TREE_MAX_DEPTH) return
-    for (const e of entries) {
-      if (e.isDirectory()) walk(path.join(dir, e.name), depth + 1)
-    }
-  }
-  walk(start, 0)
-  return groups
-})
-
-ipcMain.handle('local:deleteDownload', async (_event, absolutePath: string) => {
-  if (!withinDownloadsRoot(absolutePath)) throw new Error('Invalid path')
-  if (!fs.existsSync(absolutePath)) return
-  fs.rmSync(absolutePath, { recursive: true, force: true })
-})
-
-ipcMain.handle('local:eraseColumn', async (_event, filePath: string, colKey: string) => {
-  const raw = await fs.promises.readFile(filePath, 'utf-8')
-  const lineEnding = raw.includes('\r\n') ? '\r\n' : '\n'
-  const result = Papa.parse<Record<string, string>>(raw, { header: true, skipEmptyLines: 'greedy' })
-  if (!result.meta.fields?.includes(colKey)) throw new Error(`Column "${colKey}" not found`)
-  const newFields = result.meta.fields.filter((f) => f !== colKey)
-  const newRows = result.data.map((row) => {
-    const r: Record<string, string> = {}
-    for (const f of newFields) r[f] = row[f] ?? ''
-    return r
-  })
-  const csv = Papa.unparse({ fields: newFields, data: newRows }, { newline: lineEnding })
-  await fs.promises.writeFile(filePath, csv, 'utf-8')
 })
 
 // ── ParsedCsv 디스크 캐시 (local/tmp/cache/) ──────────────────────────────

@@ -49,7 +49,7 @@
 - [x] A3. `capabilities()` 추가. 환경별 버튼(작업 폴더 고르기, 폴더 열기, Hermes, SSH, CED 보내기)을 이 값으로 감쌈.
 - [x] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
 - [x] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
-- [ ] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
+- [x] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
 - [ ] A7. main.ts 덩어리를 core로 하나씩 옮김 (한 땀 = 한 덩어리): local/프리셋/다운로드 → 캐시/CSV 통계 → Lorebook → DB 슬롯 → DB/SSH → Keyinfo/연관/Key 노트/자동 후보 → CED/백업 → Hermes/CED 보내기(데스크톱 전용 쪽에 둠).
 - [ ] A8. main.ts = 창 만들기 + IPC↔core 연결만. 데스크톱 수동 점검.
 - [ ] A9. Web 서버 뼈대 (Express. D2는 이 초안으로 진행, Stage D에서 다시 봄): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
@@ -97,6 +97,8 @@
 - 2026-11-20 (A 중간 끼워 넣기, User 요청) CED "Local 저장" 버튼 + 톱니 저장 폴더 설정. Hermes 전송 버튼 바로 왼쪽. 설정은 `userData/ced.json` (백업에 안 들어감), 없으면 작업 폴더 `CED/`. `generateCed`가 `cedBaseDir()`을 씀 → Hermes 전송도 이 폴더에 먼저 만든 파일을 보냄. IPC `ced:getDir|pickDir|setDir|reveal` (reveal은 경로를 화면에서 받지 않음). Hermes 전송 설정 건은 `llms.md` Backlogs에 한 줄 (User 요청) → 알아낸 것: 지우기는 manifest에 있던 파일만이라 사용자 폴더를 골라도 안전. 다만 `<폴더>/<제품>/`에 같은 이름 .md가 이미 있으면 덮어씀 (User에게 알림) → 다음: A5.
 
 - 2026-11-20 A5: `src/main/core/workspace.ts` (`Workspace`, `makeWorkspace`). 전역 경로 변수 13개(약 80곳) → `WS.<경로>`. `applyDataRoot`는 `WS = makeWorkspace(root)` 한 줄. 동작 변화 없음, 시험 18/18 → 알아낸 것: ① **기존 버그** `PRODUCT_CONFIG`가 시작 때 한 번만 계산돼 작업 폴더를 바꿔도 이전 폴더에 저장 → `WS.productConfigFile`로 고침 (fix 커밋 따로). ② 경로 말고도 **모듈 전역 상태**가 있음 → 아래 "세션 상태 목록". A7에서 core로 옮길 때 `ctx = { ws, state, platform }`로 넘긴다. 셸 주의: Bash 도구에서 `node -e` 안 `\b` 이스케이프가 깨짐 → 정규식은 스크립트 파일 + 역슬래시 없는 lookaround로. → 다음: A6 (Platform + 세션 상태 묶음).
+
+- 2026-11-20 A6 + A7-1(local): `core/context.ts` = `Ctx { ws, state, emit, allowOutsidePaths }`, `SessionState`, `userPath`/`resolveInside`(심볼릭 링크 실제 위치까지 확인), `Handlers` 표 타입. `core/local.ts` = sheet·local·프리셋·readFile·다운로드 목록/트리/삭제·eraseColumn 15채널. main.ts는 `desktopCtx()` + `registerCore(표)`. 데스크톱 전용(dialog:openCsv, local:importFile, local:openDownloads, workspace:*)은 main.ts에 남김. 시험 `scripts/core-local.test.cjs` 9개 (사용자별 분리, 밖 경로 거절, junction 탈출 거절) → 27/27 → 알아낸 것: ① **화면↔main이 절대 경로를 주고받음** (fileSources, 다운로드 목록의 path). Web도 같은 약속을 쓰면 서버 경로가 화면에 보임 → B1에서 "화면엔 상대 경로"로 바꿀지, `userPath`로 막기만 할지 정해야 함 (지금 판단: 막기만 + 세션 폴더 경로가 보이는 것은 낮은 위험. B1에서 다시 봄). ② **프리셋 이름(`loadPreset`, `deletePreset`, `savePreset`)에 경로 검사 없음** → `../` 통과. 데스크톱에서도 버그. B1에서 고침. ③ 진행률 `emit`은 데스크톱에서 "마지막으로 요청한 창"으로 보냄 (창이 하나라 문제없음) → 다음: A7-2 (캐시, CSV 통계).
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
