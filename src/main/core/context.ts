@@ -37,6 +37,8 @@ export interface Ctx {
   cedDir: () => string
   // DB 연결 직전 검사. Web만 있다: 주소를 검사해 접속할 IP와 pg 연결 옵션(읽기 전용, 시간 제한)을 돌려준다. 어기면 throw.
   dbGuard?: (host: string, port: number) => Promise<{ host: string; clientOptions: Record<string, unknown> }>
+  // 디스크에 bytes만큼 더 써도 되는지 확인하고 사용량에 더한다. 넘으면 throw. Web만 있다 (세션별 용량 상한).
+  reserveDisk?: (bytes: number) => void
   // SSH 터널. 데스크톱만 있다. 없으면 SSH를 쓰는 슬롯은 연결하지 않는다.
   tunnel?: { open(key: string, ssh: SshConfig, host: string, port: number): Promise<number>; close(key: string): void }
   // true면 작업 폴더 밖의 경로도 받는다 (데스크톱: 사용자 PC의 파일). Web은 false.

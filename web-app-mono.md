@@ -67,10 +67,10 @@
 - [x] B1. (A7에서 찾은 구멍: keynote:sampleRows·keyinfo:reindex/index의 파일 경로, 프리셋 이름 load/save/delete, `lorebook:setCategories` 제품 이름, `lorebook:newPath` product) 경로 가두기 `resolveInside(ws.root, p)`: 절대 경로·`..`·심볼릭 링크 탈출 거절. **모든** 파일 핸들러가 거치게. 화면에는 절대 경로 대신 작업 폴더 기준 상대 경로만 오가게.
 - [x] B2. (A9에서 이미 됨: Web 채널 표 = core만. server.test가 hermes/ssh/workspace/ced:setDir/dialog 404 확인) Web 빌드에서 SSH(`ssh2`, `sshAlias`의 `spawn`), pem 선택, Hermes, CED 보내기, 작업 폴더 고르기 경로를 **등록 자체를 안 함**. 시험: 그 경로 요청 → 404.
 - [x] B3. DB 연결 검사 (Web): 호스트 이름 풀기 → 루프백·사설망·링크 로컬·메타데이터 주소 거절 → 검사한 IP로 그대로 연결. 읽기 전용 세션, `statement_timeout`, 연결 시간 제한, 내보내기 행 수·바이트 상한.
-- [ ] B4. Web의 DB 접속 정보는 메모리에만 (세션 끝나면 버림). 디스크 저장 경로는 데스크톱 전용.
-- [ ] B5. 자원 상한: 업로드 크기, 파일 통째 읽기(`readFileSync` 21곳) 중 큰 CSV 경로는 스트리밍 또는 크기 거절, 세션별 디스크 상한 검사 지점.
-- [ ] B6. 세션별 작업 폴더 만들기·지우기 함수 (견본 폴더 복사, 수명 지나면 삭제). 입장 방식(초대 코드)은 Stage D — 지금은 함수와 시험만.
-- [ ] B7. 오류·로그에 접속 정보, 절대 경로, 본문, 오류 원문을 남기지 않음 (`cedTransfer.ts` 규칙과 같게).
+- [x] B4. (A9에서 이미 됨: 세션 메모리 slots) Web의 DB 접속 정보는 메모리에만 (세션 끝나면 버림). 디스크 저장 경로는 데스크톱 전용.
+- [x] B5. 자원 상한: 업로드 크기, 파일 통째 읽기(`readFileSync` 21곳) 중 큰 CSV 경로는 스트리밍 또는 크기 거절, 세션별 디스크 상한 검사 지점.
+- [x] B6. 세션별 작업 폴더 만들기·지우기 함수 (견본 폴더 복사, 수명 지나면 삭제). 입장 방식(초대 코드)은 Stage D — 지금은 함수와 시험만.
+- [x] B7. 오류·로그에 접속 정보, 절대 경로, 본문, 오류 원문을 남기지 않음 (`cedTransfer.ts` 규칙과 같게).
 - [ ] B8. 운영 설정 검사: 필수 환경 변수 없으면 시작 거부, 개발 모드로 공개 실행 거부.
 - [ ] B9. Stage B 확인: 🔒 시험 묶음 — 다른 세션 폴더 읽기, `../`, 절대 경로, `127.0.0.1`/메타데이터 DB 연결, 막힌 경로 요청이 모두 실패.
 
@@ -125,6 +125,8 @@
 - 2026-11-20 B1: `context.ts`에 `checkName`(이름 한 칸: 구분자·./..·제어 문자·빈 이름·120자 초과 거절)과 `tryUserPath`. 적용: **`productDirName`(새로 찾은 가장 큰 구멍: 제품 이름이 검사 없이 경로 → Keyinfo/Key 노트를 작업 폴더 밖에 쓸 수 있었음, 거의 모든 기능이 거침)**, getKeyinfoPath도 productDirName 경유, 프리셋 이름(save/load/delete), lorebook setCategories(하나라도 틀리면 아무것도 안 바꿈)·newPath, keynote:sampleRows·keyinfo:reindex/index 파일 경로(어기면 그 파일만 건너뜀). DB 내보내기 SQL 식별자 `quoteIdent`(큰따옴표 이스케이프) — 경로는 원래 safeSegment로 안전. 시험 `scripts/security-paths.test.cjs` 6개(바깥 폴더에 아무것도 안 생기는지까지) → 55/55. 데스크톱 영향: 이상한 이름(/, .. 포함)만 거절, 정상 이름은 그대로. "화면엔 상대 경로" 전환은 안 함(막기만으로 충분, 세션 폴더 경로 노출은 B7에서 오류 문구만 거름) → 다음: B2.
 
 - 2026-11-20 B3: `core/netguard.ts` (`isPublicAddress` IPv4 14개 범위 + IPv6 ::1/::/fc00::/7/fe80::/10/ff00::/8/::ffff:v4/64:ff9b/2001:db8, `isAllowedDbPort` = 5432 또는 1024~65535 (LLM 판단: 22·80·443 같은 서비스 두드리기 막기), `resolvePublicHost` = lookup all → 하나라도 비공인이면 거절 → 첫 주소 반환). `Ctx.dbGuard?` → `withDb`가 연결 직전에 부르고 **검사한 IP로 접속**(DNS 바꿔치기 대비). Web 옵션: connectionTimeoutMillis 8s, statement_timeout 30s, query_timeout 35s, `-c default_transaction_read_only=on`. 데스크톱은 dbGuard 없음 = 그대로. 시험 `scripts/security-db.test.cjs` 5개 (Web 서버 끝까지 127.0.0.1·localhost 거절 포함) → 60/60 → 남은 점: 호스트를 IP로 바꿔 접속하면 DB가 TLS(SNI)를 요구할 때 문제될 수 있음 — 지금은 ssl 옵션 자체를 안 씀. 면접관 DB가 TLS 필수면 Stage D에서 ssl+servername 처리 → 다음: B4.
+
+- 2026-11-20 B5·B6·B7: 서버 옵션 maxSessions(10, 넘으면 503), sessionDiskBytes(200MB), sessionIdleMs(24h), sweepIntervalMs(10분), sampleDir(새 세션에 cpSync). 용량: `ensureRoom` = 추정치로 넘치면 dirSize로 실제 재고 그래도 넘치면 507. 적용 = 업로드(content-length 먼저, 받는 상한 = min(업로드 상한, 남은 용량)), DB 내보내기 청크(`ctx.reserveDisk`), 64KB 넘는 call 본문. 작은 요청(지우기·목록)은 차도 됨. 서버 시작 때 `<dataDir>/sessions` 비움(세션은 메모리라 주인 없음). `publicError`: dataDir 문자열 + 따옴표 안 절대 경로를 가림. 잘못된 JSON → 400. httpError(status, expose)로 사용자에게 보여 줄 문구만 내보냄. 시험 `scripts/security-limits.test.cjs` 8개 → 68/68 → 남은 점: ① 세션당 메모리(sampleCache 최대 32MB 읽기, CSV 파싱)는 상한 없음 → Stage D systemd MemoryMax로 가둠 + maxSessions로 간접 제한. ② 세션을 누구나 만듦(입장 방식 Stage D) → maxSessions를 봇이 채우면 면접관이 못 들어옴 = 초대 코드가 필요한 이유. User에게 알릴 것 → 다음: B8.
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 

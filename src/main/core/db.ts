@@ -448,7 +448,10 @@ async function writeTableCsv(
     const lines = result.rows.map((row: Record<string, unknown>) =>
       headers.map(h => escape(row[h])).join(',')
     )
-    fs.appendFileSync(csvPath, lines.join('\n') + '\n', 'utf-8')
+    const chunkText = lines.join('\n') + '\n'
+    // Web: 세션 용량 상한을 넘으면 여기서 멈춘다 (큰 DB를 통째로 내려받아 서버 디스크를 채우지 못하게).
+    ctx.reserveDisk?.(Buffer.byteLength(chunkText, 'utf-8'))
+    fs.appendFileSync(csvPath, chunkText, 'utf-8')
 
     rowsDone += result.rows.length
     state.rows = rowsDone
