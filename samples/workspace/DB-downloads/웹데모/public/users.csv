@@ -1,0 +1,9 @@
+id,uuid,firstName,lastName,username,password,email,phoneNumber,avatar,defaultPrivacyLevel,balance,createdAt,modifiedAt
+[PK],[NN],[NN],[NN],[NN],[NN],,,,,[NN],[NN],[NN]
+{string},{string},{string},{string},{string},{string},{string},{string},{string},{privacylevel},{integer},{timestamp},{timestamp}
+FTbUybmPh,689eaf8c-85cd-4fae-b58a-493fd263e9bf,Azjaxu,Omurxk,쇢걼룧,$2a$10$dZRYFmeDlYGfofdOgcGKXeaH5.B/TWxwcPgyQ0VV.dYHG/mCA4oqC,,010-0000-0001,,,0,Sat Nov 14 2026 21:00:43 GMT+0900 (한국 표준시),Sat Nov 14 2026 21:00:43 GMT+0900 (한국 표준시)
+IoZx1AasT,6355ac9e-74c8-4440-9090-536174dfeeb4,Nvvdiw,Cqbfyb,봱즙뿖,$2a$10$07nuw/g255uf.dxq9hoRBOzfbev7VibIRGDHE/EGn737yb8vKH/au,,010-0000-0002,,,0,Sat Nov 14 2026 21:03:35 GMT+0900 (한국 표준시),Sat Nov 14 2026 21:03:35 GMT+0900 (한국 표준시)
+1Z_tOdCSa,6b4d2019-b98d-4033-950c-1235ec0e6914,Wnlmsz,Eigmap,곔볈맨,$2a$10$2qy1QCouVT4qE0PD8VsJx.ShVoIPzdKwdbJ/vdw4t59zcHJ1IPxoa,,010-0000-0003,,,0,Sat Nov 14 2026 21:05:39 GMT+0900 (한국 표준시),Sat Nov 14 2026 21:05:39 GMT+0900 (한국 표준시)
+IvO9U4x_I,97f74f0d-5117-4801-b0e0-d278cf4ae41f,Zraxsh,Bqwfko,꿍츱췅,$2a$10$XOTmYSirGLkimjpXHcnsEueGdBUZdmcxOLE1/Q7exrfrgubC5R35S,,010-0000-0004,,,0,Sat Nov 14 2026 21:43:16 GMT+0900 (한국 표준시),Sat Nov 14 2026 21:43:16 GMT+0900 (한국 표준시)
+Q_L9iXnml,a47d3148-30a3-4664-9975-8ca391dc9141,Vsszav,Ngputh,풉푾뇯,$2a$10$/8syJsY5/7EkPUJjP8mSEubgtPMACxgu4N7AJ3ydFYcBtZyp1xpAS,,010-0000-0005,,,6851000,Sat Nov 14 2026 22:10:11 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:10:11 GMT+0900 (한국 표준시)
+WOWBbJeFW,cdbf217f-5e6e-47d4-b66a-1b1146f2b186,Ajttsj,Cxhhvu,쨲뫞쭟,$2a$10$Cl/LAalzxP.CgkRpV8sU0uruW1SgH5oL/z42YdHrQ/MZZ3zDwe.WO,,010-0000-0006,,,0,Sat Nov 14 2026 22:17:32 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:17:32 GMT+0900 (한국 표준시)

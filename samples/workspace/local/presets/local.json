@@ -1,0 +1,70 @@
+{
+  "product": "rwa",
+  "folders": [
+    {
+      "id": "mwhhjvxoswix4q4q41m",
+      "name": "웹데모.public",
+      "expanded": true
+    }
+  ],
+  "fileToFolder": {
+    "bank_accounts.csv": "mwhhjvxoswix4q4q41m",
+    "bank_transfers.csv": "mwhhjvxoswix4q4q41m",
+    "bank_transfer_logs.csv": "mwhhjvxoswix4q4q41m",
+    "comments.csv": "mwhhjvxoswix4q4q41m",
+    "likes.csv": "mwhhjvxoswix4q4q41m",
+    "notifications.csv": "mwhhjvxoswix4q4q41m",
+    "transactions.csv": "mwhhjvxoswix4q4q41m",
+    "users.csv": "mwhhjvxoswix4q4q41m",
+    "_prisma_migrations.csv": "mwhhjvxoswix4q4q41m"
+  },
+  "fileSources": {
+    "bank_accounts.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/bank_accounts.csv"
+    },
+    "bank_transfers.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/bank_transfers.csv"
+    },
+    "bank_transfer_logs.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/bank_transfer_logs.csv"
+    },
+    "comments.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/comments.csv"
+    },
+    "likes.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/likes.csv"
+    },
+    "notifications.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/notifications.csv"
+    },
+    "transactions.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/transactions.csv"
+    },
+    "users.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/users.csv"
+    },
+    "_prisma_migrations.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/public/_prisma_migrations.csv"
+    }
+  },
+  "columnWidths": {
+    "users.csv": {}
+  },
+  "pageSettings": {},
+  "hiddenFiles": [],
+  "fileComments": {},
+  "lorebookCategories": [
+    "rwa"
+  ],
+  "deletedColumns": {},
+  "hiddenColumns": {}
+}

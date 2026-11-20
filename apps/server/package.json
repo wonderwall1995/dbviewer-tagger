@@ -1,0 +1,21 @@
+{
+  "name": "@tagger/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web API 서버. @tagger/core 처리 함수를 HTTP로 연결하고 면접관(세션)마다 작업 폴더를 나눈다.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "admin": "node dist/admin.js",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=bundle/tagger-server.js --external:pg-native --log-level=warning && esbuild src/admin.ts --bundle --platform=node --target=node22 --outfile=bundle/tagger-admin.js --log-level=warning"
+  },
+  "dependencies": {
+    "@tagger/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,12 @@
+id,checksum,finished_at,migration_name,logs,rolled_back_at,started_at,applied_steps_count
+[PK],[NN],,[NN],,,[NN],[NN]
+{string},{string},{timestamp},{string},{string},{timestamp},{timestamp},{integer}
+f764d842-e69e-49be-b21b-bd68a93fe267,dfade7b0b08a56959c9ba0ce53aa17bdfeee88933ab895336b4b73b02c1a9e19,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261108224914_init,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+8d09f3b5-3158-48a3-8dac-037d3bc0625d,7b4854843ac7aafd3255f06416d80d54253d3ae4c04dde3a9c543bd608c2c84b,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261108235736_add_bank_transfer_status_and_logs,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+8031eef4-1a13-4a6b-a4d9-958cde0cec5e,fb28412d1c3f3cbc461982a5e5547d5db23cb3ddb1e9c3e91de7c35405f7953b,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261109004101_make_user_profile_fields_optional,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+da648f80-0400-4232-a86f-e09243892c25,cea08d7079fa3b84e3b93982094791e4253e109414b8a6e12423cb2504f89055,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261111000000_drop_routing_number,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+6d58776d-8452-4e06-90d2-b2df082bcfb0,242d0895959fd242f2e3a6c85a489d35cb4b181cd80b411ae95002b881aa176c,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261111010000_bank_account_visible,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+adacee24-9cd7-4754-8c63-cbefd09a76fb,2e69dbfa524a6125c84c08b5ea4345072c5a1da0fb59c4e15b627e9cfb41408c,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261111020000_bank_account_balance,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+3d058183-1e77-445a-9550-796c44af0aef,d672d2e5ec437ebca6a97ccd0e3ae952ec579523640632dbcd80309ebc305fe3,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261111030000_transaction_bank_accounts,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+36d1fd3a-5e16-461e-bd92-d26fb0a99733,9c74665819bb007ff62e064c8c7dc3caa459c8e303a14dd1b9124c4c4419130b,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261112000000_drop_contacts,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1
+9515b58b-9d26-4538-b604-45da52a9f17c,9d45c9ebb01c2d9b45c8ebe2f45548fa029df0cdc67b42252fda9a128b301fc0,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),20261113000000_drop_requests,,,Sun Nov 15 2026 05:23:06 GMT+0900 (한국 표준시),1

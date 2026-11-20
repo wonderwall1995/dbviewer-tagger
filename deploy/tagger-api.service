@@ -1,0 +1,59 @@
+# DBViewer-tagger Web API (systemd). setup-server.sh 가 /etc/systemd/system/tagger-api.service 로 설치한다.
+# 앱 안쪽 검사(경로, DB 주소, 용량)에 더해, 운영체제 쪽에서도 가둔다:
+#   - sudo가 없는 전용 사용자(tagger)로 실행한다
+#   - 쓸 수 있는 곳은 /var/lib/tagger(데이터)와 /run/tagger(소켓)뿐이다. 홈 폴더는 보이지 않는다
+#   - 루프백, 사설망, 링크 로컬(클라우드 메타데이터) 주소로 나가는 연결을 막는다
+#   - 메모리 상한을 둔다. 넘으면 이 서비스만 다시 시작한다
+# Nginx는 유닉스 소켓(/run/tagger/tagger.sock)으로 넘겨주므로 TCP 포트를 열지 않는다.
+
+[Unit]
+Description=DBViewer-tagger Web API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tagger
+# 소켓 파일의 그룹을 Nginx(www-data)로 해서 Nginx만 쓸 수 있게 한다.
+Group=www-data
+EnvironmentFile=/etc/tagger/tagger.env
+ExecStart=/usr/bin/node --max-old-space-size=320 /opt/tagger/current/tagger-server.js
+Restart=always
+RestartSec=3
+
+RuntimeDirectory=tagger
+RuntimeDirectoryMode=0750
+StateDirectory=tagger
+StateDirectoryMode=0700
+UMask=0007
+
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+# 나가는 연결: 공인 주소의 DB만. (같은 서버의 다른 DB, 사설망, 메타데이터 주소는 막는다)
+IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
+# DNS는 systemd-resolved의 로컬 주소로 묻는다. 이 주소 하나만 연다.
+IPAddressAllow=127.0.0.53/32
+
+MemoryMax=450M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

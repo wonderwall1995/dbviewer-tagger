@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { ProductViewer } from './ProductViewer'
-import type { FileSource } from '../../shared/types'
+import type { FileSource } from '@tagger/shared'
 
 interface Props {
   product: string | null

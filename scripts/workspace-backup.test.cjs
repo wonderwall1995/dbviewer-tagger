@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { saveWorkspaceBackup, restoreWorkspaceBackup, backupDirectory } = require('../dist/main/workspaceBackup.js')
+const { saveWorkspaceBackup, restoreWorkspaceBackup, backupDirectory } = require('../packages/core/dist/workspaceBackup.js')
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'workspace-backup-'))

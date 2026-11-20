@@ -1,6 +1,17 @@
 # DBViewer-tagger
 
-DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Context Enrichment Docs(CED)를 작성하는 데스크톱 도구입니다.
+DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Context Enrichment Docs(CED)를 작성하는 도구입니다.
+
+같은 화면과 로직을 두 가지로 씁니다.
+
+| | 데스크톱 앱 (Electron) | Web 체험판 |
+|---|---|---|
+| 대상 | 내 PC에서 실제 작업 | 면접관이 브라우저로 써 보기 |
+| 데이터 | 내 PC의 작업 폴더 | 들어올 때마다 견본 데이터의 복사본. 24시간 쓰지 않거나 서버를 다시 시작하면 지워짐 |
+| 입장 | 없음 | 공용 입장 코드 |
+| DB 연결 | 직접 연결, SSH 터널 | 공인 주소의 DB만, 읽기 전용, SSH 터널 없음 |
+| CED | Local 저장(폴더 선택), Obsidian Vault 전송 | Local 저장 = 화면에서 보기 + zip 내려받기 |
+| Hermes 연결 | 있음 | 없음 |
 
 ---
 
@@ -8,12 +19,13 @@ DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Con
 
 | 영역 | 기술 |
 |---|---|
-| 런타임 | Electron 30 + TypeScript |
-| 렌더러 | React 18 + Vite |
-| 패키지 매니저 | pnpm |
-| CSV 파싱 | PapaParse |
-| UI 컴포넌트 | lucide-react, sonner (토스트) |
-| 배포 | electron-builder |
+| 화면 | React 18 + Vite (`packages/ui`) |
+| 로직 | TypeScript, Electron과 HTTP를 모름 (`packages/core`) |
+| 데스크톱 | Electron 30 + electron-builder (`apps/desktop`) |
+| Web 서버 | Node 22 기본 `http`, esbuild로 파일 하나로 묶음 (`apps/server`) |
+| DB | PostgreSQL (`pg`), SSH 터널 (`ssh2`) |
+| CSV | PapaParse |
+| 패키지 관리 | pnpm 12 워크스페이스 (의존성 끌어올림 `shamefullyHoist`) |
 
 ---
 
@@ -26,91 +38,80 @@ DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Con
 - 컬럼 숨기기 · 너비 조정 · 파일별 필터링
 
 ### 시트 & 프리셋
-- 멀티 시트 레이아웃 — 시트별로 독립적인 파일 구성 저장
+- 멀티 시트 레이아웃: 시트별로 독립적인 파일 구성 저장
 - 프리셋 저장 / 불러오기 / 삭제
 - Local 설정, Keyinfo, Lorebook 백업 및 복원
 
-### Keyinfo (키 컬럼 스키마)
+### Keyinfo와 Key 노트
 - 제품별 주요 컬럼 핀 고정 및 폴더 분류
 - DB 스키마 연동: 타입 · PK / FK · 유니크 · NOT NULL · 역참조 자동 색인
+- Key 자동 후보 제안, Key 노트 작성 (초안 / 확인 / 보류)
 - 교차 제품 컬럼 관계 그룹 관리
 
 ### CED 작성
-- 확인된 Key 노트로 제품 목차와 Key별 Markdown 문서를 만든다.
-- 목차 내용이 같으면 파일과 `generated` 시각을 유지한다.
-- 목차 내용이 바뀌면 파일과 `generated` 시각을 갱신한다.
-
-### 커스텀 테이블 (Product Viewer)
-- CSV 파일과 Keyinfo 키를 조합해 사용자 정의 비교 테이블 구성
-- 자동 저장 (autosave) + 수동 저장 + 복원 기능
-- 전체보기 버튼으로 독립 Electron 창에서 Product Viewer 실행
+- 확인된 Key 노트로 제품 목차와 Key별 Markdown 문서를 만듭니다.
+- **Local 저장:** 데스크톱은 정한 폴더(Keyinfo 창 머리글의 톱니)에 쓰고, Web은 화면에서 보여 주고 zip으로 내려받게 합니다.
+- **Obsidian Vault 전송 (데스크톱):** Hermes 서버의 볼트로 보냅니다. 이 도구의 내용이 기준이라 볼트에서 고친 문서도 덮어쓰고 경고합니다.
+- 목차 내용이 같으면 파일과 `generated` 시각을 유지하고, 바뀌면 갱신합니다.
 
 ### DB 연결
-- SSH 터널을 통한 PostgreSQL 연결 (dev / prod 환경 분리)
-- 스키마 · 테이블 탐색 및 CSV 내보내기 (스트리밍 진행 표시)
+- 슬롯 4개(DB1~DB4). 슬롯마다 접속 정보, 저장 폴더 이름, SSL/TLS(서버 인증서 확인), SSH 터널(데스크톱)을 둡니다.
+- 스키마 · 테이블 탐색과 CSV 내보내기 (진행률 표시, 중단 가능)
+- 내보내기는 테이블마다 읽기 전용 스냅샷 트랜잭션 안에서 커서로 읽고, 임시 파일에 다 쓴 뒤 바꿔 끼웁니다. 실패하거나 중단해도 이전에 받은 CSV는 남습니다.
 
 ### Lorebook (컬럼 주석)
 - CSV 파일 · 컬럼 단위 주석 작성 및 관리
 - 카테고리 분류, 일괄 생성 지원
 
-### Hermes (AI 어시스턴트)
-- 내장 AI 채팅 인터페이스 (세션 관리, 스트리밍 응답)
-- 외부 Hermes API 서버와 연동
+### Hermes 연결 (데스크톱)
+- Hermes 서버의 대화 세션 보기 (읽기 전용)
+- 프로필별 접속 주소와 SSH 터널
 
 ---
 
 ## 프로젝트 구조
 
 ```
-src/
-├── main/
-│   ├── main.ts        # BrowserWindow 생성, 전체 IPC 핸들러
-│   └── preload.ts     # contextBridge — renderer ↔ main 브릿지
-└── renderer/
-    ├── main.tsx        # 렌더러 진입점 (URL 파라미터로 창 분기)
-    ├── App.tsx         # 메인 앱 레이아웃
-    ├── styles.css      # 전역 스타일
-    ├── electron.d.ts   # window.electronAPI 타입 선언
-    └── components/
-        ├── DataGrid.tsx              # CSV 테이블 뷰 + 이슈 하이라이팅
-        ├── Sidebar.tsx               # 파일 목록, 필터, 검색
-        ├── ProductViewer.tsx         # 커스텀 테이블 빌더 + 폴더 뷰어
-        ├── ProductViewerWindow.tsx   # Product Viewer 독립 창 래퍼
-        ├── KeyinfoModal.tsx          # Keyinfo 관리 모달
-        ├── LorebookModal.tsx         # Lorebook 조회/편집 모달
-        ├── HermesModal.tsx           # AI 채팅 모달
-        ├── BackupModal.tsx           # 백업 관리 모달
-        ├── LocalFilesBrowser.tsx     # 로컬 다운로드 파일 탐색기
-        └── ...                       # 기타 모달 및 유틸 컴포넌트
+apps/
+  desktop/   @tagger/desktop   Electron main·preload. core를 IPC로 연결하고 데스크톱 전용 기능을 둔다
+  server/    @tagger/server    Web API 서버. core를 HTTP로 연결하고 면접관(세션)마다 작업 폴더를 나눈다
+packages/
+  core/      @tagger/core      로직. Electron도 HTTP도 모른다 (파일, CSV, Keyinfo, CED, DB)
+  ui/        @tagger/ui        화면. 데스크톱과 Web이 같은 빌드를 쓴다 (api.ts가 실행 환경을 고른다)
+  shared/    @tagger/shared    공용 데이터 타입
+deploy/      Web 서버 배포 스크립트와 설정 견본 (deploy/README.md)
+samples/     Web 견본 작업 폴더 (가짜 데이터)
+scripts/     시험(node:test)과 견본 생성 스크립트
 ```
 
-### IPC 채널 네임스페이스
-
-| 네임스페이스 | 기능 |
-|---|---|
-| `local:*` | 로컬 파일 저장/로드, 프리셋, 다운로드 관리 |
-| `db:*` | PostgreSQL 연결, 스키마/테이블 조회, CSV 내보내기 |
-| `ssh:*` | SSH 터널 설정 관리 |
-| `sheet:*` | 멀티 시트 레이아웃 저장/로드 |
-| `keyinfo:*` | 키 컬럼 핀/폴더/관계 관리, DB 스키마 색인 |
-| `customtable:*` | 커스텀 테이블 CRUD, 폴더 관리, 자동 저장/복원 |
-| `lorebook:*` | 컬럼 주석 CRUD, 카테고리 관리 |
-| `backup:*` | Local 설정, Keyinfo, Lorebook 백업 저장/복원/삭제 |
-| `hermes:*` | Hermes 연결 설정과 세션 읽기 (읽기 전용) |
-| `keynote:*` | Key 노트 저장, 자동 후보 제안, 수락과 거절 |
-| `editor:*` | A/B 비교 에디터 템플릿 관리 |
-| `product:*` | 제품별 창 열기, 설정 관리 |
-| `cache:*` | 파싱 캐시 저장/로드 |
+화면은 `TaggerApi` 약속 하나로 로직을 부릅니다. 데스크톱은 preload(IPC)로, Web은 HTTP(`POST /api/call/<채널>`)로 같은 약속을 구현합니다.
 
 ---
 
-## 로컬 데이터 저장 위치
+## 명령
+
+| 명령 | 하는 일 |
+|---|---|
+| `pnpm install` | 의존성 설치 |
+| `pnpm dev` | 데스크톱 앱 개발 실행 |
+| `pnpm dev:web` | Web 개발 실행 (http://localhost:6200, 입장 코드 없이 열림) |
+| `pnpm build` | 화면과 데스크톱 빌드 |
+| `pnpm build:web` | 화면과 Web 서버 빌드 |
+| `pnpm typecheck` | 화면 타입 검사 |
+| `pnpm test` | 빌드 후 전체 시험 |
+| `pnpm dist:win` / `pnpm dist:mac` | 데스크톱 설치본 (`release/`) |
+
+Web 서버 배포는 [deploy/README.md](deploy/README.md)를 봅니다.
+
+---
+
+## 로컬 데이터 저장 위치 (데스크톱)
 
 CSV, 프리셋, 키 문서는 **작업 폴더**에 저장됩니다.
 
 - 설치한 앱은 처음 실행할 때 작업 폴더를 정하게 안내합니다. 기본값은 `문서\DBViewer-tagger`입니다.
-- 작업 폴더는 푸터의 `W` 버튼에서 확인하고 바꿀 수 있습니다. 바꾸면 화면이 새로고침되며 바로 적용됩니다. 기존 파일은 새 폴더로 옮겨지지 않습니다.
-- 개발 모드에서 따로 정하지 않으면 프로젝트 폴더를 사용합니다 (`.gitignore` 처리됨).
+- 작업 폴더는 사이드바의 작업 폴더 버튼에서 확인하고 바꿀 수 있습니다. 바꾸면 화면이 새로고침되며 바로 적용됩니다. 기존 파일은 새 폴더로 옮겨지지 않습니다.
+- 개발 모드에서 따로 정하지 않으면 저장소 루트를 사용합니다 (`.gitignore` 처리됨).
 - DB 접속 정보(비밀번호 포함)는 작업 폴더가 아니라 앱 데이터 폴더에 암호화되어 저장됩니다.
 
 ```
@@ -124,16 +125,28 @@ CSV, 프리셋, 키 문서는 **작업 폴더**에 저장됩니다.
 ├── docs/
 │   ├── lorebook/          # 컬럼 주석 파일
 │   └── keyinfo/           # Keyinfo 문서
+├── CED/                   # Local 저장의 기본 폴더
 └── backups/               # Local 설정, Keyinfo, Lorebook 백업
 ```
 
 ---
 
-## DB 접속 설정
+## CSV 형식
 
-DB 접속 정보는 .env가 아니라 앱 화면에서 입력합니다. DB 창에는 슬롯 4개(DB1~DB4)가 있습니다.
-슬롯마다 이름, DB 호스트, 포트, DB 이름, 사용자, 비밀번호, SSH 터널(선택)을 저장합니다.
-저장한 정보는 사용자 PC의 앱 데이터 폴더에 암호화되어 보관됩니다.
+DB에서 내보낸 CSV는 머리글 다음에 두 줄을 더 둡니다.
+
+- **제약 행:** `[PK]`, `[FK→표.열]`, `[NN]` 등
+- **타입 행:** `{integer}`, `{timestamp}` 등
+
+이 두 줄은 `DB-downloads/` 아래의 파일에서만 찾습니다. 다른 CSV는 첫 행이 `{…}`나 `[…]` 모양이어도 데이터로 읽습니다.
+
+| 값 | 쓰는 방법 |
+|---|---|
+| NULL | 빈 칸 (빈 문자열과 구분하지 않음) |
+| 날짜·시간 | DB가 준 글자 그대로 |
+| JSON, 배열 | JSON 글자 |
+| 바이너리 | `\x` + 16진수 |
+| `=`, `+`로 시작하는 값 | 그대로 둠. 스프레드시트 프로그램으로 열면 수식으로 해석될 수 있음 |
 
 ---
 
@@ -152,18 +165,9 @@ JetBrains Mono에 없는 글자(한글 등)는 Pretendard로 표시됩니다.
 
 ---
 
-## 개발 실행
+## 알려진 제한
 
-```bash
-pnpm install
-pnpm dev
-```
-
-## 빌드 / 패키징
-
-```bash
-pnpm dist          # 현재 플랫폼
-pnpm dist:win      # Windows
-pnpm dist:mac      # macOS
-pnpm dist:linux    # Linux
-```
+- **설치본에 코드 서명이 없습니다.** Windows는 SmartScreen, macOS는 Gatekeeper 경고가 뜹니다.
+- **데스크톱:** 운영체제의 암호화 저장소를 쓸 수 없는 환경(키링이 없는 Linux 등)에서는 DB 접속 정보가 암호화되지 않습니다. 직접 SSH 접속은 서버 호스트 키를 확인하지 않습니다.
+- **Electron 30과 Vite 5는 지원이 끝난 버전입니다.** 올리는 작업은 따로 계획합니다.
+- **Web 체험판:** 세션 데이터는 서버를 다시 시작하거나 24시간 쓰지 않으면 지워집니다. 개인 계정과 작업 보존은 없습니다.

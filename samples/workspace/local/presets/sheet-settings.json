@@ -1,0 +1,11 @@
+{
+  "sheets": [
+    {
+      "id": "default",
+      "name": "default",
+      "isDefault": true,
+      "jsonFile": "local.json"
+    }
+  ],
+  "activeSheet": "default"
+}

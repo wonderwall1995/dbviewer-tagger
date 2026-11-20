@@ -1,0 +1,12 @@
+id,uuid,userId,source,amount,type,transactionId,createdAt,modifiedAt,balanceAfter,balanceBefore,status
+[PK|REF←bank_transfer_logs.bankTransferId],[NN],[NN],[NN],[NN],[NN],,[NN],[NN],,,[NN]
+{string},{string},{string},{string},{integer},{banktransfertype},{string},{timestamp},{timestamp},{integer},{integer},{banktransferstatus}
+xEpfAQwIUj,8b2ab9e4-e957-4983-8e28-f9e71c290e0f,Q_L9iXnml,gtg1TJydq,10000,deposit,XABmmO7Jj,Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),10000,0,completed
+mVgc5C3YYO,a11455be-7af0-465d-bffa-f01673ba5172,Q_L9iXnml,fw6RaUFkC,10000,deposit,VtnIKkZbw,Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),10000,0,completed
+Y8h07qC34j,1f36cbe0-a7a4-4d25-8d8a-25e59d6895a2,Q_L9iXnml,9v4cR8Q-p,10000,deposit,6y2QMjyGM,Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),10000,0,completed
+4wXVaLOcH-,b4603dab-eeb3-425f-b9f8-5f03de42d24c,Q_L9iXnml,gtg1TJydq,500,deposit,ucgf5-gmq,Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),10500,10000,completed
+_roafAOELG,96eae0d3-bb02-458f-b48f-74d81646ed43,Q_L9iXnml,gtg1TJydq,7900,deposit,dz8qWxKYl,Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),18400,10500,completed
+OZoEaPWMuy,b40fa469-53dc-40c5-be70-b1aced1b8a48,Q_L9iXnml,fw6RaUFkC,37900,deposit,6zo5iUIny,Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),47900,10000,completed
+ozSKn42-Wi,3164825b-c889-4c05-9ac3-c06e39db7f47,Q_L9iXnml,fw6RaUFkC,592600,deposit,BBUkHyF7K,Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),640500,47900,completed
+iQx_xigpgq,59d27219-8ba5-47a5-8293-390bf1daa6e1,Q_L9iXnml,9v4cR8Q-p,6182000,deposit,msl_9E9mu,Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),6192000,10000,completed
+e0_OD6d_j9,bbf65f7d-b07b-4408-9bb0-5396d45c7186,Q_L9iXnml,gtg1TJydq,100,deposit,A8gKYG7Gr,Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),18500,18400,completed

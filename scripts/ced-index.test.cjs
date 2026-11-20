@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 const Module = require('node:module')
-const { writeCedIndex } = require('../dist/main/cedIndex.js')
+const { writeCedIndex } = require('../packages/core/dist/cedIndex.js')
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ced-index-'))
@@ -27,7 +27,7 @@ function fixture(t) {
     }
     return original.call(this, id, parent, isMain)
   }
-  const main = require.resolve('../dist/main/main.js')
+  const main = require.resolve('../apps/desktop/dist/main.js')
   try { delete require.cache[main]; require(main) }
   finally { Module._load = original; delete require.cache[main] }
   const generate = () => handlers.get('ced:generate')(undefined, 'sample')

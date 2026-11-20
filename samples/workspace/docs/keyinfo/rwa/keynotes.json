@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "product": "rwa",
+  "notes": [
+    {
+      "id": "kn_mwhsvz5pkacp",
+      "product": "rwa",
+      "title": "balance",
+      "definition": "개인 User 대상 계좌 잔액 기준 총 금액의 합산",
+      "body": "1. 개별 계좌는 잔액 값을 가진다. 그 잔액 값을 의미한다.\n2. 유저가 여러 계좌를 가지고 있고, 개별 계좌에 잔액이 있을 때. 그 합산 수치로도 쓰인다.",
+      "keywords": [
+        "account",
+        "balance",
+        "user"
+      ],
+      "valueMeanings": "개별 값은 계좌 혹은 User가 가진 잔액을 나타낸다. 주체는 계좌일 수 있으며, User의 계좌 합산 금액의 총액 (Sum)일 수 있다.",
+      "status": "confirmed",
+      "members": [
+        {
+          "fileName": "bank_accounts.csv",
+          "columnKey": "balance"
+        },
+        {
+          "fileName": "users.csv",
+          "columnKey": "balance"
+        }
+      ],
+      "excluded": [],
+      "createdAt": "2026-11-15T12:18:11.005Z",
+      "updatedAt": "2026-11-20T03:28:47.983Z"
+    },
+    {
+      "id": "kn_mwof69wmgwtl",
+      "product": "rwa",
+      "title": "likes.id",
+      "definition": "",
+      "body": "gd",
+      "keywords": [],
+      "valueMeanings": "vzcx",
+      "status": "suspended",
+      "members": [
+        {
+          "fileName": "likes.csv",
+          "columnKey": "id"
+        },
+        {
+          "fileName": "notifications.csv",
+          "columnKey": "likeId"
+        }
+      ],
+      "excluded": [],
+      "createdAt": "2026-11-20T03:28:40.102Z",
+      "updatedAt": "2026-11-20T03:28:47.983Z"
+    }
+  ]
+}

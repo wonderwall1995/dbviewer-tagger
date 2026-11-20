@@ -1,0 +1,452 @@
+{
+  "product": "rwa",
+  "pinnedColumns": [
+    {
+      "pinId": 1,
+      "fileName": "bank_accounts.csv",
+      "columnKey": "userId"
+    },
+    {
+      "pinId": 2,
+      "fileName": "bank_accounts.csv",
+      "columnKey": "bankName"
+    },
+    {
+      "pinId": 3,
+      "fileName": "bank_accounts.csv",
+      "columnKey": "accountNumber"
+    },
+    {
+      "pinId": 4,
+      "fileName": "bank_accounts.csv",
+      "columnKey": "visible"
+    },
+    {
+      "pinId": 5,
+      "fileName": "bank_accounts.csv",
+      "columnKey": "balance"
+    },
+    {
+      "pinId": 6,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "transactionId"
+    },
+    {
+      "pinId": 7,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "type"
+    },
+    {
+      "pinId": 8,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "amount"
+    },
+    {
+      "pinId": 9,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "source"
+    },
+    {
+      "pinId": 10,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "balanceAfter"
+    },
+    {
+      "pinId": 11,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "balanceBefore"
+    },
+    {
+      "pinId": 12,
+      "fileName": "bank_transfers.csv",
+      "columnKey": "status"
+    },
+    {
+      "pinId": 13,
+      "fileName": "bank_transfer_logs.csv",
+      "columnKey": "bankAccountId"
+    },
+    {
+      "pinId": 14,
+      "fileName": "bank_transfer_logs.csv",
+      "columnKey": "bankTransferId"
+    },
+    {
+      "pinId": 15,
+      "fileName": "bank_transfer_logs.csv",
+      "columnKey": "id"
+    }
+  ],
+  "folders": [],
+  "schema": {
+    "bank_accounts.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "bankName": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "accountNumber": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "visible": {
+        "dbType": "boolean",
+        "isNotNull": true
+      },
+      "balance": {
+        "dbType": "integer",
+        "isNotNull": true
+      }
+    },
+    "bank_transfers.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true,
+        "backrefs": [
+          "bank_transfer_logs.bankTransferId"
+        ]
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "source": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "amount": {
+        "dbType": "integer",
+        "isNotNull": true
+      },
+      "type": {
+        "dbType": "banktransfertype",
+        "isNotNull": true
+      },
+      "transactionId": {
+        "dbType": "string"
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "balanceAfter": {
+        "dbType": "integer"
+      },
+      "balanceBefore": {
+        "dbType": "integer"
+      },
+      "status": {
+        "dbType": "banktransferstatus",
+        "isNotNull": true
+      }
+    },
+    "bank_transfer_logs.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "bankTransferId": {
+        "dbType": "string",
+        "isFK": true,
+        "fkRef": "bank_transfers.id",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "bankAccountId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "amount": {
+        "dbType": "integer",
+        "isNotNull": true
+      },
+      "fromStatus": {
+        "dbType": "banktransferstatus"
+      },
+      "toStatus": {
+        "dbType": "banktransferstatus",
+        "isNotNull": true
+      },
+      "balanceBefore": {
+        "dbType": "integer"
+      },
+      "balanceAfter": {
+        "dbType": "integer"
+      },
+      "note": {
+        "dbType": "string"
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      }
+    },
+    "comments.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "content": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "transactionId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      }
+    },
+    "likes.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "transactionId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      }
+    },
+    "notifications.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "userId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "transactionId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "isRead": {
+        "dbType": "boolean",
+        "isNotNull": true
+      },
+      "status": {
+        "dbType": "string"
+      },
+      "likeId": {
+        "dbType": "string"
+      },
+      "commentId": {
+        "dbType": "string"
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      }
+    },
+    "transactions.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "source": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "amount": {
+        "dbType": "integer",
+        "isNotNull": true
+      },
+      "description": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "privacyLevel": {
+        "dbType": "privacylevel",
+        "isNotNull": true
+      },
+      "receiverId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "senderId": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "balanceAtCompletion": {
+        "dbType": "integer"
+      },
+      "status": {
+        "dbType": "transactionstatus",
+        "isNotNull": true
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "payerAccountId": {
+        "dbType": "string"
+      },
+      "payeeAccountId": {
+        "dbType": "string"
+      },
+      "payerBalanceAfter": {
+        "dbType": "integer"
+      },
+      "payeeBalanceAfter": {
+        "dbType": "integer"
+      }
+    },
+    "users.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "uuid": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "firstName": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "lastName": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "username": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "password": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "email": {
+        "dbType": "string"
+      },
+      "phoneNumber": {
+        "dbType": "string"
+      },
+      "avatar": {
+        "dbType": "string"
+      },
+      "defaultPrivacyLevel": {
+        "dbType": "privacylevel"
+      },
+      "balance": {
+        "dbType": "integer",
+        "isNotNull": true
+      },
+      "createdAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "modifiedAt": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      }
+    },
+    "_prisma_migrations.csv": {
+      "id": {
+        "dbType": "string",
+        "isPK": true
+      },
+      "checksum": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "finished_at": {
+        "dbType": "timestamp"
+      },
+      "migration_name": {
+        "dbType": "string",
+        "isNotNull": true
+      },
+      "logs": {
+        "dbType": "string"
+      },
+      "rolled_back_at": {
+        "dbType": "timestamp"
+      },
+      "started_at": {
+        "dbType": "timestamp",
+        "isNotNull": true
+      },
+      "applied_steps_count": {
+        "dbType": "integer",
+        "isNotNull": true
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+id,bankTransferId,userId,bankAccountId,amount,fromStatus,toStatus,balanceBefore,balanceAfter,note,createdAt
+[PK],[FK→bank_transfers.id|NN],[NN],[NN],[NN],,[NN],,,,[NN]
+{string},{string},{string},{string},{integer},{banktransferstatus},{banktransferstatus},{integer},{integer},{string},{timestamp}
+fgspy-RTfn,xEpfAQwIUj,Q_L9iXnml,gtg1TJydq,10000,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시)
+gNg8RHPZkG,xEpfAQwIUj,Q_L9iXnml,gtg1TJydq,10000,requested,completed,0,10000,virtual deposit completed,Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시)
+x_Czf-OvBo,mVgc5C3YYO,Q_L9iXnml,fw6RaUFkC,10000,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시)
+9yx7JtmWMf,mVgc5C3YYO,Q_L9iXnml,fw6RaUFkC,10000,requested,completed,0,10000,virtual deposit completed,Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시)
+-ghHQL2_EA,Y8h07qC34j,Q_L9iXnml,9v4cR8Q-p,10000,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시)
+RQMivJJXZV,Y8h07qC34j,Q_L9iXnml,9v4cR8Q-p,10000,requested,completed,0,10000,virtual deposit completed,Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시)
+H8TqF0R8d6,4wXVaLOcH-,Q_L9iXnml,gtg1TJydq,500,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시)
+Mqsm52gRAx,4wXVaLOcH-,Q_L9iXnml,gtg1TJydq,500,requested,completed,10000,10500,virtual deposit completed,Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시)
+RZOEthzi7A,_roafAOELG,Q_L9iXnml,gtg1TJydq,7900,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시)
+sVvwoTd7_O,_roafAOELG,Q_L9iXnml,gtg1TJydq,7900,requested,completed,10500,18400,virtual deposit completed,Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시)
+2-CBbM8TYR,OZoEaPWMuy,Q_L9iXnml,fw6RaUFkC,37900,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시)
+Ho862A-VNn,OZoEaPWMuy,Q_L9iXnml,fw6RaUFkC,37900,requested,completed,10000,47900,virtual deposit completed,Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시)
+-BPGy3UdTJ,ozSKn42-Wi,Q_L9iXnml,fw6RaUFkC,592600,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시)
+hNWKKlzpNM,ozSKn42-Wi,Q_L9iXnml,fw6RaUFkC,592600,requested,completed,47900,640500,virtual deposit completed,Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시)
+DWPYjHfuEi,iQx_xigpgq,Q_L9iXnml,9v4cR8Q-p,6182000,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시)
+Hxxtqd_H8D,iQx_xigpgq,Q_L9iXnml,9v4cR8Q-p,6182000,requested,completed,10000,6192000,virtual deposit completed,Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시)
+UxLIAkYMRr,e0_OD6d_j9,Q_L9iXnml,gtg1TJydq,100,,requested,,,virtual deposit requested,Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시)
+fAGi0K7fYg,e0_OD6d_j9,Q_L9iXnml,gtg1TJydq,100,requested,completed,18400,18500,virtual deposit completed,Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시)
