@@ -64,7 +64,7 @@
 
 각 항목은 시험을 같이 남긴다 (`scripts/` 또는 패키지별 test).
 
-- [ ] B1. (A7에서 찾은 구멍: 프리셋 이름 load/save/delete, `lorebook:setCategories` 제품 이름, `lorebook:newPath` product) 경로 가두기 `resolveInside(ws.root, p)`: 절대 경로·`..`·심볼릭 링크 탈출 거절. **모든** 파일 핸들러가 거치게. 화면에는 절대 경로 대신 작업 폴더 기준 상대 경로만 오가게.
+- [ ] B1. (A7에서 찾은 구멍: keynote:sampleRows·keyinfo:reindex/index의 파일 경로, 프리셋 이름 load/save/delete, `lorebook:setCategories` 제품 이름, `lorebook:newPath` product) 경로 가두기 `resolveInside(ws.root, p)`: 절대 경로·`..`·심볼릭 링크 탈출 거절. **모든** 파일 핸들러가 거치게. 화면에는 절대 경로 대신 작업 폴더 기준 상대 경로만 오가게.
 - [ ] B2. Web 빌드에서 SSH(`ssh2`, `sshAlias`의 `spawn`), pem 선택, Hermes, CED 보내기, 작업 폴더 고르기 경로를 **등록 자체를 안 함**. 시험: 그 경로 요청 → 404.
 - [ ] B3. DB 연결 검사 (Web): 호스트 이름 풀기 → 루프백·사설망·링크 로컬·메타데이터 주소 거절 → 검사한 IP로 그대로 연결. 읽기 전용 세션, `statement_timeout`, 연결 시간 제한, 내보내기 행 수·바이트 상한.
 - [ ] B4. Web의 DB 접속 정보는 메모리에만 (세션 끝나면 버림). 디스크 저장 경로는 데스크톱 전용.
@@ -106,14 +106,16 @@
 
 - 2026-11-20 A7-4(db): `core/db.ts` = 슬롯 타입·`normalizeSlots`·`safeSegment` + db:listSlots/loadSlot/saveSlot/testConnection/listSchemas/listTables/abortExport/exportTables/exportSchemas (9채널). `Ctx`에 `slots`(저장소)와 `tunnel?`(SSH) 추가. 데스크톱은 암호화 파일 + ensureTunnel/closeTunnel, Web은 메모리 저장소 + 터널 없음 → SSH 슬롯은 "이 환경에서는 SSH 터널을 쓸 수 없습니다". 진행률은 `ctx.emit`, 중단 표시는 `ctx.state.exportAborted`. main.ts에 남은 것: 암호화 파일 읽기/쓰기, SSH 터널(Hermes도 씀), db:closeTunnel, ssh:pickPemFile. 시험 5개 → 39/39 → 알아낸 것: B3(DB 주소 검사)는 `withDb` 한 곳에 넣으면 testConnection·조회·내보내기 모두에 걸림. 연결 직전에 `ctx.connectGuard?(host, port)` 같은 부품으로 두면 데스크톱은 없음, Web은 주소 검사 → 다음: A7-5 (Keyinfo·연관·Key 노트·자동 후보).
 
+- 2026-11-20 A7-5(keyinfo): `core/keyinfo.ts` = Keyinfo·백업·연관 그룹·Key 노트·CED 생성·자동 후보·표본 행 (20채널). `Ctx.cedDir()` 추가 (데스크톱 = 톱니 설정, Web = 작업 폴더 CED/). `keyNoteMigratedFor`, `sampleCache` → `ctx.state`. 진행률 `sender`는 `{ send: ctx.emit }`. 데스크톱 전용 CED 폴더 설정(ced:getDir/pickDir/setDir/reveal)은 main.ts에 남김. main.ts 2,800줄 → 795줄. 시험 2개 → 41/41 → 알아낸 것: ① `ced-index.test.cjs`는 가짜 electron으로 main.js를 불러 `event` 없이 핸들러를 부름 → `registerCore`가 `event.sender`에서 죽음 → `event?.sender`로 고침. 이 시험은 main 연결까지 확인해 줘서 유용. ② `keynote:sampleRows`, `keyinfo:reindex/index`가 화면에서 받은 파일 경로를 그대로 읽음 → B1 목록에 추가 → 다음: A7-6 (Hermes·CED 보내기는 데스크톱 전용이라 main.ts에 그대로 둠 → 사실상 A7 끝, A8 확인).
+
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
 | 상태 | 줄(대략) | Web에서 | 처리 |
 |---|---|---|---|
 | `csvStatsMemory`, `csvStatsLoadedFrom`, `csvStatsTimer` | 570 | 작업 폴더별 캐시 | ✅ ctx.state.csvStats (A7-2) |
 | `exportAborted` | 1616 | **한 사람이 중단하면 모두 중단됨** | ✅ ctx.state.exportAborted (A7-4) |
-| `keyNoteMigratedFor` | 2122 | 작업 폴더별 1회 이전 표시 | ctx.state로 |
-| `sampleCache` | 2647 | 파일별 표본 캐시 | ctx.state로 (메모리 상한 고려) |
+| `keyNoteMigratedFor` | 2122 | 작업 폴더별 1회 이전 표시 | ✅ ctx.state (A7-5) |
+| `sampleCache` | 2647 | 파일별 표본 캐시 | ✅ ctx.state (A7-5). 세션당 최대 32MB 읽기 → B5에서 세션 수 상한과 같이 봄 |
 | `activeTunnels`, `pendingAliasTunnels` | 1316, 1370 | SSH = 데스크톱 전용 | 데스크톱에 남김 |
 | `hermesVerified` | 862 | Hermes = 데스크톱 전용 | 데스크톱에 남김 |
 | DB 슬롯 설정 (`userData` 파일, safeStorage) | 801~ | **PC 하나에 하나 = 모든 면접관 공유가 됨** | ✅ ctx.slots 부품화 (A7-4). Web 메모리 구현은 A9 |
