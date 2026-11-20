@@ -104,5 +104,7 @@ test('ced:read는 문서 내용만 돌려주고 서버 폴더 경로는 돌려�
   assert.equal(r.body.ok, true)
   assert.equal(r.body.value.folder, 'shop')
   assert.deepEqual(r.body.value.files.map((f) => f.name).sort(), ['shop.md', '회원 ID.md'])
-  assert.ok(!JSON.stringify(r.body).includes(dataDir.replace(/\/g, '\\')))
+  // JSON 안에서는 역슬래시가 두 개로 바뀌므로, 경로를 JSON 문자열로 바꿔서 찾는다.
+  assert.ok(!JSON.stringify(r.body).includes(JSON.stringify(dataDir).slice(1, -1)))
+  assert.ok(!JSON.stringify(r.body).includes('sessions'))
 })
