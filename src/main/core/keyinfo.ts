@@ -4,6 +4,7 @@ import Papa from 'papaparse'
 import { writeCedIndex } from '../cedIndex'
 import { backupDirectory, saveWorkspaceBackup, restoreWorkspaceBackup } from '../workspaceBackup'
 import type { BackupMeta } from '../workspaceBackup'
+import { checkName, tryUserPath } from './context'
 import type { Ctx, Handlers } from './context'
 
 const H: Handlers = {}
@@ -32,7 +33,7 @@ interface KeyinfoData {
 
 
 function getKeyinfoPath(ctx: Ctx, product?: string | null): string {
-  return path.join(ctx.ws.docsKeyinfoDir, product?.trim() || 'none', 'keyinfo.json')
+  return path.join(ctx.ws.docsKeyinfoDir, productDirName(product), 'keyinfo.json')
 }
 
 function loadKeyinfoData(p: string): KeyinfoData {
@@ -186,8 +187,10 @@ interface KeyNote {
   updatedAt: string
 }
 
+// 제품 폴더 이름. 제품이 없으면 'none'. 이름으로 다른 폴더를 가리키지 못하게 확인한다.
 export function productDirName(product?: string | null): string {
-  return product?.trim() || 'none'
+  const s = typeof product === 'string' ? product.trim() : ''
+  return s === '' ? 'none' : checkName(s, '제품 이름')
 }
 
 function getKeyNotesPath(ctx: Ctx, product?: string | null): string {
@@ -770,6 +773,7 @@ export type SampleCache = {
 H['keynote:sampleRows'] = (ctx: Ctx, filePath: unknown, columnKeys: unknown, limit: unknown, skipBlank: unknown, offset: unknown, sort: unknown) => {
   const fail = (reason: string) => ({ ok: false, reason, columns: [] as string[], rows: [] as string[][], total: 0, hasMore: false, truncated: false })
   if (typeof filePath !== 'string' || !/\.csv$/i.test(filePath)) return fail('invalid')
+  if (!tryUserPath(ctx, filePath)) return fail('invalid')
   if (!fs.existsSync(filePath)) return fail('missing')
   const wanted = Array.isArray(columnKeys) ? columnKeys.filter((k): k is string => typeof k === 'string') : []
   const take = Math.min(Math.max(typeof limit === 'number' ? Math.floor(limit) : 20, 1), 200)
@@ -875,7 +879,8 @@ H['keyinfo:reindex'] = async (ctx: Ctx, product: string | null, fileSources: Rec
   sender.send('keyinfo:progress', { done, total })
 
   for (const [fileName, src] of entries) {
-    const filePath = src.type === 'local' ? src.path : src.localPath
+    // 화면에서 받은 경로라서 경로 정책(Web: 작업 폴더 안만)을 거친다. 어기면 이 파일은 건너뛴다.
+    const filePath = tryUserPath(ctx, src.type === 'local' ? src.path : src.localPath)
     if (filePath && fs.existsSync(filePath)) {
       try {
         const { columns, constraints, dbTypes } = parseCsvHeaderOnly(filePath)
@@ -913,7 +918,8 @@ H['keyinfo:index'] = async (ctx: Ctx, product: string | null, fileSources: Recor
 
   let changed = false
   for (const [fileName, src] of toIndex) {
-    const filePath = src.type === 'local' ? src.path : src.localPath
+    // 화면에서 받은 경로라서 경로 정책(Web: 작업 폴더 안만)을 거친다. 어기면 이 파일은 건너뛴다.
+    const filePath = tryUserPath(ctx, src.type === 'local' ? src.path : src.localPath)
     if (filePath && fs.existsSync(filePath)) {
       try {
         const { columns, constraints, dbTypes } = parseCsvHeaderOnly(filePath)

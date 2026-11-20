@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { checkName } from './context'
 import type { Ctx, Handlers } from './context'
 
 const H: Handlers = {}
@@ -54,7 +55,7 @@ H['lorebook:delete'] = async (ctx: Ctx, absPath: string) => {
 H['lorebook:newPath'] = (ctx: Ctx, product: string, csvName: string, colLabel: string) => {
   const safeCsv = csvName.replace(/\.csv$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file'
   const safeCol = colLabel.replace(/[\\/:*?"<>|]/g, '_').trim() || 'col'
-  const dir = product ? path.join(ctx.ws.lorebookRoot, product) : ctx.ws.lorebookRoot
+  const dir = product ? path.join(ctx.ws.lorebookRoot, checkName(product, '제품 이름')) : ctx.ws.lorebookRoot
   return path.join(dir, `${safeCsv}_${safeCol}.json`)
 }
 
@@ -121,6 +122,9 @@ H['product:saveConfig'] = (ctx: Ctx, data: unknown) => {
 H['lorebook:setCategories'] = (ctx: Ctx, cats: string[]) => {
   ensureProductRoot(ctx)
   const existing = new Set(listProductNames(ctx))
+  // 제품 이름은 파일 이름이 된다. 하나라도 올바르지 않으면 아무것도 바꾸지 않는다.
+  if (!Array.isArray(cats)) throw new Error('제품 목록이 올바르지 않습니다.')
+  cats = cats.map((c) => checkName(c, '제품 이름'))
   const next = new Set(cats)
 
   for (const name of existing) {

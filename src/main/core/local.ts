@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import Papa from 'papaparse'
-import { userPath } from './context'
+import { userPath, checkName } from './context'
 import type { Ctx, Handlers } from './context'
 
 // ── 프리셋 파일 경로 ──────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ export const localHandlers: Handlers = {
 
   // 이름 지정 저장 — 공란이면 local.json 덮어쓰기
   'local:savePreset': (ctx, name: string, data: unknown) => {
-    const safeName = (name.trim().replace(/\.json$/i, '') || 'local') + '.json'
+    const safeName = checkName((String(name ?? '').trim().replace(/\.json$/i, '') || 'local') + '.json', '프리셋 이름')
     const targetFile = path.join(ctx.ws.root, 'local', 'presets', safeName)
     fs.mkdirSync(path.dirname(targetFile), { recursive: true })
     fs.writeFileSync(targetFile, JSON.stringify(mapPresetPaths(data, (p) => toStoredPath(ctx, p)), null, 2), 'utf-8')
@@ -163,7 +163,7 @@ export const localHandlers: Handlers = {
 
   // 특정 프리셋 불러오기
   'local:loadPreset': (ctx, name: string) => {
-    const filePath = path.join(ctx.ws.root, 'local', 'presets', name)
+    const filePath = path.join(ctx.ws.root, 'local', 'presets', checkName(name, '프리셋 이름'))
     try {
       if (!fs.existsSync(filePath)) return null
       return mapPresetPaths(JSON.parse(fs.readFileSync(filePath, 'utf-8')), (p) => fromStoredPath(ctx, p))
@@ -175,7 +175,7 @@ export const localHandlers: Handlers = {
   // 프리셋 삭제 — local.json은 삭제 불가
   'local:deletePreset': (ctx, name: string) => {
     if (name === 'local.json') return
-    const filePath = path.join(ctx.ws.root, 'local', 'presets', name)
+    const filePath = path.join(ctx.ws.root, 'local', 'presets', checkName(name, '프리셋 이름'))
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
   },
 

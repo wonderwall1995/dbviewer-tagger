@@ -355,6 +355,11 @@ const escape = (v: unknown): string => {
 
 // 폴더나 파일 이름으로 쓸 문자열을 안전하게 바꾼다.
 // 경로 구분자와 Windows에서 쓸 수 없는 글자는 밑줄로 바꾸고, 점만 있는 이름이나 예약 이름은 피한다.
+// SQL 식별자(스키마, 테이블 이름)를 큰따옴표로 감싼다. 이름 안의 큰따옴표는 두 번 써서 SQL이 끼어들지 못하게 한다.
+export function quoteIdent(name: string): string {
+  return '"' + String(name).replace(/"/g, '""') + '"'
+}
+
 export function safeSegment(name: string): string {
   let s = String(name ?? '')
     // eslint-disable-next-line no-control-regex
@@ -388,14 +393,14 @@ async function writeTableCsv(
 ): Promise<string | null> {
   if (ctx.state.exportAborted) throw new Error('EXPORT_ABORTED')
 
-  const countRes = await client.query(`SELECT COUNT(*) FROM "${schema}"."${table}"`)
+  const countRes = await client.query(`SELECT COUNT(*) FROM ${quoteIdent(schema)}.${quoteIdent(table)}`)
   const totalRows = parseInt(countRes.rows[0].count, 10)
   const csvPath = path.join(baseDir, `${safeSegment(table)}.csv`)
   const sendProgress = (rowsDone: number, total: number) =>
     ctx.emit('db:exportProgress', { ...pos, table, rowsDone, totalRows: total })
 
   if (totalRows === 0) {
-    const headerRes = await client.query(`SELECT * FROM "${schema}"."${table}" LIMIT 0`)
+    const headerRes = await client.query(`SELECT * FROM ${quoteIdent(schema)}.${quoteIdent(table)} LIMIT 0`)
     const headers = headerRes.fields.map((f: { name: string }) => f.name)
     let saved: string | null = null
     if (headers.length > 0) {
@@ -421,7 +426,7 @@ async function writeTableCsv(
     if (ctx.state.exportAborted) throw new Error('EXPORT_ABORTED')
 
     const result = await client.query(
-      `SELECT * FROM "${schema}"."${table}" LIMIT $1 OFFSET $2`,
+      `SELECT * FROM ${quoteIdent(schema)}.${quoteIdent(table)} LIMIT $1 OFFSET $2`,
       [CHUNK_SIZE, rowsDone]
     )
     if (result.rows.length === 0) break

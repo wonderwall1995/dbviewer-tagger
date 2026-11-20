@@ -49,6 +49,23 @@ export function userPath(ctx: Ctx, p: unknown): string {
   return resolveInside(ctx.ws.root, p)
 }
 
+// 폴더나 파일 이름 한 칸으로 쓰는 이름(제품, 프리셋 등)을 확인한다.
+// 경로 구분자, '.', '..', 제어 문자가 있으면 거절한다. 그래야 이름으로 다른 폴더를 가리킬 수 없다.
+export function checkName(name: unknown, label = '이름'): string {
+  if (typeof name !== 'string') throw new Error(`${label}이(가) 올바르지 않습니다.`)
+  const s = name.trim()
+  // eslint-disable-next-line no-control-regex
+  if (s === '' || s === '.' || s === '..' || /[\\/\u0000-\u001f]/.test(s) || s.length > 120) {
+    throw new Error(`${label}이(가) 올바르지 않습니다.`)
+  }
+  return s
+}
+
+// 경로가 실제로 쓸 수 있는 파일이면 그 경로를, 아니면 null을 돌려준다. (경로 정책을 어기는 경우 포함)
+export function tryUserPath(ctx: Ctx, p: unknown): string | null {
+  try { return userPath(ctx, p) } catch { return null }
+}
+
 export function resolveInside(root: string, p: string): string {
   const base = path.resolve(root)
   const target = path.resolve(base, p)
