@@ -76,10 +76,10 @@
 
 ### 3-C. 기록 옮기기 (Stage B 뒤)
 
-- [ ] C1. User에게 `llms.md` 수정 허락 받기 (llms.md 규칙).
-- [ ] C2. 6장 역제안을 `llms.md` Backlogs에 한 줄씩. 서버 구성 세부는 빼고 일반 표현으로.
-- [ ] C3. 7장 User 고민을 `llms.md` To-do에 `[IMPORTANT]`로 한 줄씩. 보안 세부는 빼고 "무엇을 정해야 하는지"만.
-- [ ] C4. Stage A·B에서 알아낸 것 중 User가 알아야 할 것을 채팅으로 요약 → Stage D 의논 시작.
+- [x] C1. (User가 처음에 "B 다음에 llms.md에 실록해줘"라고 지시 = 허락) User에게 `llms.md` 수정 허락 받기 (llms.md 규칙).
+- [x] C2. 6장 역제안을 `llms.md` Backlogs에 한 줄씩. 서버 구성 세부는 빼고 일반 표현으로.
+- [x] C3. 7장 User 고민을 `llms.md` To-do에 `[IMPORTANT]`로 한 줄씩. 보안 세부는 빼고 "무엇을 정해야 하는지"만.
+- [x] C4. Stage A·B에서 알아낸 것 중 User가 알아야 할 것을 채팅으로 요약 → Stage D 의논 시작.
 
 ## 4. 땀 기록 (최신이 아래, 한 줄씩: 한 일 → 알아낸 것 → 다음)
 
@@ -131,6 +131,8 @@
 - 2026-11-20 B8·B9 (**Stage B 끝**): `src/server/config.ts` `loadConfig(env)` — TAGGER_PORT(1024~65535)·DATA_DIR(운영은 절대 경로 필수)·SAMPLE_DIR·MAX_SESSIONS·SESSION_MB·SESSION_IDLE_HOURS·UPLOAD_MB, 범위 밖이면 throw → index.ts가 "설정 오류" 찍고 exit 1. NODE_ENV=production이면 쿠키 Secure. 모든 JSON 응답에 Cache-Control: no-store, X-Content-Type-Options: nosniff. B9: 교차 세션 공격(A가 B의 경로로 readFile·csv:stats·eraseColumn·deleteDownload) 시험 추가. 시험 묶음: security-paths(6), security-db(5), security-limits(8), server-config(5), server(8) → 전체 74/74 → 다음: A11 (User 지시: B 다음 A11, 그 뒤 C).
 
 - 2026-11-20 A11 (User 결정: (나) 패키지까지 나누기, 루트 명령은 그대로): 4단계 커밋. ① packages/core (@tagger/core, main/types=dist, deps pg·papaparse, index.ts 배럴) ② apps/server (@tagger/server) ③ packages/ui (@tagger/ui, vite root=src, outDir=packages/ui/dist) + packages/shared (@tagger/shared, 타입만, main=src/types.ts) ④ apps/desktop (@tagger/desktop, deps core·ssh2). **설치본은 루트 package.json이 앱**: main=apps/desktop/dist/main.js, build.files = desktop dist·core dist·ui dist·node_modules. 루트 스크립트는 pnpm --filter <pkg>... run build로 위임. **알아낸 것: pnpm 12는 .npmrc의 shamefully-hoist를 안 읽음 → 그동안 끌어올림이 꺼져 있었음 (publicHoistPattern [])** → pnpm-workspace.yaml에 shamefullyHoist: true, autoInstallPeers: true로 옮기고 .npmrc 삭제. 그 전 설치본은 pg-protocol·asn1 등 하위 의존성이 빠져 있었을 것 (llms.md To-do 2 "설치본 확인"이 안 된 이유일 수 있음). 확인: electron-builder --win --dir → asar에 core·pg(+pg-protocol/pool/types/pgpass)·ssh2(+asn1/bcrypt-pbkdf)·papaparse 있음, electron/react/vite/typescript 없음 (5.8MB). 설치본 exe를 ELECTRON_RUN_AS_NODE=1로 돌려 asar 안에서 모듈 require 성공. TaskStop은 Windows에서 자식(vite, server)을 안 죽임 → 포트 주인 확인 후 직접 종료. report.html(11:44, User 또는 다른 도구가 만든 보고서)은 커밋 안 함. 74/74 → 다음: Stage C (llms.md 기록 옮기기) → Stage D 의논.
+
+- 2026-11-20 Stage C: llms.md To-do 8~12에 User 고민 [IMPORTANT] 5줄, To-do 6·7에 [진행함] 표시, Backlogs에 역제안 8줄, Done 7줄, Bugs 2줄([고침]). 서버 구성 세부(같은 서버의 다른 프로젝트, IP, 도메인)는 쓰지 않음 → **Stage D 의논 시작.** User에게 채팅으로 요약함.
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
