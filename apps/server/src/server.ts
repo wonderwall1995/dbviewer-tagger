@@ -256,6 +256,18 @@ export function createTaggerServer(opts: ServerOptions) {
       return sendJson(res, 200, { ok: true })
     }
 
+    // 견본 재생성: 지금 세션(작업 폴더와 메모리)을 지우고 견본의 새 복사본으로 다시 시작한다.
+    // 이미 들어와 있는 사람만 쓸 수 있다 (입장 코드를 다시 묻지 않는다). 세션 수는 늘지 않는다.
+    if (req.method === 'POST' && url.pathname === '/api/reset') {
+      req.resume()
+      const current = findSession(req)
+      if (!current) throw httpError(401, '입장 코드를 넣어 주세요.')
+      current.ctx.state.exportAborted = true
+      removeSession(current)
+      startSession(res)
+      return sendJson(res, 200, { ok: true })
+    }
+
     if (req.method === 'POST' && url.pathname.startsWith('/api/call/')) {
       const channel = decodeURIComponent(url.pathname.slice('/api/call/'.length))
       const fn = Object.prototype.hasOwnProperty.call(webHandlers, channel) ? webHandlers[channel] : undefined

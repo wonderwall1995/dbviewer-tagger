@@ -79,3 +79,39 @@ test('견본으로 시작한 세션에서 CSV, Keyinfo, Key 노트, CED 미리�
   assert.ok(ced.files.some((f) => f.name === 'rwa.md'))
   assert.ok(ced.files.length >= 2, '확인된 Key 노트 문서가 있어야 한다')
 })
+
+test('견본 재생성: 지운 CSV가 새 견본 복사본으로 돌아오고, 세션 수는 늘지 않으며, 예전 폴더는 지운다', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reset-'))
+  const { server, sessions } = createTaggerServer({ dataDir, sampleDir: SAMPLE, openAccess: true })
+  await new Promise((r) => server.listen(0, '127.0.0.1', r))
+  t.after(() => new Promise((r) => { server.closeAllConnections?.(); server.close(r); fs.rmSync(dataDir, { recursive: true, force: true }) }))
+  const base = `http://127.0.0.1:${server.address().port}`
+  let cookie = ''
+  const keep = (res) => { const c = res.headers.get('set-cookie'); if (c) cookie = c.split(';')[0] }
+  const call = async (channel, ...args) => {
+    const res = await fetch(`${base}/api/call/${channel}`, { method: 'POST', headers: { cookie }, body: JSON.stringify({ args }) })
+    keep(res)
+    return (await res.json()).value
+  }
+  // 세션 없이 재생성은 거절
+  assert.equal((await fetch(`${base}/api/reset`, { method: 'POST' })).status, 401)
+
+  keep(await fetch(`${base}/api/session`))
+  const users = Object.values((await call('local:load')).fileSources).find((s) => s.path.endsWith('users.csv'))
+  await call('local:deleteDownload', users.path)
+  assert.equal((await call('csv:stats', users.path)).missing, true)
+  const oldRoot = [...sessions.values()][0].root
+  const oldCookie = cookie
+
+  const res = await fetch(`${base}/api/reset`, { method: 'POST', headers: { cookie } })
+  assert.equal(res.status, 200)
+  keep(res)
+  assert.notEqual(cookie, oldCookie)
+  assert.equal(sessions.size, 1)
+  assert.equal(fs.existsSync(oldRoot), false)
+  // 새 세션에서는 견본 CSV가 다시 있다
+  const fresh = Object.values((await call('local:load')).fileSources).find((s) => s.path.endsWith('users.csv'))
+  assert.equal((await call('csv:stats', fresh.path)).rows, 6)
+  // 예전 세션 번호는 서버에서 사라졌다 (예전 쿠키로는 지운 세션에 다시 닿지 못한다)
+  assert.ok(!sessions.has(oldCookie.split('=')[1]))
+})

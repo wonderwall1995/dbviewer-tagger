@@ -19,11 +19,12 @@ import { ProductModal } from './components/ProductModal'
 import { KeyinfoModal } from './components/KeyinfoModal'
 import { HermesModal } from './components/HermesModal'
 import { HelpModal } from './components/HelpModal'
+import { ResetSampleModal } from './components/ResetSampleModal'
 import { ClearModal } from './components/ClearModal'
 import { BackupModal } from './components/BackupModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import type { ParsedCsv, FolderItem, FileSource, PinnedColumn, KeyinfoColumnSchema, KeyinfoFolder } from '@tagger/shared'
-import { api, caps } from './api'
+import { api, caps, isDesktop } from './api'
 
 export interface PendingFileEntry {
   status: 'uploading' | 'ready' | 'parsing'
@@ -77,6 +78,8 @@ export default function App() {
   const [hermesOpen, setHermesOpen] = useState(false)
   // 머리글 Help! 버튼으로 여는 도움말 창
   const [helpOpen, setHelpOpen] = useState(false)
+  // Web 머리글의 "견본 재생성" 확인 창
+  const [resetOpen, setResetOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
@@ -1408,6 +1411,14 @@ export default function App() {
             onClick={() => { setKeyinfoTab('notes'); setKeyinfoOpen(true) }}
             title="Key 노트 열기"
           >Key 노트</button>
+          {/* Web만: 지금 작업을 지우고 견본의 새 복사본으로 다시 시작한다. (데스크톱은 견본이 없다) */}
+          {!isDesktop && (
+            <button
+              className="split-toggle-btn split-toggle-btn--header header-reset-btn" {...uiId('HD.reset')}
+              onClick={() => setResetOpen(true)}
+              title="지금 작업을 지우고 처음 견본 데이터로 다시 시작"
+            >견본 재생성</button>
+          )}
         </div>
         <div className="header-divider" {...uiId('HD.divider', '2')} />
         {/* 오른쪽 영역: 웹 데모, GitHub 버튼 */}
@@ -1857,6 +1868,7 @@ export default function App() {
         {/* Web에서도 Hermes 창은 열린다. 다만 입력을 막고 연결하지 않는다 (HermesModal의 demo 모드) */}
         {hermesOpen && <HermesModal onClose={() => setHermesOpen(false)} />}
         {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+        {resetOpen && <ResetSampleModal onClose={() => setResetOpen(false)} />}
         {clearOpen && <ClearModal onClose={() => setClearOpen(false)} />}
         {backupOpen && <BackupModal onClose={() => setBackupOpen(false)} />}
         {workspaceOpen && (

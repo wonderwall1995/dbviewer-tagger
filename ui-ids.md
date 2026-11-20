@@ -210,6 +210,9 @@
 | CP.text | CP.content | 오른쪽 마크다운 원문 | `ced-preview-text` | |
 | CP.download | CP.zip | "zip 내려받기" 버튼. 제품 폴더 하나로 묶은 zip | `modal-btn--save` | |
 | HD.help | HD.help-btn | 머리글 가운데, 이중 뷰 왼쪽 "Help!" 버튼. 도움말 창을 엶 | `header-help-btn` | |
+| HD.reset | HD.sample-reset | 머리글 가운데, Key 노트 오른쪽 "견본 재생성" 버튼 (Web만). 확인 창을 엶 | `header-reset-btn` | |
+| RS.frame | RS.root | 견본 재생성 확인 창 (RS.title, RS.close 포함) | `reset-modal-card` | |
+| RS.confirm | RS.ok | "지우고 다시 시작" 버튼. 세션을 지우고 견본 복사본으로 새로 시작한 뒤 화면을 새로 불러옴 | `reset-confirm` | |
 | HP.frame | HP.root | 도움말 창 (HP.title, HP.close 포함). 폭은 가장 긴 줄에 맞춤 | `help-modal-card` | |
 | HP.list | HP.lines | 도움말 줄 목록 | `help-list` | |
 | HM.demo | HM.demo-lock | Web(시연)에서 Hermes 창의 모든 입력과 버튼을 막는 fieldset | `hermes-demo-fieldset` | |

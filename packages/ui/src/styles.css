@@ -6629,3 +6629,11 @@ select.kn-input { cursor: pointer; }
 /* Web(시연)에서 막은 DB 접속 칸 */
 .db-ssh-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .db-ssh-input:disabled::placeholder { color: var(--text-2); opacity: 1; }
+
+/* Web 머리글의 "견본 재생성" 버튼과 확인 창 */
+.header-reset-btn { color: #fca5a5; }
+.reset-modal-card { width: min(460px, 92vw); }
+.reset-title { display: inline-flex; align-items: center; gap: 6px; }
+.reset-body { padding: 16px 20px 6px; font-size: 13px; line-height: 1.65; color: var(--text); word-break: keep-all; }
+.reset-body p { margin: 0 0 10px; }
+.reset-error { color: #f87171; }
