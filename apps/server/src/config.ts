@@ -3,6 +3,7 @@ import type { ServerOptions } from './server'
 
 // 환경 변수 → 서버 설정. 값이 잘못되면 throw해서 서버를 시작하지 않는다.
 //   TAGGER_PORT               API 포트 (기본 6201). 127.0.0.1에만 묶는다
+//   TAGGER_SOCKET             정하면 포트 대신 이 유닉스 소켓 파일로 받는다 (운영 권장)
 //   TAGGER_DATA_DIR           세션 폴더를 둘 폴더 (운영: 절대 경로 필수)
 //   TAGGER_SAMPLE_DIR         새 세션에 복사할 견본 작업 폴더 (선택)
 //   TAGGER_MAX_SESSIONS       동시 세션 수 (기본 10)
@@ -12,6 +13,9 @@ import type { ServerOptions } from './server'
 //   NODE_ENV                  운영은 production. 이때 쿠키에 Secure를 붙인다 (HTTPS 뒤에서만 동작)
 export interface TaggerConfig {
   port: number
+  // 정해지면 TCP 포트 대신 이 유닉스 소켓 파일로 받는다 (운영: Nginx가 이 파일로 넘겨준다).
+  // 그러면 서비스가 루프백 주소로 나가는 연결을 운영체제에서 모두 막을 수 있다.
+  socket?: string
   production: boolean
   server: ServerOptions & { secureCookie: boolean }
 }
@@ -34,8 +38,13 @@ export function loadConfig(env: NodeJS.ProcessEnv, cwd = process.cwd()): TaggerC
   const dataDir = path.resolve(cwd, rawData || path.join('local', 'web-data'))
   const sampleDir = env.TAGGER_SAMPLE_DIR ? path.resolve(cwd, env.TAGGER_SAMPLE_DIR) : undefined
   const MB = 1024 * 1024
+  const socket = env.TAGGER_SOCKET ? env.TAGGER_SOCKET : undefined
+  if (socket && !path.isAbsolute(socket) && !socket.startsWith('\\\\.\\pipe\\')) {
+    throw new Error('TAGGER_SOCKET은 절대 경로여야 합니다.')
+  }
   return {
     port,
+    socket,
     production,
     server: {
       dataDir,

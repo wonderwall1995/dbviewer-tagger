@@ -7,13 +7,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "admin": "node dist/admin.js"
+    "admin": "node dist/admin.js",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=bundle/tagger-server.js --external:pg-native --log-level=warning && esbuild src/admin.ts --bundle --platform=node --target=node22 --outfile=bundle/tagger-admin.js --log-level=warning"
   },
   "dependencies": {
     "@tagger/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.4.0"
   }
 }
