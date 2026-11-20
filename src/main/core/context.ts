@@ -8,10 +8,16 @@ import type { Workspace } from './workspace'
 export interface SessionState {
   // DB 내보내기 중단 요청. 한 사용자의 중단이 다른 사용자에게 번지지 않게 사용자마다 둔다.
   exportAborted: boolean
+  // CSV 행·열 수 캐시 (core/csv.ts). loadedFrom은 이 캐시를 읽어 온 파일이다.
+  csvStats: {
+    memory: Map<string, { rows: number; columns: number; partial: boolean; missing?: boolean }>
+    loadedFrom: string
+    timer: ReturnType<typeof setTimeout> | null
+  }
 }
 
 export function makeSessionState(): SessionState {
-  return { exportAborted: false }
+  return { exportAborted: false, csvStats: { memory: new Map(), loadedFrom: '', timer: null } }
 }
 
 export interface Ctx {

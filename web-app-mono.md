@@ -100,11 +100,13 @@
 
 - 2026-11-20 A6 + A7-1(local): `core/context.ts` = `Ctx { ws, state, emit, allowOutsidePaths }`, `SessionState`, `userPath`/`resolveInside`(심볼릭 링크 실제 위치까지 확인), `Handlers` 표 타입. `core/local.ts` = sheet·local·프리셋·readFile·다운로드 목록/트리/삭제·eraseColumn 15채널. main.ts는 `desktopCtx()` + `registerCore(표)`. 데스크톱 전용(dialog:openCsv, local:importFile, local:openDownloads, workspace:*)은 main.ts에 남김. 시험 `scripts/core-local.test.cjs` 9개 (사용자별 분리, 밖 경로 거절, junction 탈출 거절) → 27/27 → 알아낸 것: ① **화면↔main이 절대 경로를 주고받음** (fileSources, 다운로드 목록의 path). Web도 같은 약속을 쓰면 서버 경로가 화면에 보임 → B1에서 "화면엔 상대 경로"로 바꿀지, `userPath`로 막기만 할지 정해야 함 (지금 판단: 막기만 + 세션 폴더 경로가 보이는 것은 낮은 위험. B1에서 다시 봄). ② **프리셋 이름(`loadPreset`, `deletePreset`, `savePreset`)에 경로 검사 없음** → `../` 통과. 데스크톱에서도 버그. B1에서 고침. ③ 진행률 `emit`은 데스크톱에서 "마지막으로 요청한 창"으로 보냄 (창이 하나라 문제없음) → 다음: A7-2 (캐시, CSV 통계).
 
+- 2026-11-20 A7-2(csv): `core/csv.ts` = cache:load/save, csv:stats + `recordSnapshotStats(ctx,...)`(DB 내보내기가 부름). 통계 캐시 `csvStatsMemory/LoadedFrom/Timer` → `ctx.state.csvStats`. 저장 타이머는 예약 시점의 작업 폴더로 고정 (예전엔 2초 뒤의 WS를 씀 → 그사이 작업 폴더를 바꾸면 새 폴더에 옛 캐시를 쓸 수 있었음, 작은 버그 같이 고침). 시험 4개 추가 → 31/31 → 다음: A7-3 (Lorebook).
+
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
 | 상태 | 줄(대략) | Web에서 | 처리 |
 |---|---|---|---|
-| `csvStatsMemory`, `csvStatsLoadedFrom`, `csvStatsTimer` | 570 | 작업 폴더별 캐시 | ctx.state로 |
+| `csvStatsMemory`, `csvStatsLoadedFrom`, `csvStatsTimer` | 570 | 작업 폴더별 캐시 | ✅ ctx.state.csvStats (A7-2) |
 | `exportAborted` | 1616 | **한 사람이 중단하면 모두 중단됨** | ctx.state로 (필수) |
 | `keyNoteMigratedFor` | 2122 | 작업 폴더별 1회 이전 표시 | ctx.state로 |
 | `sampleCache` | 2647 | 파일별 표본 캐시 | ctx.state로 (메모리 상한 고려) |
