@@ -6,7 +6,7 @@ import { LorebookCreateManyModal } from './LorebookCreateManyModal'
 import { KeyNotesPane } from './KeyNotesPane'
 import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '../../shared/types'
 import { uiId } from '../ui/uiId'
-import { api } from '../api'
+import { api, caps } from '../api'
 
 interface Props {
   parsedMap: Record<string, ParsedCsv>
@@ -618,7 +618,7 @@ export function KeyinfoModal({
           </div>
           {/* 제품 맥락 문서 전송: 지금 고른 제품의 확인된 Key 노트로 맥락 문서(CED)를 만들어 Hermes 서버의 Obsidian 볼트로 보낸다.
               볼트 경로와 SSH는 Hermes 설정에서 정한다. 볼트에서 사람이 고친 파일은 덮어쓰지 않는다. */}
-          <button
+          {caps.hermes && <button
             className={`keyinfo-export-btn${sending ? ' keyinfo-export-btn--busy' : ''}`} {...uiId('KI.export')}
             disabled={sending}
             onClick={async () => {
@@ -655,7 +655,7 @@ export function KeyinfoModal({
           >
             <Upload size={12} />
             {sending ? '전송 중…' : '제품 맥락 문서 전송'}
-          </button>
+          </button>}
         </div>
 
         {tab === 'notes' && (!localProduct || localProduct === '__null__') && (

@@ -4,7 +4,7 @@ import type { FileSource } from '../../shared/types'
 import { Modal } from './Modal'
 import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
-import { api } from '../api'
+import { api, caps } from '../api'
 
 interface LocalFolderItem { name: string; path: string }
 interface LocalFileItem   { name: string; path: string; mtime: number; size: number }
@@ -264,14 +264,14 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
               <span className="browser-panel-path" title={fullPath} {...uiId('LF.path')}>
                 Local{pathStack.length > 0 ? `\\${pathStack.join('\\')}` : ''}
               </span>
-              <button
+              {caps.revealInOs && <button
                 className="lf-explorer-btn" {...uiId('LF.explorer')}
                 onClick={openInExplorer}
                 title={fullPath ? `탐색기에서 열기: ${fullPath}` : '탐색기에서 열기'}
               >
                 <FolderOpen size={12} />
                 <span>탐색기에서 열기</span>
-              </button>
+              </button>}
               {onOpenWorkspace && (
                 <button
                   className="lf-explorer-btn" {...uiId('LF.workspace')}

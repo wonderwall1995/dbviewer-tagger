@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useDraggable } from '../hooks/useDraggable'
 import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
-import { api } from '../api'
+import { api, caps } from '../api'
 
 type Step = 'slots' | 'schemas' | 'tables'
 
@@ -707,6 +707,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                     </div>
                   </div>
 
+                  {caps.ssh && <>
                   <div className="db-conn-sub" {...uiId('DB.ssh')}>SSH 터널 (선택)</div>
                   <div className="db-ssh-row">
                     <div className="db-ssh-field db-ssh-field--grow" {...uiId('DB.ssh-host')}>
@@ -746,6 +747,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                       </button>
                     </div>
                   </div>
+                  </>}
                 </div>
               )}
             </div>

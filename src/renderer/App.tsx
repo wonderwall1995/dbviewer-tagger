@@ -21,7 +21,7 @@ import { ClearModal } from './components/ClearModal'
 import { BackupModal } from './components/BackupModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import type { ParsedCsv, FolderItem, FileSource, PinnedColumn, KeyinfoColumnSchema, KeyinfoFolder } from '../shared/types'
-import { api } from './api'
+import { api, caps } from './api'
 
 export interface PendingFileEntry {
   status: 'uploading' | 'ready' | 'parsing'
@@ -86,6 +86,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!caps.workspace) return
     api.workspaceGet().then((info) => {
       if (info.needsSetup) {
         setWorkspaceFirstRun(true)
@@ -1423,7 +1424,7 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         actions={<DBButton onClick={() => setDbOpen(true)} />}
-        onOpenWorkspace={openWorkspace}
+        onOpenWorkspace={caps.workspace ? openWorkspace : undefined}
         folders={folders}
         fileToFolder={fileToFolder}
         onCreateFolder={handleCreateFolder}
@@ -1448,7 +1449,7 @@ export default function App() {
         selectedFileNames={selectedFileNames}
         onSelectionChange={setSelectedFileNames}
         localFilesBrowser={
-          <LocalFilesBrowser onFilesLoaded={handleFilesLoaded} onLoading={setLoadingMessage} onOpenWorkspace={openWorkspace} />
+          <LocalFilesBrowser onFilesLoaded={handleFilesLoaded} onLoading={setLoadingMessage} onOpenWorkspace={caps.workspace ? openWorkspace : undefined} />
         }
         hiddenFiles={hiddenFiles}
         fileStats={fileStats}
@@ -1760,10 +1761,10 @@ export default function App() {
 
         </div>
         <footer className="main-footer" {...uiId('FT.bar')}>
-          <button className="footer-hermes-btn" {...uiId('FT.hermes')} onClick={() => setHermesOpen(true)}>
+          {caps.hermes && <button className="footer-hermes-btn" {...uiId('FT.hermes')} onClick={() => setHermesOpen(true)}>
             <Bot size={14} className="footer-hermes-icon" aria-label="Hermes" />
             <span className="lb-tooltip">Hermes</span>
-          </button>
+          </button>}
           <button
             className="footer-lorebook-btn" {...uiId('FT.lorebook')}
             onClick={() => setLorebookOpen(true)}
@@ -1812,7 +1813,7 @@ export default function App() {
           </div>
         </footer>
         {lorebookOpen && <LorebookModal onClose={() => setLorebookOpen(false)} />}
-        <DBBrowser open={dbOpen} onClose={() => setDbOpen(false)} onLoading={setLoadingMessage} onOpenWorkspace={openWorkspace} />
+        <DBBrowser open={dbOpen} onClose={() => setDbOpen(false)} onLoading={setLoadingMessage} onOpenWorkspace={caps.workspace ? openWorkspace : undefined} />
         {productOpen && (
           <ProductModal
             categories={lorebookCategories}
@@ -1837,7 +1838,7 @@ export default function App() {
             onLayoutChange={(pins, fols) => { setPinnedColumns(pins); setKeyinfoFolders(fols) }}
           />
         )}
-        {hermesOpen && <HermesModal onClose={() => setHermesOpen(false)} />}
+        {caps.hermes && hermesOpen && <HermesModal onClose={() => setHermesOpen(false)} />}
         {clearOpen && <ClearModal onClose={() => setClearOpen(false)} />}
         {backupOpen && <BackupModal onClose={() => setBackupOpen(false)} />}
         {workspaceOpen && (

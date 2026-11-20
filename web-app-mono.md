@@ -46,7 +46,7 @@
 - [x] A0. 기준선: `pnpm install`, typecheck, build, 시험 결과 기록. 데스크톱 수동 점검 목록 만들기 (CSV 열기, 끌어다 놓기, DB 연결, Keyinfo, Lorebook, Key 노트, CED 생성, 백업).
 - [x] A1. `TaggerApi` 타입 (preload 모양 그대로) + `electron.d.ts` 정리.
 - [x] A2. 화면에 `api` 모듈. `window.electronAPI.x` → `api.x` 일괄 교체. 동작 변화 없음.
-- [ ] A3. `capabilities()` 추가. 환경별 버튼(작업 폴더 고르기, 폴더 열기, Hermes, SSH, CED 보내기)을 이 값으로 감쌈.
+- [x] A3. `capabilities()` 추가. 환경별 버튼(작업 폴더 고르기, 폴더 열기, Hermes, SSH, CED 보내기)을 이 값으로 감쌈.
 - [ ] A4. 끌어다 놓기·파일 선택을 `api.importFiles(File[])`로 감쌈. 데스크톱은 `webUtils.getPathForFile`, Web은 업로드.
 - [ ] A5. 🔑 **작업 폴더 문맥(Workspace) 도입.** core 함수는 전역 `DATA_ROOT` 대신 `ws`(그 요청의 작업 폴더 경로 묶음)를 받는다. 데스크톱은 늘 같은 `ws` 하나, Web은 세션마다 다른 `ws`.
 - [ ] A6. `Platform` 주입: `secrets`(safeStorage 대체 가능), `emit`(진행률), `pickFile`/`openPath`(데스크톱만).
@@ -88,6 +88,8 @@
 - 2026-11-20 A0: typecheck 통과, build 통과, 시험 18/18 통과 (Node 24). `node --test scripts/`는 Node 24에서 폴더를 파일로 읽어 실패 → `pnpm test`(build:electron 뒤 `scripts/*.test.cjs`) 추가. ssh2 선택 바인딩 빌드 실패는 무해(선택 모듈). `.gitattributes` 추가(저장소 75개 파일 모두 LF라 정규화 변화 없음) → 다음: A1.
 
 - 2026-11-20 A1·A2: `electron.d.ts`의 익명 객체를 전역 `interface TaggerApi`로 이름 붙임. `src/renderer/api.ts` 추가, 16개 파일 117곳 `window.electronAPI.` → `api.`. 지역 변수 `api`와 겹침 없음 확인. typecheck·build 통과 → 알아낸 것: 타입이 `declare global` 전역 선언이라 A11(모노레포)에서 `packages/shared`의 모듈 export로 바꿔야 함 → 다음: A3.
+
+- 2026-11-20 A3: `api.ts`에 `caps`(workspace·revealInOs·hermes·ssh) 추가. 작업 폴더 버튼 3곳은 이미 `onOpenWorkspace &&` 구조라 App에서 넘기지 않는 것으로 끝. 첫 실행 안내도 caps로 막음. Hermes 푸터 버튼·모달, CED 보내기 버튼, DB 창 SSH 칸, Local 창 탐색기 버튼을 caps로 감쌈 → 알아낸 것: **`cedGenerate`(CED를 작업 폴더에 쓰기)는 화면 어디에서도 안 부름.** CED는 "보내기" 버튼 안에서만 만들어짐 → Web에서 hermes를 끄면 CED를 볼 방법이 없음. User 판단 필요 (질문함) → 다음: A4.
 
 ## 5. 우려 재점검 (코드 작업하며 갱신)
 
