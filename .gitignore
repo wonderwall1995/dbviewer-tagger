@@ -1,19 +1,40 @@
+# ── 빌드 결과와 의존성 (어느 폴더에서든) ──────────────────────────────
 node_modules/
 dist/
+bundle/
 release/
+
+# ── 비밀 값 (어느 폴더에서든) ──────────────────────────────────────────
+# 견본(.env.example 등)만 올린다.
 .env
-.vscode/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+# Web 입장 코드 해시. 서버 데이터 폴더에만 있어야 한다.
+access.json
+
+# ── 개발 모드 작업 폴더 (저장소 루트만) ─────────────────────────────────
+# 개발 모드에서는 저장소 루트가 작업 폴더라서, 앱이 여기에 데이터를 쓴다.
+# 견본(samples/workspace/ 아래의 같은 이름 폴더)은 올라가야 하므로 앞에 /를 붙여 루트만 막는다.
 /docs/
 /local/
 /DB-downloads/
+/S3-downloads/
 /CED/
 /backups/
 .restoring-*/
 
-# *.local
+# ── 편집기와 도구 ──────────────────────────────────────────────────────
+.vscode/
+.claude/settings.local.json
 .DS_Store
 Thumbs.db
+*.log
 
 # 다른 도구(GPT)가 작업을 평가하려고 만드는 보고서. 커밋하지 않는다.
 report.html
-bundle/
