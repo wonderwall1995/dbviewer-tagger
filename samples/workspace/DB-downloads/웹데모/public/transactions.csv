@@ -1,0 +1,12 @@
+id,uuid,source,amount,description,privacyLevel,receiverId,senderId,balanceAtCompletion,status,createdAt,modifiedAt,payerAccountId,payeeAccountId,payerBalanceAfter,payeeBalanceAfter
+[PK],[NN],[NN],[NN],[NN],[NN],[NN],[NN],,[NN],[NN],[NN],,,,
+{string},{string},{string},{integer},{string},{privacylevel},{string},{string},{integer},{transactionstatus},{timestamp},{timestamp},{string},{string},{integer},{integer}
+XABmmO7Jj,f3a1c733-5a31-4cf6-80da-b37c6fcad6b5,gtg1TJydq,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),,gtg1TJydq,,10000
+VtnIKkZbw,dab7baae-94fc-4dc6-a7b7-a8a561b1af5d,fw6RaUFkC,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),,fw6RaUFkC,,10000
+6y2QMjyGM,421c4fe5-32e3-479e-9c1a-be3fa928751c,9v4cR8Q-p,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),,9v4cR8Q-p,,10000
+ucgf5-gmq,a7fbdc75-616c-49b9-97a0-f0dcecc2c881,gtg1TJydq,500,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),,gtg1TJydq,,10500
+dz8qWxKYl,89827e34-4710-4d12-9377-6d4b547ef9fa,gtg1TJydq,7900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),,gtg1TJydq,,18400
+6zo5iUIny,daae5c6c-c68d-48a0-aac5-4898b04c76fb,fw6RaUFkC,37900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),,fw6RaUFkC,,47900
+BBUkHyF7K,805021fb-7e15-4e4f-a7d9-ac0bed504b79,fw6RaUFkC,592600,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),,fw6RaUFkC,,640500
+msl_9E9mu,7b9f24b5-8901-4b84-b435-f216604d4ea6,9v4cR8Q-p,6182000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),,9v4cR8Q-p,,6192000
+A8gKYG7Gr,ceb4ed3d-bd33-4ab4-908c-e5046bd4fb92,gtg1TJydq,100,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),,gtg1TJydq,,18500

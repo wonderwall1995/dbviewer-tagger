@@ -3,11 +3,11 @@ dist/
 release/
 .env
 .vscode/
-docs/
-local/
-DB-downloads/
-CED/
-backups/
+/docs/
+/local/
+/DB-downloads/
+/CED/
+/backups/
 .restoring-*/
 
 # *.local

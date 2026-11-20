@@ -178,9 +178,13 @@ export function createTaggerServer(opts: ServerOptions) {
       return sendJson(res, 200, { ok: true })
     }
 
-    // 지금 들어와 있는지. 세션을 만들지 않는다. 화면은 이 답을 보고 입장 화면을 띄운다.
+    // 지금 들어와 있는지. 화면은 앱을 그리기 전에 이것을 먼저 부르고, 답을 보고 입장 화면을 띄운다.
+    // 입장 코드를 쓰는 서버는 세션을 만들지 않는다. 열린 서버(개발용)는 여기서 세션을 하나 만든다.
+    // (앱이 처음 뜰 때 요청을 동시에 여러 개 보내므로, 쿠키 없는 요청마다 세션이 생기지 않게 먼저 만들어 둔다)
     if (req.method === 'GET' && url.pathname === '/api/session') {
-      return sendJson(res, 200, { ok: true, value: { loggedIn: !!findSession(req), open: !!opts.openAccess } })
+      let found = findSession(req)
+      if (!found && opts.openAccess) found = startSession(res)
+      return sendJson(res, 200, { ok: true, value: { loggedIn: !!found, open: !!opts.openAccess } })
     }
 
     // 입장: 공용 입장 코드가 맞으면 새 세션(새 견본)을 시작한다.

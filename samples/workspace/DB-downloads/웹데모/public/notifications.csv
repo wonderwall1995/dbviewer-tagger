@@ -1,0 +1,3 @@
+id,uuid,userId,transactionId,isRead,status,likeId,commentId,createdAt,modifiedAt
+[PK],[NN],[NN],[NN],[NN],,,,[NN],[NN]
+{string},{string},{string},{string},{boolean},{string},{string},{string},{timestamp},{timestamp}

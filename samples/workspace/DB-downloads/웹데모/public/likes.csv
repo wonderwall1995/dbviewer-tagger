@@ -1,0 +1,3 @@
+id,uuid,userId,transactionId,createdAt,modifiedAt
+[PK],[NN],[NN],[NN],[NN],[NN]
+{string},{string},{string},{string},{timestamp},{timestamp}

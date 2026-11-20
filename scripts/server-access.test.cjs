@@ -147,3 +147,16 @@ test('관리 명령: set-code는 코드를 한 번 보여 주고, status와 revo
   assert.match(run('revoke').stdout, /지웠습니다/)
   assert.match(run('status').stdout, /없습니다/)
 })
+
+test('열린 서버(개발용): /api/session이 세션을 하나 만들고, 그 뒤 동시에 보낸 요청은 같은 세션을 쓴다', async (t) => {
+  const { server, sessions } = await start(t, { openAccess: true })
+  const base = `http://127.0.0.1:${server.address().port}`
+  // 화면(WebGate)이 하는 순서: /api/session 먼저 → 받은 쿠키로 앱의 요청을 동시에 보낸다
+  const res = await fetch(`${base}/api/session`)
+  assert.deepEqual((await res.json()).value, { loggedIn: true, open: true })
+  const cookie = res.headers.get('set-cookie').split(';')[0]
+  const results = await Promise.all(Array.from({ length: 10 }, () =>
+    fetch(`${base}/api/call/local:load`, { method: 'POST', headers: { cookie }, body: '{"args":[]}' }).then((r) => r.status)))
+  assert.deepEqual([...new Set(results)], [200])
+  assert.equal(sessions.size, 1)
+})
