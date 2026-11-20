@@ -90,6 +90,7 @@ const special: Partial<TaggerApi> = {
   offKeyinfoProgress: () => unsubscribe('keyinfo:progress'),
   // GitHub 버튼은 Web에서 새 탭으로 연다.
   openGithub: async () => { window.open('https://github.com/wonderwall1995', '_blank', 'noopener') },
+  openWebDemo: async () => { window.open('https://demo.hwk-resume.web.chickenkiller.com/', '_blank', 'noopener') },
 }
 
 export function createHttpApi(): TaggerApi {

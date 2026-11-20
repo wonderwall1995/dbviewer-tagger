@@ -6,6 +6,10 @@ import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
 import { api, caps } from '../api'
 
+// Web(시연)에서는 DB에 연결하지 않게 접속 칸을 막는다. 데스크톱은 그대로다.
+const DB_BLOCKED = !caps.ssh
+const DB_BLOCKED_TEXT = '현재 웹에선 연결을 막고 있습니다.'
+
 type Step = 'slots' | 'schemas' | 'tables'
 
 interface DBBrowserProps {
@@ -644,8 +648,9 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                     <label className="db-ssh-label">이름</label>
                     <input
                       className="db-ssh-input"
-                      placeholder={slot ? slot.toUpperCase() : ''}
-                      value={form.name}
+                      placeholder={DB_BLOCKED ? DB_BLOCKED_TEXT : slot ? slot.toUpperCase() : ''}
+                      disabled={DB_BLOCKED}
+                      value={DB_BLOCKED ? '' : form.name}
                       onChange={e => updateForm({ name: e.target.value })}
                     />
                   </div>
@@ -663,6 +668,8 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                       <label className="db-ssh-label">DB 호스트</label>
                       <input
                         className="db-ssh-input"
+                        placeholder={DB_BLOCKED ? DB_BLOCKED_TEXT : undefined}
+                        disabled={DB_BLOCKED}
                         value={form.host}
                         onChange={e => updateForm({ host: e.target.value })}
                       />
@@ -681,6 +688,8 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                     <label className="db-ssh-label">DB 이름</label>
                     <input
                       className="db-ssh-input"
+                      placeholder={DB_BLOCKED ? DB_BLOCKED_TEXT : undefined}
+                      disabled={DB_BLOCKED}
                       value={form.database}
                       onChange={e => updateForm({ database: e.target.value })}
                     />
@@ -690,6 +699,8 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                       <label className="db-ssh-label">사용자 이름</label>
                       <input
                         className="db-ssh-input"
+                        placeholder={DB_BLOCKED ? DB_BLOCKED_TEXT : undefined}
+                        disabled={DB_BLOCKED}
                         value={form.user}
                         onChange={e => updateForm({ user: e.target.value })}
                       />
@@ -700,7 +711,8 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
                         className="db-ssh-input"
                         type="password"
                         autoComplete="off"
-                        placeholder={form.hasPassword ? '저장됨' : ''}
+                        placeholder={DB_BLOCKED ? DB_BLOCKED_TEXT : form.hasPassword ? '저장됨' : ''}
+                        disabled={DB_BLOCKED}
                         value={password}
                         onChange={e => updatePassword(e.target.value)}
                       />

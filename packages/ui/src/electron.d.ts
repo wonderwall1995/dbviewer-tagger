@@ -23,6 +23,8 @@ declare global {
     localListCsvTree: (root: 's3' | 'db', subPath?: string) => Promise<Array<{ segments: string[]; files: Array<{ name: string; path: string }> }>>
     localOpenDownloads: (root: 's3' | 'db', subPath?: string) => Promise<string>
     openGithub: () => Promise<void>
+    // 머리글의 "웹 데모 보러가기": 정해진 웹 데모 주소만 연다.
+    openWebDemo: () => Promise<void>
     workspaceGet: () => Promise<WorkspaceInfo>
     workspacePick: () => Promise<string | null>
     workspaceSave: (dir: string) => Promise<WorkspaceSaveResult>

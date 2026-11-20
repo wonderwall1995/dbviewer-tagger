@@ -5,7 +5,7 @@ import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
 import { HermesMessageBody } from './HermesMessageBody'
 import type { ReadMode } from './HermesMessageBody'
-import { api } from '../api'
+import { api, caps } from '../api'
 
 interface ChatMessage {
   role: string
@@ -57,6 +57,22 @@ function emptyProfile(name: string): ProfileDraft {
 }
 
 // Hermes 보기 창. 세션 목록과 대화 내용을 보기만 한다. (읽기 전용)
+// Web(시연)에서는 Hermes에 연결하지 않는다. 창은 열리지만 입력과 버튼을 모두 막고 안내 문구를 보여 준다.
+const DEMO = !caps.hermes
+const DEMO_TEXT = '시연을 위한 웹에선 연결을 막고 있습니다.'
+const DEMO_PROFILE: ConfigState['profiles'][number] = {
+  id: 'demo',
+  name: 'Hermes',
+  serverUrl: '',
+  hasKey: false,
+  keyDraft: '',
+  ssh: { enabled: false, host: '', port: '22', username: '', pemPath: '', alias: '' },
+  vaultPath: '',
+  needsVerify: false,
+}
+// 시연이면 안내 문구, 아니면 원래 안내
+const ph = (original: string) => (DEMO ? DEMO_TEXT : original)
+
 export function HermesModal({ onClose }: Props) {
   const [view, setView] = useState<View>('sessions')
   const [cfg, setCfg] = useState<ConfigState | null>(null)
@@ -175,6 +191,12 @@ export function HermesModal({ onClose }: Props) {
 
   // 처음 열 때 설정을 불러온다. 주소나 키가 없으면 설정 화면으로, 있으면 세션 목록을 불러온다.
   useEffect(() => {
+    // Web(시연): 서버에 Hermes 기능이 없다. 부르지 않고 빈 프로필 하나로 설정 화면만 보여 준다. 입력은 모두 막는다.
+    if (DEMO) {
+      updateCfg({ activeId: 'demo', logoutOnExit: false, profiles: [DEMO_PROFILE] })
+      setView('config')
+      return
+    }
     api.hermesLoadConfig().then(c => {
       const next: ConfigState = {
         activeId: c.activeId,
@@ -373,6 +395,8 @@ export function HermesModal({ onClose }: Props) {
         </button>
       }
     >
+      {/* 시연(Web): 아래 모든 입력과 버튼을 막는다 (fieldset disabled는 안의 input, button을 한 번에 막는다) */}
+      <fieldset className="hermes-demo-fieldset" disabled={DEMO} {...uiId('HM.demo')}>
       {/* 프로필 줄: 누르면 선택, 우클릭하면 이름 변경과 삭제 */}
       <div className="hermes-profile-bar" {...uiId('HM.profiles')}>
         {/* 프로필이 넘치면 이 안에서 가로로 스크롤한다. 스크롤바는 숨기고 마우스 휠로 넘긴다. */}
@@ -478,13 +502,14 @@ export function HermesModal({ onClose }: Props) {
           {view === 'config' && activeProfile ? (
             <div className="hermes-config" {...uiId('HM.config')}>
               <h3 className="hermes-config-title">{activeProfile.name} 연결 설정</h3>
+              {DEMO && <p className="hermes-note hermes-note--warn" {...uiId('HM.demo-note')}>{DEMO_TEXT}</p>}
 
               <label className="hermes-config-label">서버 주소</label>
               <input
                 className="hermes-config-input" {...uiId('HM.config-url')}
                 value={activeProfile.serverUrl}
                 onChange={e => patchActive({ serverUrl: e.target.value })}
-                placeholder="http://127.0.0.1:8642"
+                placeholder={ph('http://127.0.0.1:8642')}
               />
 
               <label className="hermes-config-label">
@@ -496,7 +521,7 @@ export function HermesModal({ onClose }: Props) {
                 autoComplete="off"
                 value={activeProfile.keyDraft}
                 onChange={e => patchActive({ keyDraft: e.target.value })}
-                placeholder={activeProfile.hasKey ? '••••••••' : 'Bearer 키 입력'}
+                placeholder={ph(activeProfile.hasKey ? '••••••••' : 'Bearer 키 입력')}
               />
 
               {/* SSH 터널: 선택 사항이라 접어 둔다 */}
@@ -526,7 +551,7 @@ export function HermesModal({ onClose }: Props) {
                     className="hermes-config-input" {...uiId('HM.ssh-alias')}
                     value={activeProfile.ssh.alias}
                     onChange={e => patchSsh({ alias: e.target.value.replace(/\s/g, '') })}
-                    placeholder="~/.ssh/config의 Host 이름 (예: hermes)"
+                    placeholder={ph('~/.ssh/config의 Host 이름 (예: hermes)')}
                   />
                   <p className="hermes-note">
                     별칭을 적으면 아래 호스트, 사용자, 키 칸은 쓰지 않고, 이 PC의 ssh 설정을 그대로 따라요. 키 암호는 물을 수 없어서 암호 없는 키나 ssh-agent가 필요해요. 이 PC에 OpenSSH 클라이언트(ssh)가 있어야 해요.
@@ -576,7 +601,7 @@ export function HermesModal({ onClose }: Props) {
                     className="hermes-config-input" {...uiId('HM.vault-path')}
                     value={activeProfile.vaultPath}
                     onChange={e => { patchActive({ vaultPath: e.target.value }); setVaultResult(null); setVaultTree(null) }}
-                    placeholder="/home/사용자/문서/Obsidian Vault"
+                    placeholder={ph('/home/사용자/문서/Obsidian Vault')}
                   />
                   <p className="hermes-note">
                     SSH로 접속한 PC의 Obsidian 볼트 절대 경로예요. 문서는 이 안의 CED/제품 폴더에만 써요. SSH 터널 설정(호스트, 사용자, 키)을 같이 써요.
@@ -680,6 +705,7 @@ export function HermesModal({ onClose }: Props) {
           )}
         </div>
       </div>
+      </fieldset>
 
       {/* 프로필 우클릭 메뉴. 창이 드래그로 움직여도 위치가 어긋나지 않게 body에 그린다. */}
       {ctx && createPortal(

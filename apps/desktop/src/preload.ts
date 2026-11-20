@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   localListCsvTree: (root: 's3' | 'db', subPath?: string) => ipcRenderer.invoke('local:listCsvTree', root, subPath),
   localOpenDownloads: (root: 's3' | 'db', subPath?: string) => ipcRenderer.invoke('local:openDownloads', root, subPath),
   openGithub: () => ipcRenderer.invoke('app:openGithub'),
+  openWebDemo: () => ipcRenderer.invoke('app:openWebDemo'),
   workspaceGet: () => ipcRenderer.invoke('workspace:get'),
   workspacePick: () => ipcRenderer.invoke('workspace:pick'),
   workspaceSave: (dir: string) => ipcRenderer.invoke('workspace:save', dir),

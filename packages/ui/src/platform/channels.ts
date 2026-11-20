@@ -15,6 +15,7 @@ export const CHANNELS: Record<string, string> = {
   localListCsvTree: 'local:listCsvTree',
   localOpenDownloads: 'local:openDownloads',
   openGithub: 'app:openGithub',
+  openWebDemo: 'app:openWebDemo',
   workspaceGet: 'workspace:get',
   workspacePick: 'workspace:pick',
   workspaceSave: 'workspace:save',

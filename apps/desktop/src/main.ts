@@ -12,6 +12,8 @@ import { makeWorkspace, makeSessionState, localHandlers, importToLocalDownloads,
 import type { Workspace, Ctx, Handlers, SlotId, SshConfig, DbSlotConfig, DbSlots } from '@tagger/core'
 
 const isDev = !app.isPackaged
+// 머리글의 "웹 데모 보러가기"가 여는 주소 (Cypress Real World App 포크로 만든 공개 시연 사이트)
+const WEB_DEMO_URL = 'https://demo.hwk-resume.web.chickenkiller.com/'
 
 // ── 작업 폴더 ─────────────────────────────────────────────────────────────────
 // CSV, 프리셋, 키 문서가 저장되는 폴더이다. 선택한 위치는 userData의 workspace.json에 기록한다.
@@ -120,6 +122,8 @@ registerCore(localHandlers)
 
 // 헤더의 GitHub 버튼: 기본 브라우저로 고정된 주소만 연다.
 ipcMain.handle('app:openGithub', () => shell.openExternal('https://github.com/wonderwall1995'))
+// 머리글의 웹 데모 버튼: 기본 브라우저로 고정된 주소만 연다.
+ipcMain.handle('app:openWebDemo', () => shell.openExternal(WEB_DEMO_URL))
 
 ipcMain.handle('workspace:get', () => ({
   path: WS.root,

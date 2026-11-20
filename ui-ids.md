@@ -48,6 +48,7 @@
 | HD.inspector | HD.ids | HD.tag | Inspector 토글 버튼 (제목 바로 옆 자리에 겹쳐 띄운 위젯, 모달이 열려 있어도 보임) | (없음) | |
 | HD.keynote | HD.notes | HD.key-note-btn | "Key 노트" 버튼. 가운데 영역(`HD.zone-center`)의 "이중 뷰" 버튼 오른쪽. 누르면 Keyinfo 창을 Key 노트 탭으로 바로 연다 (푸터 K 버튼과 같은 창) | `split-toggle-btn--header` | |
 | HD.github | HD.link | HD.credit | 오른쪽 영역의 "GitHub" 버튼 | `logo-copyright` | |
+| HD.webdemo | HD.demo-link | 머리글 오른쪽 "웹 데모 보러가기" 버튼. 정해진 웹 데모 주소를 새 창으로 엶 | `logo-copyright--wide` | |
 
 ## SB 사이드바
 
@@ -208,6 +209,11 @@
 | CP.list | CP.files | 왼쪽 문서 목록 (목차가 맨 위) | `ced-preview-list` | |
 | CP.text | CP.content | 오른쪽 마크다운 원문 | `ced-preview-text` | |
 | CP.download | CP.zip | "zip 내려받기" 버튼. 제품 폴더 하나로 묶은 zip | `modal-btn--save` | |
+| HD.help | HD.help-btn | 머리글 가운데, 이중 뷰 왼쪽 "Help!" 버튼. 도움말 창을 엶 | `header-help-btn` | |
+| HP.frame | HP.root | 도움말 창 (HP.title, HP.close 포함). 폭은 가장 긴 줄에 맞춤 | `help-modal-card` | |
+| HP.list | HP.lines | 도움말 줄 목록 | `help-list` | |
+| HM.demo | HM.demo-lock | Web(시연)에서 Hermes 창의 모든 입력과 버튼을 막는 fieldset | `hermes-demo-fieldset` | |
+| HM.demo-note | HM.demo-text | Web(시연) 안내 "시연을 위한 웹에선 연결을 막고 있습니다." | `hermes-note--warn` | |
 | WG.frame | WG.root | Web 입장 화면 전체 (입장 전에만). 데스크톱에는 없음 | `web-gate` | |
 | WG.card | WG.form | 입장 카드 (제목, 안내, 코드 칸, 버튼) | `web-gate-card` | |
 | WG.notice | WG.trial-notice | 체험판 안내 (24시간·점검 시 삭제, zip으로 받기, DB 접속 정보는 메모리·읽기 전용) | `web-gate-notice` | |

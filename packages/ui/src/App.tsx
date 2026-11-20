@@ -18,6 +18,7 @@ import { LorebookModal } from './components/LorebookModal'
 import { ProductModal } from './components/ProductModal'
 import { KeyinfoModal } from './components/KeyinfoModal'
 import { HermesModal } from './components/HermesModal'
+import { HelpModal } from './components/HelpModal'
 import { ClearModal } from './components/ClearModal'
 import { BackupModal } from './components/BackupModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
@@ -74,6 +75,8 @@ export default function App() {
   const [keyinfoOpen, setKeyinfoOpen] = useState(false)
   const [keyinfoTab, setKeyinfoTab] = useState<'pins' | 'notes'>('pins')   // 창을 열 때 먼저 보여 줄 탭
   const [hermesOpen, setHermesOpen] = useState(false)
+  // 머리글 Help! 버튼으로 여는 도움말 창
+  const [helpOpen, setHelpOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
@@ -1390,6 +1393,11 @@ export default function App() {
         {/* 가운데 영역: 왼쪽부터 버튼을 놓는다. 남는 공간은 비워 둔다. */}
         <div className="header-zone header-zone--center" {...uiId('HD.zone-center')}>
           <button
+            className="split-toggle-btn split-toggle-btn--header header-help-btn" {...uiId('HD.help')}
+            onClick={() => setHelpOpen(true)}
+            title="도움말 열기"
+          >Help!</button>
+          <button
             className={`split-toggle-btn split-toggle-btn--header${layout === 'split-v' ? ' active' : ''}`} {...uiId('MN.split')}
             onClick={() => layout === 'split-v' ? closePaneB() : openPaneB()}
             title={layout === 'split-v' ? '단일 뷰로 전환' : '화면 분할'}
@@ -1402,8 +1410,16 @@ export default function App() {
           >Key 노트</button>
         </div>
         <div className="header-divider" {...uiId('HD.divider', '2')} />
-        {/* 오른쪽 영역: GitHub 버튼 */}
+        {/* 오른쪽 영역: 웹 데모, GitHub 버튼 */}
         <div className="header-zone header-zone--right" {...uiId('HD.zone-right')}>
+          <button
+            className="logo-copyright logo-copyright--wide"
+            {...uiId('HD.webdemo')}
+            onClick={() => { api.openWebDemo().catch(() => {}) }}
+            title="웹 데모 열기"
+          >
+            웹 데모 보러가기
+          </button>
           <button
             className="logo-copyright"
             {...uiId('HD.github')}
@@ -1761,10 +1777,10 @@ export default function App() {
 
         </div>
         <footer className="main-footer" {...uiId('FT.bar')}>
-          {caps.hermes && <button className="footer-hermes-btn" {...uiId('FT.hermes')} onClick={() => setHermesOpen(true)}>
+          <button className="footer-hermes-btn" {...uiId('FT.hermes')} onClick={() => setHermesOpen(true)}>
             <Bot size={14} className="footer-hermes-icon" aria-label="Hermes" />
             <span className="lb-tooltip">Hermes</span>
-          </button>}
+          </button>
           <button
             className="footer-lorebook-btn" {...uiId('FT.lorebook')}
             onClick={() => setLorebookOpen(true)}
@@ -1838,7 +1854,9 @@ export default function App() {
             onLayoutChange={(pins, fols) => { setPinnedColumns(pins); setKeyinfoFolders(fols) }}
           />
         )}
-        {caps.hermes && hermesOpen && <HermesModal onClose={() => setHermesOpen(false)} />}
+        {/* Web에서도 Hermes 창은 열린다. 다만 입력을 막고 연결하지 않는다 (HermesModal의 demo 모드) */}
+        {hermesOpen && <HermesModal onClose={() => setHermesOpen(false)} />}
+        {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
         {clearOpen && <ClearModal onClose={() => setClearOpen(false)} />}
         {backupOpen && <BackupModal onClose={() => setBackupOpen(false)} />}
         {workspaceOpen && (
