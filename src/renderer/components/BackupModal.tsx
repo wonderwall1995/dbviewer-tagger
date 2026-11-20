@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
 import { toast } from 'sonner'
+import { api } from '../api'
 
 interface Props {
   onClose: () => void
@@ -35,7 +36,7 @@ export function BackupModal({ onClose }: Props) {
 
   const loadBackups = async () => {
     try {
-      const list = await window.electronAPI.backupList()
+      const list = await api.backupList()
       setBackups(list)
     } catch { toast.error('백업 목록을 불러오지 못했습니다.') }
   }
@@ -50,7 +51,7 @@ export function BackupModal({ onClose }: Props) {
     if (saving) return
     setSaving(true)
     try {
-      const meta = await window.electronAPI.backupSave(title, comment)
+      const meta = await api.backupSave(title, comment)
       await loadBackups()
       setSelected(meta)
       setMode('list')
@@ -63,7 +64,7 @@ export function BackupModal({ onClose }: Props) {
     if (!confirmRestore || restoring) return
     setRestoring(true)
     try {
-      await window.electronAPI.backupRestore(confirmRestore.id)
+      await api.backupRestore(confirmRestore.id)
       setConfirmRestore(null)
       onClose()
       window.location.reload()
@@ -76,7 +77,7 @@ export function BackupModal({ onClose }: Props) {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await window.electronAPI.backupDelete(confirmDelete.id)
+      await api.backupDelete(confirmDelete.id)
       if (selected?.id === confirmDelete.id) setSelected(null)
       await loadBackups()
       setConfirmDelete(null)

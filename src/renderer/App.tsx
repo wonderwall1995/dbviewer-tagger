@@ -21,6 +21,7 @@ import { ClearModal } from './components/ClearModal'
 import { BackupModal } from './components/BackupModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import type { ParsedCsv, FolderItem, FileSource, PinnedColumn, KeyinfoColumnSchema, KeyinfoFolder } from '../shared/types'
+import { api } from './api'
 
 export interface PendingFileEntry {
   status: 'uploading' | 'ready' | 'parsing'
@@ -85,7 +86,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    window.electronAPI.workspaceGet().then((info) => {
+    api.workspaceGet().then((info) => {
       if (info.needsSetup) {
         setWorkspaceFirstRun(true)
         setWorkspaceOpen(true)
@@ -138,7 +139,7 @@ export default function App() {
 
   // sheet-settings.json 로드
   useEffect(() => {
-    window.electronAPI.sheetLoadSettings().then((settings) => {
+    api.sheetLoadSettings().then((settings) => {
       if (settings?.sheets?.length) {
         const migrated = settings.sheets.map((s: SheetMeta) => ({
           ...s,
@@ -178,7 +179,7 @@ export default function App() {
 
   const handleSheetGlobalSave = useCallback(async () => {
     try {
-      await window.electronAPI.sheetSaveSettings({ sheets, activeSheet: activeSheetId })
+      await api.sheetSaveSettings({ sheets, activeSheet: activeSheetId })
       lastSavedSheetsRef.current = JSON.stringify(sheets)
       setIsDirty(false)
       toast.success('시트 설정 저장')
@@ -203,7 +204,7 @@ export default function App() {
 
   const handleSheetReset = useCallback(async () => {
     try {
-      const settings = await window.electronAPI.sheetLoadSettings()
+      const settings = await api.sheetLoadSettings()
       if (settings?.sheets?.length) {
         const migrated = settings.sheets.map((s: SheetMeta) => ({
           ...s,
@@ -362,7 +363,7 @@ export default function App() {
   // activeFile 변경 시 lorebook 주석 로드
   useEffect(() => {
     if (!activeFile) { setColumnComments({}); return }
-    window.electronAPI.lorebookGetColumnComments(activeFile)
+    api.lorebookGetColumnComments(activeFile)
       .then(setColumnComments)
       .catch(() => setColumnComments({}))
   }, [activeFile])
@@ -410,7 +411,7 @@ export default function App() {
 
   // keyinfo:index progress 수신
   useEffect(() => {
-    window.electronAPI.onKeyinfoProgress(({ done, total }) => {
+    api.onKeyinfoProgress(({ done, total }) => {
       if (bgTaskClearRef.current) { clearTimeout(bgTaskClearRef.current); bgTaskClearRef.current = null }
       if (done >= total) {
         setBgTask({ label: 'CSV 색인 완료', done: total, total })
@@ -419,7 +420,7 @@ export default function App() {
         setBgTask({ label: 'CSV 색인 중', done, total })
       }
     })
-    return () => { window.electronAPI.offKeyinfoProgress() }
+    return () => { api.offKeyinfoProgress() }
   }, [])
 
   // keyinfo 로드 함수 (ref에 저장해 applyLoadedData에서 호출 — 자동 색인 없음)
@@ -439,7 +440,7 @@ export default function App() {
         return
       }
       try {
-        const loaded = await window.electronAPI.keyinfoLoad(target)
+        const loaded = await api.keyinfoLoad(target)
         if (seq !== keyinfoLoadSeqRef.current) return   // 더 새로운 읽기가 시작됐다. 이 응답은 버린다.
         setPinnedColumns(loaded.pinnedColumns ?? [])
         setKeyinfoFolders(loaded.folders ?? [])
@@ -458,7 +459,7 @@ export default function App() {
     const otherId: PaneId = focusedPaneId === 'A' ? 'B' : 'A'
     const product = paneContextsRef.current[otherId]?.activeProduct || null
     let cancelled = false
-    window.electronAPI.keyinfoLoad(product)
+    api.keyinfoLoad(product)
       .then(d => {
         if (cancelled) return
         setOtherPaneKeyinfo({ paneId: otherId, product, pins: d.pinnedColumns ?? [], schema: d.schema ?? {} })
@@ -472,15 +473,15 @@ export default function App() {
     if (!keyinfoReadyRef.current || !activeProduct) return   // 제품이 없으면 저장하지 않는다.
     // 화면의 핀이 지금 제품의 것일 때만 저장한다. (제품이 바뀐 직후에 이전 제품의 핀을 쓰지 않는다)
     if (keyinfoLoadedProductRef.current !== (activeProduct || null)) return
-    window.electronAPI.keyinfoSaveLayout(activeProduct || null, pinnedColumns, keyinfoFolders).catch(() => {})
+    api.keyinfoSaveLayout(activeProduct || null, pinnedColumns, keyinfoFolders).catch(() => {})
   }, [pinnedColumns, keyinfoFolders, activeProduct])
 
   useEffect(() => {
     ;(async () => {
       try {
         const [cats, cfg] = await Promise.all([
-          window.electronAPI.lorebookGetCategories(),
-          window.electronAPI.productLoadConfig(),
+          api.lorebookGetCategories(),
+          api.productLoadConfig(),
         ])
         const savedOrder: string[] = cfg?.order ?? []
         const exists = new Set(cats)
@@ -490,13 +491,13 @@ export default function App() {
         ]
         setLorebookCategories(merged)
       } catch {
-        window.electronAPI.lorebookGetCategories().then(setLorebookCategories).catch(() => {})
+        api.lorebookGetCategories().then(setLorebookCategories).catch(() => {})
       }
     })()
   }, [])
 
   useEffect(() => {
-    window.electronAPI.localLoad().then((data) => {
+    api.localLoad().then((data) => {
       if (data) {
         setFolders(data.folders ?? [])
         setFileToFolder(data.fileToFolder ?? {})
@@ -531,7 +532,7 @@ export default function App() {
   useEffect(() => {
     if (!hasLoaded.current) return
     if (activeSheetIdRef.current !== 'default') return
-    window.electronAPI.localSave({ folders, fileToFolder, fileSources, columnWidths: allColumnWidths, pageSettings: allPageSettings, hiddenFiles: [...hiddenFiles], fileComments, lorebookCategories, deletedColumns: allColumnDeletions, hiddenColumns: allHiddenColumns, lorebookIndex, ...(activeProduct ? { product: activeProduct } : {}) })
+    api.localSave({ folders, fileToFolder, fileSources, columnWidths: allColumnWidths, pageSettings: allPageSettings, hiddenFiles: [...hiddenFiles], fileComments, lorebookCategories, deletedColumns: allColumnDeletions, hiddenColumns: allHiddenColumns, lorebookIndex, ...(activeProduct ? { product: activeProduct } : {}) })
   }, [folders, fileToFolder, fileSources, allColumnWidths, allPageSettings, hiddenFiles, fileComments, lorebookCategories, allColumnDeletions, allHiddenColumns, lorebookIndex, activeProduct])
 
   // 프리셋 데이터를 앱 상태에 적용하는 공통 헬퍼
@@ -547,7 +548,7 @@ export default function App() {
     }
     if (!data.product) return
     try {
-      const registered = await window.electronAPI.lorebookGetCategories()
+      const registered = await api.lorebookGetCategories()
       if (!registered.includes(data.product)) {
         toast.warning(`${sheet.jsonFile}의 제품 "${data.product}"이(가) 등록된 제품 목록에 없어요. Footer의 P 버튼에서 확인해 주세요.`, { duration: 7000 })
       }
@@ -604,7 +605,7 @@ export default function App() {
   // sheet-settings.json 동기화 헬퍼
   const syncSheetSettings = useCallback(async (updatedSheets: typeof sheets) => {
     try {
-      await window.electronAPI.sheetSaveSettings({
+      await api.sheetSaveSettings({
         sheets: updatedSheets,
         activeSheet: activeSheetIdRef.current,
       })
@@ -640,8 +641,8 @@ export default function App() {
     const sheet = sheetsRef.current.find(s => s.id === sheetId)
     if (!sheet) return
     let data: LocalPreset | null = null
-    if (sheet.isDefault) data = await window.electronAPI.localLoad()
-    else if (sheet.jsonFile) data = await window.electronAPI.localLoadPreset(sheet.jsonFile)
+    if (sheet.isDefault) data = await api.localLoad()
+    else if (sheet.jsonFile) data = await api.localLoadPreset(sheet.jsonFile)
     applyLoadedData(data, true)
     void checkSheetLoad(sheet, data)
     updatePane(pid, { activeFile: null, activeFileParsed: null })
@@ -672,13 +673,13 @@ export default function App() {
     // 단일뷰에서 시트 전환 시 pane A의 CSV 파일을 초기화 — 이전 시트의 데이터그리드 잔류 방지
     setPanes(prev => prev.map(p => p.id === 'A' ? { ...p, activeFile: null, activeFileParsed: null } : p))
     if (sheet.isDefault) {
-      window.electronAPI.localLoad().then((d) => {
+      api.localLoad().then((d) => {
         applyLoadedData(d, true)
         void checkSheetLoad(sheet, d)
         void openRememberedFileRef.current(sheet.id, d)
       })
     } else if (sheet.jsonFile) {
-      window.electronAPI.localLoadPreset(sheet.jsonFile).then((d) => {
+      api.localLoadPreset(sheet.jsonFile).then((d) => {
         applyLoadedData(d, true)
         void checkSheetLoad(sheet, d)
         void openRememberedFileRef.current(sheet.id, d)
@@ -734,7 +735,7 @@ export default function App() {
         const entry = pendingForStatsRef.current[name]
         if (!entry || statsRequestedRef.current[name] !== entry.path) continue
         let result: CsvStats | null = null
-        try { result = await window.electronAPI.csvStats(entry.path) } catch { result = null }
+        try { result = await api.csvStats(entry.path) } catch { result = null }
         // 세는 동안 같은 이름에 다른 파일이 들어왔다면 결과를 버린다.
         if (pendingForStatsRef.current[name]?.path !== entry.path) continue
         statsBufferRef.current[name] = result
@@ -822,7 +823,7 @@ export default function App() {
           : null
         if (localPath && src && !pendingFilesRef.current[parsed[i].fileName]) {
           pathEntries[parsed[i].fileName] = { status: 'ready', path: localPath, source: src }
-          window.electronAPI.cacheSave(localPath, parsed[i])
+          api.cacheSave(localPath, parsed[i])
         }
       }
       if (Object.keys(pathEntries).length > 0) {
@@ -888,7 +889,7 @@ export default function App() {
       }))
 
       try {
-        const cached = await window.electronAPI.cacheLoad(pending.path)
+        const cached = await api.cacheLoad(pending.path)
         if (cached) {
           updatePane(paneId, { activeFileParsed: cached })
           setParsedMap(prev => ({ ...prev, [name]: cached }))
@@ -896,22 +897,22 @@ export default function App() {
           return
         }
 
-        const content = await window.electronAPI.localReadFile(pending.path)
+        const content = await api.localReadFile(pending.path)
         let parsed = await parseCsv(name, content)
         // JSON에 기록된 삭제 칼럼이 CSV에 재등장했다면 재삭제
         const deletions = allColumnDeletionsRef.current[name] ?? []
         const toDelete = deletions.filter(dk => parsed.columns.some(c => c.key === dk))
         if (toDelete.length > 0 && pending.source?.type === 'local') {
           for (const dk of toDelete) {
-            await window.electronAPI.localEraseColumn(pending.path, dk)
+            await api.localEraseColumn(pending.path, dk)
           }
-          const fresh = await window.electronAPI.localReadFile(pending.path)
+          const fresh = await api.localReadFile(pending.path)
           parsed = await parseCsv(name, fresh)
         }
         updatePane(paneId, { activeFileParsed: parsed })
         setParsedMap(prev => ({ ...prev, [name]: parsed }))
         setPendingFiles((prev) => ({ ...prev, [name]: { ...prev[name], status: 'ready' } }))
-        window.electronAPI.cacheSave(pending.path, parsed)
+        api.cacheSave(pending.path, parsed)
       } catch {
         toast.error(`${name} 파싱 실패`)
         setPendingFiles((prev) => ({ ...prev, [name]: { ...prev[name], status: 'ready' } }))
@@ -934,7 +935,7 @@ export default function App() {
     if (!entry || entry.status !== 'ready') return
     // 디스크에 없는 파일(실종)은 열지 않는다.
     try {
-      const stats = await window.electronAPI.csvStats(entry.path)
+      const stats = await api.csvStats(entry.path)
       if (stats?.missing) return
     } catch { /* 확인하지 못해도 열기를 시도한다. */ }
     // 확인하는 동안 다른 시트로 넘어갔다면 열지 않는다.
@@ -958,7 +959,7 @@ export default function App() {
     const jsonFile = sheetsRef.current.find((s) => s.id === sheetId)?.jsonFile
     if (!jsonFile) return
     const timer = setTimeout(() => {
-      window.electronAPI.localSetActiveFile(jsonFile, focusedActiveFile).catch(() => {})
+      api.localSetActiveFile(jsonFile, focusedActiveFile).catch(() => {})
     }, 300)
     return () => clearTimeout(timer)
   }, [focusedActiveFile])
@@ -984,7 +985,7 @@ export default function App() {
         csvFiles.map(async (file) => {
           try {
             const sourcePath = (file as any).path as string
-            const imported = await window.electronAPI.localImportFile(sourcePath)
+            const imported = await api.localImportFile(sourcePath)
             setPendingFiles((prev) => ({
               ...prev,
               [file.name]: {
@@ -1010,7 +1011,7 @@ export default function App() {
 
   // 파일 선택 다이얼로그 — 복사만, 파싱 안 함
   const handleOpenDialog = async () => {
-    const result = await window.electronAPI.openCsv()
+    const result = await api.openCsv()
     if (!result) return
     setPendingFiles((prev) => {
       const next = { ...prev }
@@ -1048,7 +1049,7 @@ export default function App() {
       return { ...prev, [csvName]: [...current, colKey] }
     })
     // 현재 활성 파일이면 주석 즉시 갱신
-    window.electronAPI.lorebookGetColumnComments(csvName)
+    api.lorebookGetColumnComments(csvName)
       .then(setColumnComments)
       .catch(() => {})
   }, [])
@@ -1146,7 +1147,7 @@ export default function App() {
 
   const handleCategoriesChange = useCallback((cats: string[]) => {
     setLorebookCategories(cats)
-    window.electronAPI.productSaveConfig({ order: cats }).catch(() => {})
+    api.productSaveConfig({ order: cats }).catch(() => {})
   }, [])
 
   const [dragProduct, setDragProduct] = useState<string | null>(null)
@@ -1162,7 +1163,7 @@ export default function App() {
       if (toIdx === -1) return prev
       if (side === 'after') toIdx++
       cats.splice(toIdx, 0, fromCat)
-      window.electronAPI.productSaveConfig({ order: cats }).catch(() => {})
+      api.productSaveConfig({ order: cats }).catch(() => {})
       return cats
     })
   }, [])
@@ -1208,7 +1209,7 @@ export default function App() {
         return next.map((p, i) => ({ ...p, pinId: i + 1 }))
       })
       const remainingPins = current.filter((_, i) => i !== exactIdx)
-      window.electronAPI.keynotePruneByPins(activeProductRef.current || null, remainingPins)
+      api.keynotePruneByPins(activeProductRef.current || null, remainingPins)
         .then(removed => {
           if (removed.length > 0) toast.info(`핀이 없어진 Key 노트 ${removed.length}개를 함께 지웠어요: ${removed.join(', ')}`, { duration: 6000 })
         })
@@ -1218,7 +1219,7 @@ export default function App() {
       setPinnedColumns(prev => [...prev, { pinId: prev.length + 1, fileName: activeFile, columnKey }])
       const src = fileSourcesRef.current[activeFile]
       if (src) {
-        window.electronAPI.keyinfoIndex(
+        api.keyinfoIndex(
           activeProductRef.current || null,
           { [activeFile]: src } as Record<string, { type: string; path?: string; localPath?: string }>
         ).then(updated => setKeyinfoSchema(updated.schema ?? {})).catch(() => {})
@@ -1237,12 +1238,12 @@ export default function App() {
       toast.error('로컬 파일만 칼럼 삭제가 가능합니다')
       return
     }
-    await window.electronAPI.localEraseColumn(source.path, colKey)
-    const content = await window.electronAPI.localReadFile(source.path)
+    await api.localEraseColumn(source.path, colKey)
+    const content = await api.localReadFile(source.path)
     const reparsed = await parseCsv(activeFile, content)
     updatePane(focusedPaneIdRef.current, { activeFileParsed: reparsed })
     setParsedMap(prev => ({ ...prev, [activeFile]: reparsed }))
-    window.electronAPI.cacheSave(source.path, reparsed)
+    api.cacheSave(source.path, reparsed)
     // 삭제 기록
     setAllColumnDeletions(prev => {
       const next = { ...prev }
@@ -1282,7 +1283,7 @@ export default function App() {
   const handleSavePreset = useCallback(
     async (name: string, product: string) => {
       try {
-        const savedName = await window.electronAPI.localSavePreset(name, {
+        const savedName = await api.localSavePreset(name, {
           ...(product ? { product } : {}),
           folders,
           fileToFolder,
@@ -1324,7 +1325,7 @@ export default function App() {
 
   const handleLoadPreset = useCallback(
     async (name: string) => {
-      const data = await window.electronAPI.localLoadPreset(name)
+      const data = await api.localLoadPreset(name)
       applyLoadedData(data)
       // 불러온 JSON에 기록된 마지막 파일을 연다. (이 시트에서 보던 파일보다 JSON의 기록을 우선한다)
       if (data) void openRememberedFileRef.current(activeSheetIdRef.current, data, true)
@@ -1405,7 +1406,7 @@ export default function App() {
           <button
             className="logo-copyright"
             {...uiId('HD.github')}
-            onClick={() => { window.electronAPI.openGithub().catch(() => {}) }}
+            onClick={() => { api.openGithub().catch(() => {}) }}
             title="GitHub 열기"
           >
             GitHub

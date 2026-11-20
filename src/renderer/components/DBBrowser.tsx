@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { useDraggable } from '../hooks/useDraggable'
 import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 type Step = 'slots' | 'schemas' | 'tables'
 
@@ -76,7 +77,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
   const { handleProps, cardStyle } = useDraggable()
 
   const refreshSlots = useCallback(() => {
-    window.electronAPI.dbListSlots().then(setSlots).catch(() => {})
+    api.dbListSlots().then(setSlots).catch(() => {})
   }, [])
 
   // 대기 중인 저장 내용을 즉시 기록한다.
@@ -85,7 +86,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     const pending = pendingSave.current
     if (!pending) return
     pendingSave.current = null
-    const verified = await window.electronAPI.dbSaveSlot(pending.id, pending.payload).catch(() => null)
+    const verified = await api.dbSaveSlot(pending.id, pending.payload).catch(() => null)
     // 더 새로운 입력이 없을 때만 저장 결과를 화면에 반영한다.
     if (verified !== null && slotRef.current === pending.id && !pendingSave.current) {
       const next = { ...formRef.current, verified }
@@ -135,7 +136,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
   }
 
   const handlePickPem = async () => {
-    const p = await window.electronAPI.sshPickPemFile()
+    const p = await api.sshPickPemFile()
     if (p) updateSsh({ pemPath: p })
   }
 
@@ -197,7 +198,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     setSchemasLoading(true)
     try {
       await flushSave()
-      const page = await window.electronAPI.dbListSchemas(id, keyword, 0)
+      const page = await api.dbListSchemas(id, keyword, 0)
       if (reqId !== schemaReq.current) return
       schemaCache.set(schemaCacheKey(id, keyword), page)
       setSchemas(page.items)
@@ -220,7 +221,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     const reqId = schemaReq.current
     setSchemasLoadingMore(true)
     try {
-      const page = await window.electronAPI.dbListSchemas(id, keyword, schemas.length)
+      const page = await api.dbListSchemas(id, keyword, schemas.length)
       if (reqId !== schemaReq.current) return
       const merged: DbSchemaPage = { items: [...schemas, ...page.items], hasMore: page.hasMore }
       schemaCache.set(schemaCacheKey(id, keyword), merged)
@@ -262,7 +263,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     setPassword('')
     setForm(EMPTY_FORM)
     try {
-      const view = await window.electronAPI.dbLoadSlot(id)
+      const view = await api.dbLoadSlot(id)
       formRef.current = view
       setForm(view)
       // 연결 확인을 통과하지 않은 슬롯은 설정 칸을 펼친다.
@@ -280,7 +281,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     setTablesLoading(true)
     try {
       await flushSave()
-      const list = await window.electronAPI.dbListTables(slot!, schema)
+      const list = await api.dbListTables(slot!, schema)
       setTables(list)
     } catch {
       setError('테이블 목록을 불러오지 못했습니다.')
@@ -323,11 +324,11 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     // 클릭 즉시 모달 표시 — IPC 첫 이벤트를 기다리지 않음
     setExportProgress({ ti: 0, total: list.length, schema: exportSchema, table: list[0] ?? '', rowsDone: 0, totalRows: 0 })
 
-    window.electronAPI.onExportProgress((p) => setExportProgress(p))
+    api.onExportProgress((p) => setExportProgress(p))
 
     try {
       await flushSave()
-      const paths = await window.electronAPI.dbExportTables(exportSlot, exportSchema, list)
+      const paths = await api.dbExportTables(exportSlot, exportSchema, list)
       toast.success(`${paths.length}개 테이블 CSV 저장 완료 (${formRef.current.folderName || slotLabel}\\${exportSchema})`)
       onClose()
     } catch (e) {
@@ -335,7 +336,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
       if (msg.includes('EXPORT_ABORTED')) toast.info('저장을 중단하고, 이번에 만든 파일을 삭제했습니다.')
       else toast.error('내보내기에 실패했습니다.')
     } finally {
-      window.electronAPI.offExportProgress()
+      api.offExportProgress()
       setExporting(false)
       setExportProgress(null)
     }
@@ -351,11 +352,11 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     // 테이블 수는 저장을 시작해야 알 수 있으므로 첫 진행 이벤트 전에는 준비 중으로 표시한다.
     setExportProgress({ ti: 0, total: 0, schema: '', table: '', rowsDone: 0, totalRows: 0 })
 
-    window.electronAPI.onExportProgress((p) => setExportProgress(p))
+    api.onExportProgress((p) => setExportProgress(p))
 
     try {
       await flushSave()
-      const { saved, failed } = await window.electronAPI.dbExportSchemas(exportSlot, list)
+      const { saved, failed } = await api.dbExportSchemas(exportSlot, list)
       if (saved.length === 0 && failed.length === 0) {
         toast.info('선택한 스키마에 저장할 테이블이 없습니다.')
         return
@@ -372,19 +373,19 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
       if (msg.includes('EXPORT_ABORTED')) toast.info('저장을 중단하고, 이번에 만든 파일을 삭제했습니다.')
       else toast.error('내보내기에 실패했습니다.')
     } finally {
-      window.electronAPI.offExportProgress()
+      api.offExportProgress()
       setExporting(false)
       setExportProgress(null)
     }
   }
 
   const handleAbortExport = () => {
-    window.electronAPI.dbAbortExport().catch(() => {})
+    api.dbAbortExport().catch(() => {})
   }
 
   const handleClose = () => {
     void flushSave()
-    if (slotRef.current) window.electronAPI.dbCloseTunnel(slotRef.current).catch(() => {})
+    if (slotRef.current) api.dbCloseTunnel(slotRef.current).catch(() => {})
     onClose()
   }
 
@@ -394,7 +395,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
       setStep('schemas'); setSelectedSchema(null); setTables([]); setSelectedTables(new Set())
     } else if (step === 'schemas') {
       void flushSave().then(refreshSlots)
-      if (slotRef.current) window.electronAPI.dbCloseTunnel(slotRef.current).catch(() => {})
+      if (slotRef.current) api.dbCloseTunnel(slotRef.current).catch(() => {})
       slotRef.current = null
       formRef.current = EMPTY_FORM
       passwordRef.current = ''
@@ -409,7 +410,7 @@ export function DBBrowser({ open, onClose, onLoading, onOpenWorkspace }: DBBrows
     setTestingConn(true)
     try {
       await flushSave()
-      const result = await window.electronAPI.dbTestConnection(slot)
+      const result = await api.dbTestConnection(slot)
       if (result.ok) {
         const next = { ...formRef.current, verified: true }
         formRef.current = next

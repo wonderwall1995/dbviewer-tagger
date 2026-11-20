@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { Pencil, Trash2, ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface LorebookEntry {
   name: string
@@ -42,7 +43,7 @@ export function LorebookModal({ onClose }: Props) {
   const loadEntries = async () => {
     setLoading(true)
     try {
-      const list = await window.electronAPI.lorebookList()
+      const list = await api.lorebookList()
       setEntries(list)
     } catch {
       setError('목록을 불러오지 못했습니다.')
@@ -62,7 +63,7 @@ export function LorebookModal({ onClose }: Props) {
   const openEdit = async (entry: LorebookEntry) => {
     setError(null)
     try {
-      const content = await window.electronAPI.lorebookRead(entry.path)
+      const content = await api.lorebookRead(entry.path)
       setView({ type: 'edit', entry, content })
     } catch {
       setError('파일을 읽지 못했습니다.')
@@ -74,7 +75,7 @@ export function LorebookModal({ onClose }: Props) {
     setSaving(true)
     setError(null)
     try {
-      await window.electronAPI.lorebookWrite(view.entry.path, view.content)
+      await api.lorebookWrite(view.entry.path, view.content)
       await loadEntries()
       setView({ type: 'list' })
     } catch {
@@ -88,7 +89,7 @@ export function LorebookModal({ onClose }: Props) {
     setDeleting(true)
     setError(null)
     try {
-      await window.electronAPI.lorebookDelete(entry.path)
+      await api.lorebookDelete(entry.path)
       await loadEntries()
       setConfirmDelete(null)
       setSelectedEntry(prev => prev?.path === entry.path ? null : prev)

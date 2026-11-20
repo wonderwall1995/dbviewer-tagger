@@ -3,6 +3,7 @@ import { Check, X, Plus, Pause, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { uiId } from '../ui/uiId'
 import type { KeyinfoColumnSchema } from '../../shared/types'
+import { api } from '../api'
 
 interface Props {
   // null이면 제품 미지정
@@ -75,7 +76,7 @@ function ValueExamples({ note, fileSources }: { note: KeyNote; fileSources: File
     setLoadingMore(false)
     if (!table || !filePath || columnKeys.length === 0) { setState('idle'); return }
     setState('loading')
-    window.electronAPI.keynoteSampleRows(filePath, columnKeys, PAGE, skipBlank, 0, sort)
+    api.keynoteSampleRows(filePath, columnKeys, PAGE, skipBlank, 0, sort)
       .then(r => {
         if (gen !== genRef.current) return
         if (!r.ok) { setState(r.reason === 'missing' ? 'missing' : 'unreadable'); return }
@@ -93,7 +94,7 @@ function ValueExamples({ note, fileSources }: { note: KeyNote; fileSources: File
     if (!data || !hasMore || loadingMore || !filePath) return
     const gen = genRef.current
     setLoadingMore(true)
-    window.electronAPI.keynoteSampleRows(filePath, columnKeys, PAGE, skipBlank, data.rows.length, sort)
+    api.keynoteSampleRows(filePath, columnKeys, PAGE, skipBlank, data.rows.length, sort)
       .then(r => {
         if (gen !== genRef.current) return
         if (r.ok) {
@@ -219,8 +220,8 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
 
   const reload = useCallback(async () => {
     const [n, c] = await Promise.all([
-      window.electronAPI.keynoteList(product),
-      window.electronAPI.keynoteCandidates(product),
+      api.keynoteList(product),
+      api.keynoteCandidates(product),
     ])
     setNotes(n)
     setCandidates(c)
@@ -232,7 +233,7 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
     const pending = pendingRef.current
     if (!pending) return
     pendingRef.current = null
-    await window.electronAPI.keynoteSave(pending.product, pending.notes)
+    await api.keynoteSave(pending.product, pending.notes)
   }, [])
 
   // 제품이 바뀌면 저장하지 않은 편집을 먼저 저장하고 다시 읽는다.
@@ -266,7 +267,7 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
 
   const accept = async (c: KeyCandidate) => {
     await flush()
-    const note = await window.electronAPI.keynoteAcceptCandidate(product, c.signature)
+    const note = await api.keynoteAcceptCandidate(product, c.signature)
     if (!note) { toast.warning('이미 노트에 들어갔거나 핀이 없어진 후보예요.') }
     await reload()
     if (note) setSelectedId(note.id)
@@ -279,7 +280,7 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
     edit({ status: 'suspended' })
     setSelectedId(null)
     await flush()
-    setCandidates(await window.electronAPI.keynoteCandidates(product))
+    setCandidates(await api.keynoteCandidates(product))
     toast.info(`"${title}" 노트를 후보로 옮겼어요. 다시 수락하면 적은 내용 그대로 돌아와요.`)
   }
 
@@ -290,7 +291,7 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
       members: selected.members.filter(x => !(x.fileName === m.fileName && x.columnKey === m.columnKey)),
       excluded: [...selected.excluded, m],
     })
-    setTimeout(async () => { await flush(); setCandidates(await window.electronAPI.keynoteCandidates(product)) }, 700)
+    setTimeout(async () => { await flush(); setCandidates(await api.keynoteCandidates(product)) }, 700)
   }
 
   // 새로고침: 아직 색인하지 않은 테이블을 색인하고, 노트의 출현 목록에 새 테이블의 같은 Key를 넣고, 후보를 다시 계산한다.
@@ -300,10 +301,10 @@ export function KeyNotesPane({ product, schema, fileSources, onSchemaUpdated, on
     try {
       await flush()
       if (fileSources) {
-        const data = await window.electronAPI.keyinfoIndex(product, fileSources)
+        const data = await api.keyinfoIndex(product, fileSources)
         onSchemaUpdated?.(data.schema ?? {})
       }
-      const changed = await window.electronAPI.keynoteRefreshMembers(product)
+      const changed = await api.keynoteRefreshMembers(product)
       const keepId = selectedId
       const n = await reload()
       if (keepId && !n.some(x => x.id === keepId)) setSelectedId(null)

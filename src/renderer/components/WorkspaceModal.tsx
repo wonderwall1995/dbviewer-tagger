@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   // true이면 처음 실행할 때의 안내 창이다. 닫기 버튼이 없고, 폴더를 정해야 닫힌다.
@@ -18,7 +19,7 @@ export function WorkspaceModal({ firstRun, onClose }: Props) {
   const [pendingPath, setPendingPath] = useState<string | null>(null)
 
   useEffect(() => {
-    window.electronAPI.workspaceGet().then(setInfo).catch(() => setError('작업 폴더 정보를 읽지 못했습니다.'))
+    api.workspaceGet().then(setInfo).catch(() => setError('작업 폴더 정보를 읽지 못했습니다.'))
   }, [])
 
   // 폴더를 저장하고 적용한다. 지금 폴더와 다르면 메인이 화면을 새로고침한다.
@@ -26,7 +27,7 @@ export function WorkspaceModal({ firstRun, onClose }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const result = await window.electronAPI.workspaceSave(dir)
+      const result = await api.workspaceSave(dir)
       if (!result.ok) {
         setError(result.message)
         return
@@ -40,7 +41,7 @@ export function WorkspaceModal({ firstRun, onClose }: Props) {
   }
 
   const handlePick = async () => {
-    const dir = await window.electronAPI.workspacePick()
+    const dir = await api.workspacePick()
     if (!dir) return
     // 처음 실행 안내에서는 바로 적용하고, 설정 창에서는 확인을 한 번 거친다.
     if (firstRun) await apply(dir)
@@ -48,7 +49,7 @@ export function WorkspaceModal({ firstRun, onClose }: Props) {
   }
 
   const handleOpenExplorer = async () => {
-    const message = await window.electronAPI.workspaceOpen()
+    const message = await api.workspaceOpen()
     if (message) setError(`탐색기를 열지 못했습니다. ${message}`)
   }
 

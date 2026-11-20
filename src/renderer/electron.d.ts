@@ -4,90 +4,93 @@ export {}
 
 declare global {
   interface Window {
-    electronAPI: {
-      openCsv: () => Promise<Array<{ name: string; path: string }> | null>
-      localSave: (data: LocalPreset) => Promise<void>
-      localLoad: () => Promise<LocalPreset | null>
-      localSetActiveFile: (presetName: string, fileName: string | null) => Promise<void>
-      localSavePreset: (name: string, data: LocalPreset) => Promise<string>
-      localListPresets: () => Promise<Array<{ name: string; mtime: number; product?: string }>>
-      localLoadPreset: (name: string) => Promise<LocalPreset | null>
-      localDeletePreset: (name: string) => Promise<void>
-      localImportFile: (sourcePath: string) => Promise<{ name: string; path: string }>
-      localReadFile: (filePath: string) => Promise<string>
-      localGetDownloadsPath: (root: 's3' | 'db') => Promise<string>
-      localListCsvTree: (root: 's3' | 'db', subPath?: string) => Promise<Array<{ segments: string[]; files: Array<{ name: string; path: string }> }>>
-      localOpenDownloads: (root: 's3' | 'db', subPath?: string) => Promise<string>
-      openGithub: () => Promise<void>
-      workspaceGet: () => Promise<WorkspaceInfo>
-      workspacePick: () => Promise<string | null>
-      workspaceSave: (dir: string) => Promise<WorkspaceSaveResult>
-      workspaceOpen: () => Promise<string>
-      localEraseColumn: (filePath: string, colKey: string) => Promise<void>
-      localListDownloads: (root: 's3' | 'db', subPath?: string) => Promise<{ folders: Array<{ name: string; path: string }>; files: Array<{ name: string; path: string; mtime: number; size: number }> }>
-      localDeleteDownload: (absolutePath: string) => Promise<void>
-      localClearTmp: () => Promise<void>
-      csvStats: (filePath: string) => Promise<CsvStats | null>
-      cacheLoad: (filePath: string) => Promise<ParsedCsv | null>
-      cacheSave: (filePath: string, data: ParsedCsv) => Promise<void>
-      sheetSaveSettings: (data: SheetSettings) => Promise<void>
-      sheetLoadSettings: () => Promise<SheetSettings | null>
-      lorebookList: () => Promise<Array<{ name: string; path: string; folder: string }>>
-      lorebookRead: (absPath: string) => Promise<string>
-      lorebookWrite: (absPath: string, content: string) => Promise<void>
-      lorebookDelete: (absPath: string) => Promise<void>
-      lorebookNewPath: (product: string, csvName: string, colLabel: string) => Promise<string>
-      lorebookGetColumnComments: (csvName: string) => Promise<Record<string, string>>
-      lorebookGetCategories: () => Promise<string[]>
-      lorebookSetCategories: (cats: string[]) => Promise<void>
-      productLoadConfig: () => Promise<{ order?: string[] }>
-      productSaveConfig: (data: { order: string[] }) => Promise<void>
-      dbCloseTunnel: (slot: DbSlotId) => Promise<void>
-      dbAbortExport: () => Promise<void>
-      onExportProgress: (cb: (data: ExportProgress) => void) => void
-      offExportProgress: () => void
-      dbTestConnection: (slot: DbSlotId) => Promise<{ ok: boolean; message?: string }>
-      dbListSchemas: (slot: DbSlotId, search: string, offset?: number) => Promise<DbSchemaPage>
-      dbListTables: (slot: DbSlotId, schema: string) => Promise<string[]>
-      dbExportTables: (slot: DbSlotId, schema: string, tables: string[]) => Promise<string[]>
-      dbExportSchemas: (slot: DbSlotId, schemas: string[]) => Promise<DbExportSchemasResult>
-      dbListSlots: () => Promise<DbSlotSummary[]>
-      dbLoadSlot: (slot: DbSlotId) => Promise<DbSlotView>
-      dbSaveSlot: (slot: DbSlotId, config: DbSlotConfig) => Promise<boolean>
-      sshPickPemFile: () => Promise<string | null>
-      hermesLoadConfig: () => Promise<HermesConfigView>
-      hermesSaveConfig: (cfg: HermesConfigInput) => Promise<void>
-      hermesTestConnection: () => Promise<{ ok: true } | { ok: false; message: string }>
-      hermesVaultTest: () => Promise<{ ok: boolean; message: string }>
-      hermesVaultList: () => Promise<{ ok: true; tree: Array<{ name: string; children: string[] }> } | { ok: false; message: string }>
-      cedSend: (product: string | null) => Promise<
-        | { ok: true; dir: string; skippedDrafts: number; noNotes: boolean; written: string[]; updated: string[]; unchanged: string[]; conflicts: string[]; leftover: string[] }
-        | { ok: false; message: string; dir: string }
-      >
-      hermesGetSessions: () => Promise<{ object: string; data: HermesSession[] }>
-      hermesGetMessages: (sessionId: string) => Promise<{ object: string; data: HermesMessage[] }>
-      keyinfoReindex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
-      keyinfoLoad: (product: string | null) => Promise<KeyinfoData>
-      keyinfoSavePins: (product: string | null, pins: Array<{ pinId: number; fileName: string; columnKey: string; folderId?: string; comment?: string }>) => Promise<void>
-      keyinfoSaveLayout: (product: string | null, pins: Array<{ pinId: number; fileName: string; columnKey: string; folderId?: string; comment?: string }>, folders: KeyinfoFolder[]) => Promise<void>
-      keyinfoIndex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
-      onKeyinfoProgress: (cb: (data: { done: number; total: number }) => void) => void
-      offKeyinfoProgress: () => void
-      cedGenerate: (product: string | null) => Promise<{ dir: string; files: string[]; skippedDrafts: number }>
-      keynoteList: (product: string | null) => Promise<KeyNote[]>
-      keynoteSave: (product: string | null, notes: KeyNote[]) => Promise<void>
-      keynoteCandidates: (product: string | null) => Promise<KeyCandidate[]>
-      keynoteAcceptCandidate: (product: string | null, signature: string) => Promise<KeyNote | null>
-      keynoteSampleRows: (filePath: string, columnKeys: string[], limit: number, skipBlank: boolean, offset: number, sort: { column: string; dir: 'asc' | 'desc' } | null) => Promise<{ ok: boolean; reason: string; columns: string[]; rows: string[][]; total: number; hasMore: boolean; truncated: boolean }>
-      keynotePruneByPins: (product: string | null, pins: Array<{ columnKey: string }>) => Promise<string[]>
-      keynoteRefreshMembers: (product: string | null) => Promise<number>
-      keyinfoListRelations: () => Promise<KeyRelationGroup[]>
-      keyinfoSaveRelations: (groups: KeyRelationGroup[]) => Promise<void>
-      backupList: () => Promise<BackupMeta[]>
-      backupSave: (title: string, comment: string) => Promise<BackupMeta>
-      backupRestore: (id: string) => Promise<void>
-      backupDelete: (id: string) => Promise<void>
-    }
+    electronAPI: TaggerApi
+  }
+
+  // 화면과 로직 사이의 약속. 데스크톱은 preload(IPC)로, Web은 HTTP로 같은 약속을 구현한다.
+  interface TaggerApi {
+    openCsv: () => Promise<Array<{ name: string; path: string }> | null>
+    localSave: (data: LocalPreset) => Promise<void>
+    localLoad: () => Promise<LocalPreset | null>
+    localSetActiveFile: (presetName: string, fileName: string | null) => Promise<void>
+    localSavePreset: (name: string, data: LocalPreset) => Promise<string>
+    localListPresets: () => Promise<Array<{ name: string; mtime: number; product?: string }>>
+    localLoadPreset: (name: string) => Promise<LocalPreset | null>
+    localDeletePreset: (name: string) => Promise<void>
+    localImportFile: (sourcePath: string) => Promise<{ name: string; path: string }>
+    localReadFile: (filePath: string) => Promise<string>
+    localGetDownloadsPath: (root: 's3' | 'db') => Promise<string>
+    localListCsvTree: (root: 's3' | 'db', subPath?: string) => Promise<Array<{ segments: string[]; files: Array<{ name: string; path: string }> }>>
+    localOpenDownloads: (root: 's3' | 'db', subPath?: string) => Promise<string>
+    openGithub: () => Promise<void>
+    workspaceGet: () => Promise<WorkspaceInfo>
+    workspacePick: () => Promise<string | null>
+    workspaceSave: (dir: string) => Promise<WorkspaceSaveResult>
+    workspaceOpen: () => Promise<string>
+    localEraseColumn: (filePath: string, colKey: string) => Promise<void>
+    localListDownloads: (root: 's3' | 'db', subPath?: string) => Promise<{ folders: Array<{ name: string; path: string }>; files: Array<{ name: string; path: string; mtime: number; size: number }> }>
+    localDeleteDownload: (absolutePath: string) => Promise<void>
+    localClearTmp: () => Promise<void>
+    csvStats: (filePath: string) => Promise<CsvStats | null>
+    cacheLoad: (filePath: string) => Promise<ParsedCsv | null>
+    cacheSave: (filePath: string, data: ParsedCsv) => Promise<void>
+    sheetSaveSettings: (data: SheetSettings) => Promise<void>
+    sheetLoadSettings: () => Promise<SheetSettings | null>
+    lorebookList: () => Promise<Array<{ name: string; path: string; folder: string }>>
+    lorebookRead: (absPath: string) => Promise<string>
+    lorebookWrite: (absPath: string, content: string) => Promise<void>
+    lorebookDelete: (absPath: string) => Promise<void>
+    lorebookNewPath: (product: string, csvName: string, colLabel: string) => Promise<string>
+    lorebookGetColumnComments: (csvName: string) => Promise<Record<string, string>>
+    lorebookGetCategories: () => Promise<string[]>
+    lorebookSetCategories: (cats: string[]) => Promise<void>
+    productLoadConfig: () => Promise<{ order?: string[] }>
+    productSaveConfig: (data: { order: string[] }) => Promise<void>
+    dbCloseTunnel: (slot: DbSlotId) => Promise<void>
+    dbAbortExport: () => Promise<void>
+    onExportProgress: (cb: (data: ExportProgress) => void) => void
+    offExportProgress: () => void
+    dbTestConnection: (slot: DbSlotId) => Promise<{ ok: boolean; message?: string }>
+    dbListSchemas: (slot: DbSlotId, search: string, offset?: number) => Promise<DbSchemaPage>
+    dbListTables: (slot: DbSlotId, schema: string) => Promise<string[]>
+    dbExportTables: (slot: DbSlotId, schema: string, tables: string[]) => Promise<string[]>
+    dbExportSchemas: (slot: DbSlotId, schemas: string[]) => Promise<DbExportSchemasResult>
+    dbListSlots: () => Promise<DbSlotSummary[]>
+    dbLoadSlot: (slot: DbSlotId) => Promise<DbSlotView>
+    dbSaveSlot: (slot: DbSlotId, config: DbSlotConfig) => Promise<boolean>
+    sshPickPemFile: () => Promise<string | null>
+    hermesLoadConfig: () => Promise<HermesConfigView>
+    hermesSaveConfig: (cfg: HermesConfigInput) => Promise<void>
+    hermesTestConnection: () => Promise<{ ok: true } | { ok: false; message: string }>
+    hermesVaultTest: () => Promise<{ ok: boolean; message: string }>
+    hermesVaultList: () => Promise<{ ok: true; tree: Array<{ name: string; children: string[] }> } | { ok: false; message: string }>
+    cedSend: (product: string | null) => Promise<
+      | { ok: true; dir: string; skippedDrafts: number; noNotes: boolean; written: string[]; updated: string[]; unchanged: string[]; conflicts: string[]; leftover: string[] }
+      | { ok: false; message: string; dir: string }
+    >
+    hermesGetSessions: () => Promise<{ object: string; data: HermesSession[] }>
+    hermesGetMessages: (sessionId: string) => Promise<{ object: string; data: HermesMessage[] }>
+    keyinfoReindex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
+    keyinfoLoad: (product: string | null) => Promise<KeyinfoData>
+    keyinfoSavePins: (product: string | null, pins: Array<{ pinId: number; fileName: string; columnKey: string; folderId?: string; comment?: string }>) => Promise<void>
+    keyinfoSaveLayout: (product: string | null, pins: Array<{ pinId: number; fileName: string; columnKey: string; folderId?: string; comment?: string }>, folders: KeyinfoFolder[]) => Promise<void>
+    keyinfoIndex: (product: string | null, fileSources: Record<string, { type: string; path?: string; localPath?: string }>) => Promise<KeyinfoData>
+    onKeyinfoProgress: (cb: (data: { done: number; total: number }) => void) => void
+    offKeyinfoProgress: () => void
+    cedGenerate: (product: string | null) => Promise<{ dir: string; files: string[]; skippedDrafts: number }>
+    keynoteList: (product: string | null) => Promise<KeyNote[]>
+    keynoteSave: (product: string | null, notes: KeyNote[]) => Promise<void>
+    keynoteCandidates: (product: string | null) => Promise<KeyCandidate[]>
+    keynoteAcceptCandidate: (product: string | null, signature: string) => Promise<KeyNote | null>
+    keynoteSampleRows: (filePath: string, columnKeys: string[], limit: number, skipBlank: boolean, offset: number, sort: { column: string; dir: 'asc' | 'desc' } | null) => Promise<{ ok: boolean; reason: string; columns: string[]; rows: string[][]; total: number; hasMore: boolean; truncated: boolean }>
+    keynotePruneByPins: (product: string | null, pins: Array<{ columnKey: string }>) => Promise<string[]>
+    keynoteRefreshMembers: (product: string | null) => Promise<number>
+    keyinfoListRelations: () => Promise<KeyRelationGroup[]>
+    keyinfoSaveRelations: (groups: KeyRelationGroup[]) => Promise<void>
+    backupList: () => Promise<BackupMeta[]>
+    backupSave: (title: string, comment: string) => Promise<BackupMeta>
+    backupRestore: (id: string) => Promise<void>
+    backupDelete: (id: string) => Promise<void>
   }
 
   interface HermesSession {

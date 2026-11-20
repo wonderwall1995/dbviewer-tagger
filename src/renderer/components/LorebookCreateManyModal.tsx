@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface CrossFile {
   fileName: string
@@ -24,8 +25,8 @@ export function LorebookCreateManyModal({ columnKey, product, crossFiles, onClos
     try {
       for (const { fileName } of crossFiles) {
         const csvName = fileName.replace(/\.csv$/i, '')
-        const absPath = await window.electronAPI.lorebookNewPath(product, csvName, columnKey)
-        await window.electronAPI.lorebookWrite(absPath, comment.trim())
+        const absPath = await api.lorebookNewPath(product, csvName, columnKey)
+        await api.lorebookWrite(absPath, comment.trim())
       }
       setDone(true)
       setTimeout(onClose, 900)

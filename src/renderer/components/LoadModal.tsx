@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { FileText, RefreshCw, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface PresetItem {
   name: string
@@ -42,7 +43,7 @@ export function LoadModal({ open, onClose, onLoad, currentJson, categories }: Lo
   const fetchPresets = async () => {
     setLoading(true)
     try {
-      const list = await window.electronAPI.localListPresets()
+      const list = await api.localListPresets()
       setPresets(list.filter((p) => p.name !== 'sheet-settings.json'))
     } finally {
       setLoading(false)
@@ -107,7 +108,7 @@ export function LoadModal({ open, onClose, onLoad, currentJson, categories }: Lo
     setDeleting(name)
     setConfirmTarget(null)
     try {
-      await window.electronAPI.localDeletePreset(name)
+      await api.localDeletePreset(name)
       await fetchPresets()
     } finally {
       setDeleting(null)

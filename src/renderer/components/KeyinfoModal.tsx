@@ -6,6 +6,7 @@ import { LorebookCreateManyModal } from './LorebookCreateManyModal'
 import { KeyNotesPane } from './KeyNotesPane'
 import type { ParsedCsv, PinnedColumn, KeyinfoColumnSchema, DbConstraints, KeyinfoData, KeyinfoFolder } from '../../shared/types'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   parsedMap: Record<string, ParsedCsv>
@@ -44,7 +45,7 @@ function ProductSummaryPanel({ products, activeProduct, selectedProduct }: { pro
     const results = await Promise.all(
       products.map(async (product): Promise<ProductSnapshot> => {
         try {
-          const data = await window.electronAPI.keyinfoLoad(product)
+          const data = await api.keyinfoLoad(product)
           return { product, pins: data.pinnedColumns ?? [], schema: data.schema ?? {}, loading: false, error: false }
         } catch {
           return { product, pins: [], schema: {}, loading: false, error: true }
@@ -240,7 +241,7 @@ export function KeyinfoModal({
   } | null>(null)
 
   useEffect(() => {
-    window.electronAPI.keyinfoLoad(null).then(data => {
+    api.keyinfoLoad(null).then(data => {
       if ((data.pinnedColumns?.length ?? 0) > 0) {
         setNullProductData({
           pins: data.pinnedColumns ?? [],
@@ -272,7 +273,7 @@ export function KeyinfoModal({
     if (product === '__null__') { setProductData(nullProductData); return }
     setProductLoading(true)
     try {
-      const data = await window.electronAPI.keyinfoLoad(product)
+      const data = await api.keyinfoLoad(product)
       setProductData({ pins: data.pinnedColumns ?? [], schema: data.schema ?? {}, folders: data.folders ?? [] })
     } catch {}
     setProductLoading(false)
@@ -343,7 +344,7 @@ export function KeyinfoModal({
   // ── 핀 삭제 ──────────────────────────────────────────────────────────────
   // 핀이 Key 노트가 존재하는 조건이다. 남은 핀이 하나도 없는 노트는 핀을 거둘 때 함께 지운다.
   const pruneNotes = (product: string | null, remainingPins: PinnedColumn[]) => {
-    window.electronAPI.keynotePruneByPins(product, remainingPins)
+    api.keynotePruneByPins(product, remainingPins)
       .then(removed => {
         if (removed.length > 0) toast.info(`핀이 없어진 Key 노트 ${removed.length}개를 함께 지웠어요: ${removed.join(', ')}`, { duration: 6000 })
       })
@@ -364,7 +365,7 @@ export function KeyinfoModal({
         .filter(p => !pinIds.includes(p.pinId))
         .map((p, i) => ({ ...p, pinId: i + 1 }))
       const remainingFolders = nullProductData?.folders ?? []
-      window.electronAPI.keyinfoSaveLayout(null, remaining, remainingFolders)
+      api.keyinfoSaveLayout(null, remaining, remainingFolders)
       pruneNotes(null, remaining)
       if (remaining.length === 0) {
         setNullProductData(null)
@@ -512,7 +513,7 @@ export function KeyinfoModal({
   // ── keyinfo 액션 ──────────────────────────────────────────────────────────
   const handleLoad = async () => {
     if (!activeProduct) return   // 제품이 없으면 색인하지 않는다.
-    try { const updated = await window.electronAPI.keyinfoReindex(activeProduct || null, fileSources); onSchemaUpdated(updated.schema) } catch {}
+    try { const updated = await api.keyinfoReindex(activeProduct || null, fileSources); onSchemaUpdated(updated.schema) } catch {}
   }
 
   const handleTag = async () => {
@@ -523,7 +524,7 @@ export function KeyinfoModal({
       for (const { fileName } of crossFiles) {
         if (fileSources[fileName]) scopedSources[fileName] = fileSources[fileName]
       }
-      const updated = await window.electronAPI.keyinfoIndex(activeProduct || null, scopedSources)
+      const updated = await api.keyinfoIndex(activeProduct || null, scopedSources)
       onSchemaUpdated(updated.schema)
     } catch {}
     setTagLoading(false)
@@ -627,7 +628,7 @@ export function KeyinfoModal({
               }
               setSending(true)
               try {
-                const r = await window.electronAPI.cedSend(localProduct)
+                const r = await api.cedSend(localProduct)
                 if (!r.ok) {
                   toast.error(`볼트로 보내지 못했어요: ${r.message}`, { duration: 8000 })
                   return

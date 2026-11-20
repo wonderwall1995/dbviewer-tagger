@@ -4,6 +4,7 @@ import type { FileSource } from '../../shared/types'
 import { Modal } from './Modal'
 import { ModalOverlay } from './ModalOverlay'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface LocalFolderItem { name: string; path: string }
 interface LocalFileItem   { name: string; path: string; mtime: number; size: number }
@@ -70,7 +71,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
     setSearchQuery('')
     try {
       const subPath = stack.join('/')
-      const result = await window.electronAPI.localListDownloads(DOWNLOAD_ROOT, subPath || undefined)
+      const result = await api.localListDownloads(DOWNLOAD_ROOT, subPath || undefined)
       setData(result)
     } catch {
       setError('폴더를 읽을 수 없습니다.')
@@ -86,7 +87,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
     setPathStack([])
     setData(null)
     setError(null)
-    window.electronAPI.localGetDownloadsPath(DOWNLOAD_ROOT).then(setBasePath).catch(() => {})
+    api.localGetDownloadsPath(DOWNLOAD_ROOT).then(setBasePath).catch(() => {})
     loadDir([])
   }
 
@@ -109,7 +110,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
 
   // 현재 보고 있는 폴더를 탐색기로 연다.
   const openInExplorer = async () => {
-    const message = await window.electronAPI.localOpenDownloads(DOWNLOAD_ROOT, pathStack.join('/') || undefined)
+    const message = await api.localOpenDownloads(DOWNLOAD_ROOT, pathStack.join('/') || undefined)
     if (message) setError(`탐색기를 열지 못했습니다. ${message}`)
   }
 
@@ -170,7 +171,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
       const jobs: Array<{ folder?: string; paths: string[] }> = []
       for (const folderPath of folderPaths) {
         const relative = [...pathStack, lastName(folderPath)].join('/')
-        const groups = await window.electronAPI.localListCsvTree(DOWNLOAD_ROOT, relative)
+        const groups = await api.localListCsvTree(DOWNLOAD_ROOT, relative)
         for (const group of groups) {
           jobs.push({
             folder: group.segments.length > 0 ? group.segments.join('.') : undefined,
@@ -192,7 +193,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
       for (const job of jobs) {
         const results: { name: string; content: string; source: FileSource }[] = []
         for (const filePath of job.paths) {
-          const content = await window.electronAPI.localReadFile(filePath)
+          const content = await api.localReadFile(filePath)
           results.push({ name: lastName(filePath), content, source: { type: 'local', path: filePath } })
           done++
           onLoading(`파일 읽는 중... ${done} / ${total}`)
@@ -218,7 +219,7 @@ export function LocalFilesBrowser({ onFilesLoaded, onLoading, onOpenWorkspace }:
     setDeleting(true)
     try {
       for (const p of targets) {
-        await window.electronAPI.localDeleteDownload(p)
+        await api.localDeleteDownload(p)
       }
       await loadDir(pathStack)
     } catch {

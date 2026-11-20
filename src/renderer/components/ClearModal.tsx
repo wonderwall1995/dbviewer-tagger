@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   onClose: () => void
@@ -14,7 +15,7 @@ export function ClearModal({ onClose }: Props) {
     if (clearing || done) return
     setClearing(true)
     try {
-      await window.electronAPI.localClearTmp()
+      await api.localClearTmp()
       setDone(true)
       setTimeout(onClose, 900)
     } catch {

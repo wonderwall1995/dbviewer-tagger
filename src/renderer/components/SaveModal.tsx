@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Modal } from './Modal'
 import { CategoryDropdown } from './CategoryDropdown'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface SaveModalProps {
   open: boolean
@@ -44,7 +45,7 @@ export function SaveModal({ open, onClose, onSave, categories, onCategoriesChang
       setWingQuery('')
       setSortDir('desc')
       setOverwriteTarget(null)
-      window.electronAPI.localListPresets().then(setPresets).catch(() => {})
+      api.localListPresets().then(setPresets).catch(() => {})
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [open])
@@ -77,7 +78,7 @@ export function SaveModal({ open, onClose, onSave, categories, onCategoriesChang
   }
 
   const handleInputFocus = () => {
-    window.electronAPI.localListPresets().then(setPresets).catch(() => {})
+    api.localListPresets().then(setPresets).catch(() => {})
     setWingOpen(true)
   }
 
@@ -97,7 +98,7 @@ export function SaveModal({ open, onClose, onSave, categories, onCategoriesChang
     const bare = presetName.replace(/\.json$/, '')
     setName(bare)
     try {
-      const data = await window.electronAPI.localLoadPreset(presetName)
+      const data = await api.localLoadPreset(presetName)
       if (data?.product && categories.includes(data.product)) setProduct(data.product)
     } catch {}
     inputRef.current?.focus()

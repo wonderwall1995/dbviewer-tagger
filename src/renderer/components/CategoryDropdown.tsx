@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   value: string
@@ -40,7 +41,7 @@ export function CategoryDropdown({ value, onChange, categories, onCategoriesChan
 
   const persist = (next: string[]) => {
     onCategoriesChange(next)
-    window.electronAPI.lorebookSetCategories(next).catch(() => {})
+    api.lorebookSetCategories(next).catch(() => {})
   }
 
   const handleSelect = (cat: string) => {

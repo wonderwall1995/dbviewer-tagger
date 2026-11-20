@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { CategoryDropdown } from './CategoryDropdown'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   csvName: string
@@ -44,7 +45,7 @@ export function LorebookCreateModal({
     setSaving(true)
     setError(null)
     try {
-      const targetPath = await window.electronAPI.lorebookNewPath(product, csvName, colLabel)
+      const targetPath = await api.lorebookNewPath(product, csvName, colLabel)
       const data = {
         csvFile: csvName,
         column: colKey,
@@ -52,7 +53,7 @@ export function LorebookCreateModal({
         product,
         comment,
       }
-      await window.electronAPI.lorebookWrite(targetPath, JSON.stringify(data, null, 2))
+      await api.lorebookWrite(targetPath, JSON.stringify(data, null, 2))
       onCreated(csvName, colKey, product)
       onClose()
     } catch {

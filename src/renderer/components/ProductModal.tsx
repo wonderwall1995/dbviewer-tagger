@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
+import { api } from '../api'
 
 interface Props {
   categories: string[]
@@ -18,7 +19,7 @@ export function ProductModal({ categories, onCategoriesChange, onClose }: Props)
 
   const persist = (next: string[]) => {
     onCategoriesChange(next)
-    window.electronAPI.lorebookSetCategories(next).catch(() => {})
+    api.lorebookSetCategories(next).catch(() => {})
   }
 
   const startEdit = (idx: number) => {

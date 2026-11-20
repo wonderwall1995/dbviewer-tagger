@@ -5,6 +5,7 @@ import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
 import { HermesMessageBody } from './HermesMessageBody'
 import type { ReadMode } from './HermesMessageBody'
+import { api } from '../api'
 
 interface ChatMessage {
   role: string
@@ -118,7 +119,7 @@ export function HermesModal({ onClose }: Props) {
         }
       }),
     }
-    await window.electronAPI.hermesSaveConfig(payload).catch(() => {})
+    await api.hermesSaveConfig(payload).catch(() => {})
     const latest = cfgRef.current
     if (!latest) return
     updateCfg({
@@ -147,7 +148,7 @@ export function HermesModal({ onClose }: Props) {
     setMessages([])
     try {
       await flushSave()
-      const res = await window.electronAPI.hermesGetSessions()
+      const res = await api.hermesGetSessions()
       if (seq !== loadSeq.current) return
       setSessions(res?.data ?? [])
     } catch (e) {
@@ -163,7 +164,7 @@ export function HermesModal({ onClose }: Props) {
     setMessages([])
     setMessagesLoading(true)
     try {
-      const res = await window.electronAPI.hermesGetMessages(sessionId)
+      const res = await api.hermesGetMessages(sessionId)
       setMessages((res?.data ?? []).map((m: HermesMessage) => ({ role: m.role, content: m.content })))
     } catch (e) {
       setMessages([{ role: 'assistant', content: `대화를 불러오지 못했어요: ${e instanceof Error ? e.message : String(e)}` }])
@@ -174,7 +175,7 @@ export function HermesModal({ onClose }: Props) {
 
   // 처음 열 때 설정을 불러온다. 주소나 키가 없으면 설정 화면으로, 있으면 세션 목록을 불러온다.
   useEffect(() => {
-    window.electronAPI.hermesLoadConfig().then(c => {
+    api.hermesLoadConfig().then(c => {
       const next: ConfigState = {
         activeId: c.activeId,
         logoutOnExit: c.logoutOnExit,
@@ -296,7 +297,7 @@ export function HermesModal({ onClose }: Props) {
   }
 
   const handlePickPem = async () => {
-    const picked = await window.electronAPI.sshPickPemFile()
+    const picked = await api.sshPickPemFile()
     if (picked) patchSsh({ pemPath: picked })
   }
 
@@ -306,7 +307,7 @@ export function HermesModal({ onClose }: Props) {
     setVaultBusy('test'); setVaultResult(null)
     try {
       await flushSave()
-      setVaultResult(await window.electronAPI.hermesVaultTest())
+      setVaultResult(await api.hermesVaultTest())
     } finally { setVaultBusy(null) }
   }
 
@@ -315,7 +316,7 @@ export function HermesModal({ onClose }: Props) {
     setVaultBusy('list'); setVaultResult(null); setVaultTree(null)
     try {
       await flushSave()
-      const res = await window.electronAPI.hermesVaultList()
+      const res = await api.hermesVaultList()
       if (res.ok) setVaultTree(res.tree)
       else setVaultResult({ ok: false, message: res.message })
     } finally { setVaultBusy(null) }
@@ -327,7 +328,7 @@ export function HermesModal({ onClose }: Props) {
     setTestResult(null)
     try {
       await flushSave()
-      const res = await window.electronAPI.hermesTestConnection()
+      const res = await api.hermesTestConnection()
       if (res.ok) {
         setTestResult({ ok: true, message: '연결에 성공했어요.' })
         // 이번 실행에서 연결 확인을 마친 프로필로 표시한다.
@@ -648,7 +649,7 @@ export function HermesModal({ onClose }: Props) {
                     if (!cfg) return
                     changeCfg({ ...cfg, logoutOnExit: e.target.checked })
                     // 켜고 끄면 어떤 프로필이 연결 확인이 필요한지가 바뀐다. 저장한 뒤 메인의 기준으로 다시 맞춘다.
-                    void flushSave().then(() => window.electronAPI.hermesLoadConfig()).then(c => {
+                    void flushSave().then(() => api.hermesLoadConfig()).then(c => {
                       const latest = cfgRef.current
                       if (!latest) return
                       const flags = new Map(c.profiles.map(p => [p.id, p.needsVerify]))
