@@ -14,6 +14,7 @@ export interface Workspace {
   lorebookRoot: string
   productRoot: string
   productConfigDir: string
+  productConfigFile: string
   docsKeyinfoDir: string
   keyinfoRelationsPath: string
   backupRoot: string
@@ -33,6 +34,7 @@ export function makeWorkspace(root: string): Workspace {
     lorebookRoot: path.join(root, 'docs', 'lorebook'),
     productRoot,
     productConfigDir: path.join(productRoot, 'configure'),
+    productConfigFile: path.join(productRoot, 'configure', 'config.json'),
     docsKeyinfoDir: path.join(root, 'docs', 'keyinfo'),
     keyinfoRelationsPath: path.join(root, 'docs', 'keyinfo', 'relations.json'),
     backupRoot: path.join(root, 'backups'),

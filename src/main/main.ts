@@ -734,18 +734,16 @@ ipcMain.handle('lorebook:getCategories', () => {
 })
 
 // product:loadConfig / saveConfig — 순서 등 설정을 local/product/configure/config.json에 저장
-const PRODUCT_CONFIG = path.join(WS.productConfigDir, 'config.json')
-
 ipcMain.handle('product:loadConfig', () => {
   try {
-    if (!fs.existsSync(PRODUCT_CONFIG)) return {}
-    return JSON.parse(fs.readFileSync(PRODUCT_CONFIG, 'utf-8'))
+    if (!fs.existsSync(WS.productConfigFile)) return {}
+    return JSON.parse(fs.readFileSync(WS.productConfigFile, 'utf-8'))
   } catch { return {} }
 })
 
 ipcMain.handle('product:saveConfig', (_event, data: unknown) => {
   if (!fs.existsSync(WS.productConfigDir)) fs.mkdirSync(WS.productConfigDir, { recursive: true })
-  fs.writeFileSync(PRODUCT_CONFIG, JSON.stringify(data, null, 2), 'utf-8')
+  fs.writeFileSync(WS.productConfigFile, JSON.stringify(data, null, 2), 'utf-8')
 })
 
 // lorebook:setCategories — 배열과 파일 시스템을 reconcile
