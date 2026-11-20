@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import type { Workspace } from './workspace'
+import type { DbSlots, SshConfig } from './db'
 
 // 사용자 한 명(데스크톱은 앱 하나, Web은 세션 하나)의 메모리 상태.
 // 모듈 전역 변수로 두면 Web에서 모든 사용자가 같은 값을 쓰게 되므로 여기에 모은다.
@@ -25,6 +26,10 @@ export interface Ctx {
   state: SessionState
   // 진행률 같은 알림을 화면으로 보낸다. 데스크톱은 IPC, Web은 SSE.
   emit: (channel: string, data: unknown) => void
+  // DB 슬롯 저장소. 데스크톱은 암호화 파일, Web은 세션 메모리.
+  slots: { load(): DbSlots; save(slots: DbSlots): void }
+  // SSH 터널. 데스크톱만 있다. 없으면 SSH를 쓰는 슬롯은 연결하지 않는다.
+  tunnel?: { open(key: string, ssh: SshConfig, host: string, port: number): Promise<number>; close(key: string): void }
   // true면 작업 폴더 밖의 경로도 받는다 (데스크톱: 사용자 PC의 파일). Web은 false.
   allowOutsidePaths: boolean
 }

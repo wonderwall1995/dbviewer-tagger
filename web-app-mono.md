@@ -104,17 +104,19 @@
 
 - 2026-11-20 A7-3(lorebook): `core/lorebook.ts` = lorebook:* 8개 + product:loadConfig/saveConfig (10채널). 이제부터 옮기기는 스크래치패드의 `move-section.cjs`(ipcMain.handle→표, WS.→ctx.ws., 도우미에 ctx 추가)와 `check-channels.cjs`(중복·빠짐 점검)로 함. **Git Bash 주의: `//`로 시작하는 인자를 `/`로 바꿈 → `MSYS_NO_PATHCONV=1` 필요** (한 번 깨져서 손으로 고침). 시험 3개 → 34/34 → 알아낸 것: **`lorebook:setCategories`의 제품 이름에 경로 검사 없음** → `../../x`로 제품 폴더 밖 .json을 만들고 **지울** 수 있음. `lorebook:newPath`의 product도 검사 없음(쓰기는 withinLorebookRoot가 막음). B1에 넣음 → 다음: A7-4 (DB 슬롯).
 
+- 2026-11-20 A7-4(db): `core/db.ts` = 슬롯 타입·`normalizeSlots`·`safeSegment` + db:listSlots/loadSlot/saveSlot/testConnection/listSchemas/listTables/abortExport/exportTables/exportSchemas (9채널). `Ctx`에 `slots`(저장소)와 `tunnel?`(SSH) 추가. 데스크톱은 암호화 파일 + ensureTunnel/closeTunnel, Web은 메모리 저장소 + 터널 없음 → SSH 슬롯은 "이 환경에서는 SSH 터널을 쓸 수 없습니다". 진행률은 `ctx.emit`, 중단 표시는 `ctx.state.exportAborted`. main.ts에 남은 것: 암호화 파일 읽기/쓰기, SSH 터널(Hermes도 씀), db:closeTunnel, ssh:pickPemFile. 시험 5개 → 39/39 → 알아낸 것: B3(DB 주소 검사)는 `withDb` 한 곳에 넣으면 testConnection·조회·내보내기 모두에 걸림. 연결 직전에 `ctx.connectGuard?(host, port)` 같은 부품으로 두면 데스크톱은 없음, Web은 주소 검사 → 다음: A7-5 (Keyinfo·연관·Key 노트·자동 후보).
+
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
 | 상태 | 줄(대략) | Web에서 | 처리 |
 |---|---|---|---|
 | `csvStatsMemory`, `csvStatsLoadedFrom`, `csvStatsTimer` | 570 | 작업 폴더별 캐시 | ✅ ctx.state.csvStats (A7-2) |
-| `exportAborted` | 1616 | **한 사람이 중단하면 모두 중단됨** | ctx.state로 (필수) |
+| `exportAborted` | 1616 | **한 사람이 중단하면 모두 중단됨** | ✅ ctx.state.exportAborted (A7-4) |
 | `keyNoteMigratedFor` | 2122 | 작업 폴더별 1회 이전 표시 | ctx.state로 |
 | `sampleCache` | 2647 | 파일별 표본 캐시 | ctx.state로 (메모리 상한 고려) |
 | `activeTunnels`, `pendingAliasTunnels` | 1316, 1370 | SSH = 데스크톱 전용 | 데스크톱에 남김 |
 | `hermesVerified` | 862 | Hermes = 데스크톱 전용 | 데스크톱에 남김 |
-| DB 슬롯 설정 (`userData` 파일, safeStorage) | 801~ | **PC 하나에 하나 = 모든 면접관 공유가 됨** | Web은 ctx.state 메모리 (B4) |
+| DB 슬롯 설정 (`userData` 파일, safeStorage) | 801~ | **PC 하나에 하나 = 모든 면접관 공유가 됨** | ✅ ctx.slots 부품화 (A7-4). Web 메모리 구현은 A9 |
 | `KEY_NAME_EXCLUDED` | 2370 | 상수 | 그대로 |
 
 ## 5. 우려 재점검 (코드 작업하며 갱신)
