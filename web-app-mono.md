@@ -55,7 +55,7 @@
 - [x] A9. Web 서버 뼈대 (node:http): `127.0.0.1` 고정 포트, `/api/health`, `POST /api/<함수>` 표 연결, SSE 진행률.
 - [x] A10. 화면 쪽 `httpApi` + Web용 Vite 빌드 진입점.
 - [x] A10b. Web의 CED "Local 저장" = **화면에서 보기 + zip 내려받기** (User 결정 2026-11-20). 미리보기 창(제품 목차 + Key 문서 목록, 마크다운 읽기)과 zip. Web에서는 톱니(저장 폴더)·`ced:setDir`·`ced:pickDir`·`ced:reveal` 없음.
-- [ ] A11. 모노레포 폴더 이동 (`apps/desktop`, `apps/server`, `packages/core|shared|ui`). 스크립트 `dev:desktop|web`, `build:desktop|web`. Web 설치 시 Electron 바이너리 생략.
+- [x] A11. 모노레포 폴더 이동 (`apps/desktop`, `apps/server`, `packages/core|shared|ui`). 스크립트 `dev:desktop|web`, `build:desktop|web`. Web 설치 시 Electron 바이너리 생략.
 - [ ] A12. Stage A 확인: 데스크톱 수동 점검 + 내 PC Web 모드에서 견본 CSV 열기·Keyinfo·CED 생성.
 
 수동 점검 목록 (Stage 끝마다, 데스크톱): ① 앱 실행 ② CSV 파일 선택으로 열기 ③ CSV 끌어다 놓기 ④ DB 슬롯 연결 확인·스키마 목록 ⑤ Keyinfo 열기·핀 ⑥ Lorebook 쓰기 ⑦ Key 노트 저장 ⑧ CED 생성 ⑨ 백업 저장·복원 ⑩ 작업 폴더 바꾸기. GUI 조작은 User 도움이 필요할 수 있음.
@@ -129,6 +129,8 @@
 - 2026-11-20 B5·B6·B7: 서버 옵션 maxSessions(10, 넘으면 503), sessionDiskBytes(200MB), sessionIdleMs(24h), sweepIntervalMs(10분), sampleDir(새 세션에 cpSync). 용량: `ensureRoom` = 추정치로 넘치면 dirSize로 실제 재고 그래도 넘치면 507. 적용 = 업로드(content-length 먼저, 받는 상한 = min(업로드 상한, 남은 용량)), DB 내보내기 청크(`ctx.reserveDisk`), 64KB 넘는 call 본문. 작은 요청(지우기·목록)은 차도 됨. 서버 시작 때 `<dataDir>/sessions` 비움(세션은 메모리라 주인 없음). `publicError`: dataDir 문자열 + 따옴표 안 절대 경로를 가림. 잘못된 JSON → 400. httpError(status, expose)로 사용자에게 보여 줄 문구만 내보냄. 시험 `scripts/security-limits.test.cjs` 8개 → 68/68 → 남은 점: ① 세션당 메모리(sampleCache 최대 32MB 읽기, CSV 파싱)는 상한 없음 → Stage D systemd MemoryMax로 가둠 + maxSessions로 간접 제한. ② 세션을 누구나 만듦(입장 방식 Stage D) → maxSessions를 봇이 채우면 면접관이 못 들어옴 = 초대 코드가 필요한 이유. User에게 알릴 것 → 다음: B8.
 
 - 2026-11-20 B8·B9 (**Stage B 끝**): `src/server/config.ts` `loadConfig(env)` — TAGGER_PORT(1024~65535)·DATA_DIR(운영은 절대 경로 필수)·SAMPLE_DIR·MAX_SESSIONS·SESSION_MB·SESSION_IDLE_HOURS·UPLOAD_MB, 범위 밖이면 throw → index.ts가 "설정 오류" 찍고 exit 1. NODE_ENV=production이면 쿠키 Secure. 모든 JSON 응답에 Cache-Control: no-store, X-Content-Type-Options: nosniff. B9: 교차 세션 공격(A가 B의 경로로 readFile·csv:stats·eraseColumn·deleteDownload) 시험 추가. 시험 묶음: security-paths(6), security-db(5), security-limits(8), server-config(5), server(8) → 전체 74/74 → 다음: A11 (User 지시: B 다음 A11, 그 뒤 C).
+
+- 2026-11-20 A11 (User 결정: (나) 패키지까지 나누기, 루트 명령은 그대로): 4단계 커밋. ① packages/core (@tagger/core, main/types=dist, deps pg·papaparse, index.ts 배럴) ② apps/server (@tagger/server) ③ packages/ui (@tagger/ui, vite root=src, outDir=packages/ui/dist) + packages/shared (@tagger/shared, 타입만, main=src/types.ts) ④ apps/desktop (@tagger/desktop, deps core·ssh2). **설치본은 루트 package.json이 앱**: main=apps/desktop/dist/main.js, build.files = desktop dist·core dist·ui dist·node_modules. 루트 스크립트는 pnpm --filter <pkg>... run build로 위임. **알아낸 것: pnpm 12는 .npmrc의 shamefully-hoist를 안 읽음 → 그동안 끌어올림이 꺼져 있었음 (publicHoistPattern [])** → pnpm-workspace.yaml에 shamefullyHoist: true, autoInstallPeers: true로 옮기고 .npmrc 삭제. 그 전 설치본은 pg-protocol·asn1 등 하위 의존성이 빠져 있었을 것 (llms.md To-do 2 "설치본 확인"이 안 된 이유일 수 있음). 확인: electron-builder --win --dir → asar에 core·pg(+pg-protocol/pool/types/pgpass)·ssh2(+asn1/bcrypt-pbkdf)·papaparse 있음, electron/react/vite/typescript 없음 (5.8MB). 설치본 exe를 ELECTRON_RUN_AS_NODE=1로 돌려 asar 안에서 모듈 require 성공. TaskStop은 Windows에서 자식(vite, server)을 안 죽임 → 포트 주인 확인 후 직접 종료. report.html(11:44, User 또는 다른 도구가 만든 보고서)은 커밋 안 함. 74/74 → 다음: Stage C (llms.md 기록 옮기기) → Stage D 의논.
 
 ### 세션 상태 목록 (main.ts 모듈 전역, A5에서 찾음)
 
