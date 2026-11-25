@@ -2,7 +2,7 @@ import { HelpCircle } from 'lucide-react'
 import { Modal } from './Modal'
 import { uiId } from '../ui/uiId'
 
-// 머리글 Help! 버튼으로 여는 도움말. 줄 안의 \n은 줄을 바꾼다. 창 폭은 가장 긴 줄에 맞춘다.
+// 도움말. 머리글 Help! 버튼의 창과 Web 입장 화면(WebGate)이 같은 내용을 보여 준다. 줄 안의 \n은 줄을 바꾼다. 창 폭은 가장 긴 줄에 맞춘다.
 // 마지막 줄의 숫자는 코드의 값이다: DB 내보내기 CHUNK_SIZE(3,000행), CHUNK_DELAY_MS(150ms) — packages/core/src/db.ts,
 // Web의 쿼리 시간 제한 30초(statement_timeout)·세션 디스크 200MB — apps/server/src/server.ts, 표의 쪽 크기 — DataGrid.tsx.
 const LINES = [
@@ -16,19 +16,29 @@ const LINES = [
     + 'Web에서는 쿼리 하나당 30초, 면접관 한 명당 디스크 200MB까지이며, 표는 100 / 500 / 1,000 / 2,500행 단위로 나눠 보여 줍니다.',
 ]
 
+export function HelpTitle() {
+  return <span className="help-title"><HelpCircle size={15} /> Help!</span>
+}
+
+export function HelpList() {
+  return (
+    <ul className="help-list" {...uiId('HP.list')}>
+      {LINES.map((line, i) => (
+        <li key={i} className="help-item">{line}</li>
+      ))}
+    </ul>
+  )
+}
+
 export function HelpModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
-      title={<span className="help-title"><HelpCircle size={15} /> Help!</span>}
+      title={<HelpTitle />}
       uiCode="HP"
       onClose={onClose}
       cardClassName="help-modal-card"
     >
-      <ul className="help-list" {...uiId('HP.list')}>
-        {LINES.map((line, i) => (
-          <li key={i} className="help-item">{line}</li>
-        ))}
-      </ul>
+      <HelpList />
     </Modal>
   )
 }

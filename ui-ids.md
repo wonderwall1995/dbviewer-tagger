@@ -214,14 +214,13 @@
 | RS.frame | RS.root | 견본 재생성 확인 창 (RS.title, RS.close 포함) | `reset-modal-card` | |
 | RS.confirm | RS.ok | "지우고 다시 시작" 버튼. 세션을 지우고 견본 복사본으로 새로 시작한 뒤 화면을 새로 불러옴 | `reset-confirm` | |
 | HP.frame | HP.root | 도움말 창 (HP.title, HP.close 포함). 폭은 가장 긴 줄에 맞춤 | `help-modal-card` | |
-| HP.list | HP.lines | 도움말 줄 목록 | `help-list` | |
+| HP.list | HP.lines | 도움말 줄 목록 (Help! 창과 Web 입장 화면) | `help-list` | |
 | HM.demo | HM.demo-lock | Web(시연)에서 Hermes 창의 모든 입력과 버튼을 막는 fieldset | `hermes-demo-fieldset` | |
 | HM.demo-note | HM.demo-text | Web(시연) 안내 "시연을 위한 웹에선 연결을 막고 있습니다." | `hermes-note--warn` | |
 | WG.frame | WG.root | Web 입장 화면 전체 (입장 전에만). 데스크톱에는 없음 | `web-gate` | |
-| WG.card | WG.form | 입장 카드 (제목, 안내, 코드 칸, 버튼) | `web-gate-card` | |
-| WG.notice | WG.trial-notice | 체험판 안내 (24시간·점검 시 삭제, zip으로 받기, DB 접속 정보는 메모리·읽기 전용) | `web-gate-notice` | |
-| WG.code | WG.input | 입장 코드 칸 | `web-gate-input` | |
-| WG.error | WG.message | 입장 실패 문구 (틀림, 만료, 여러 번 틀림, 세션 끝남) | `web-gate-error` | |
+| WG.card | WG.form | 입장 카드 (제목, 도움말, 버튼) | `web-gate-card` | |
+| WG.help | WG.help-box | 들어가기 전에 읽는 도움말 상자 (Help! 창과 같은 내용) | `web-gate-help` | |
+| WG.error | WG.message | 입장 실패 문구 (사용자 많음, 연결 실패, 세션 끝남) | `web-gate-error` | |
 | WG.enter | WG.submit | "들어가기" 버튼 | `web-gate-btn` | |
 | KI.product-bar | KI.products | 위쪽 제품 선택 칩 줄 | `keyinfo-product-bar` | |
 | KI.product-chip | KI.product | 제품 칩 하나 (반복, 현재 제품은 점 표시) | `keyinfo-product-bar` 안의 버튼 | |

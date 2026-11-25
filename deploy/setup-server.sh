@@ -7,7 +7,7 @@
 #   2. 전용 사용자 tagger 를 만든다 (로그인 불가, sudo 없음)
 #   3. /opt/tagger/releases(서버 파일, 버전별), /var/www/tagger-releases(화면, 버전별), /var/lib/tagger(데이터), /etc/tagger(설정)를 만든다
 #   4. systemd 서비스와 Nginx 사이트를 설치한다 (서비스 시작은 server-up.sh 가 한다)
-# 하지 않는 일: 인증서 발급(certbot), 입장 코드 만들기, 보안 그룹 변경. 끝에 다음 할 일을 알려 준다.
+# 하지 않는 일: 인증서 발급(certbot), 보안 그룹 변경. 끝에 다음 할 일을 알려 준다.
 set -euo pipefail
 
 DOMAIN="${1:-}"
@@ -108,6 +108,5 @@ cat <<EOF
 설치 자리를 만들었습니다. 다음 순서로 진행하세요.
   1. 배포:            pnpm server:up
   2. HTTPS:           sudo certbot --nginx -d $DOMAIN
-  3. 입장 코드:        pnpm server:code set-code
-  4. 확인:            pnpm server:status
+  3. 확인:            pnpm server:status
 EOF

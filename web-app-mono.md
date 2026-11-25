@@ -202,3 +202,4 @@
 - 남은 것: 의존성 업그레이드, 내보내기 비동기 작업화, NULL 표기 = llms.md 백로그. 실제 EC2 확인은 deploy/README.md "첫 배포 확인 목록".
 - 셸 주의(또): node -e 안의 정규식·역슬래시는 거의 늘 깨짐 → 정규식 편집은 Edit 도구로만.
 - 2026-11-20 User 결정: 개발 API 포트를 서버와 상관없는 로컬 번호 6201로 (코드 작업은 User의 PC에서, EC2는 배포만). (나) 이력 정리: 커밋을 유지한 채 이 브랜치(29077a9 이후) 47개 커밋의 내용에서 옛 포트 번호와 서버 대역 IP 예시를 바꿈 (git filter-branch --tree-filter, 단어 경계, 견본·잠금 파일 제외). 검증: 커밋 수·메시지 같음, 백업과의 차이 = 바꾼 줄뿐, 새 이력 0건, 102/102. 백업 브랜치 backup/web-app-mono-before-rewrite는 로컬에만 둠 (옛 문자열이 들어 있으므로 push 금지, User 확인 뒤 지움). push는 User 확인 대기.
+- 2026-11-25 User 결정: 공용 입장 코드를 없앰 (README에 공개돼 비밀이 아니었음). 입장 화면은 안내 + "들어가기" 버튼, POST /api/login 이 코드 없이 세션을 만든다 (경로는 서버 Nginx 제한과 맞추려 유지). access.ts·admin.ts·tagger-admin.sh·server:code 삭제. 98/98. 하지 않은 것: 서버에서 DB 채널 차단, IP별 세션 제한, 짧은 세션 수명 (User에게 알림).
