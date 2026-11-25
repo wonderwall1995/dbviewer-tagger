@@ -1,0 +1,3 @@
+id,run_no,kind,test_case,name,file,parent_id,status,attempt,error_message,started_at,duration_ms
+[PK|REF←app_test_record.parent_id],[FK→test_fixture.run_no|NN],[NN],[NN],[NN],[NN],[FK→app_test_record.id],[NN],[NN],,[NN],[NN]
+{integer},{integer},{codekind},{string},{string},{string},{integer},{coderesultstatus},{integer},{string},{timestamp},{integer}

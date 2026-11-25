@@ -1,0 +1,4 @@
+run_no,opened_by,created_at,transfer_cycle_dollars,detail_dollars,detail_comment,filter_sent_small_dollars,filter_sent_big_dollars,filter_got_small_dollars,filter_got_big_dollars
+"[PK|REF←app_test_record.run_no,app_test_report.run_no,run_progress.run_no,test_fixture_person.run_no,web_test_record.run_no,web_test_report.run_no]",[NN],[NN],,,,,,,
+{integer},{testplatform},{timestamp},{integer},{integer},{string},{integer},{integer},{integer},{integer}
+1,web,2026-11-24 07:30:47.086,207,379,옴궘뮔쮥깾귿졟헷,75,364,65,337

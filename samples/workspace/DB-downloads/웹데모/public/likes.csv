@@ -1,3 +1,8 @@
 id,uuid,userId,transactionId,createdAt,modifiedAt
 [PK],[NN],[NN],[NN],[NN],[NN]
 {string},{string},{string},{string},{timestamp},{timestamp}
+JFp-X8DEs,eceef011-b014-4d52-bebc-590eeb5922b0,TyO7WfePO7,IwRxcnKQnM,2026-11-24 07:33:41.823,2026-11-24 07:33:41.823
+plHXIfzAwa,fc556ee4-f140-43b7-bfee-d5b6991787cc,Hd4zMprwiJ,AS-Yq73i5G,2026-11-24 07:34:31.583,2026-11-24 07:34:31.583
+5z4x7PowN,d8228f80-1ce5-40e0-8428-a7750b082ab3,72XzWWZ7E,1b5PT5Nc7,2026-11-24 11:14:14.321,2026-11-24 11:14:14.321
+6BsdOlhxs,2f3a3663-c560-44df-97cb-756dfccc9552,6E2rPeDpW,AS-Yq73i5G,2026-11-24 12:29:33.064,2026-11-24 12:29:33.064
+Cn60E0uGd,55f8b4a0-0f0b-4c9f-a910-bd8ebe83483a,wW5UhwT4-,xoPz7-kGX,2026-11-24 12:40:29.868,2026-11-24 12:40:29.868

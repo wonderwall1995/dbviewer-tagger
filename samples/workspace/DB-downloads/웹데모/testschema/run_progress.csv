@@ -1,0 +1,4 @@
+run_no,platform,status,device,started_at,last_signal_at,finished_at,server_version,server_version_end,target_version,test_commit,test_dirty
+[PK|FK→test_fixture.run_no],[PK],[NN],,[NN],[NN],,,,,,
+{integer},{testplatform},{runstatus},{string},{timestamp},{timestamp},{timestamp},{string},{string},{string},{string},{boolean}
+1,web,finished,chrome,2026-11-24 07:30:47.086,2026-11-24 07:35:18.809,2026-11-24 07:35:18.809,0.100,0.100,0.100,d3097af6526cda73634f304b6dbfb3dcabf886f8,false

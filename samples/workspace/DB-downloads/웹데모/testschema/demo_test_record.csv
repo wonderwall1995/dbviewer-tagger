@@ -1,0 +1,11 @@
+id,demo_run_id,test_case,file,status,error_message,started_at,duration_ms
+[PK],[FK→demo_run.id|NN],[NN],[NN],[NN],,[NN],[NN]
+{integer},{integer},{string},{string},{coderesultstatus},{string},{timestamp},{integer}
+1,1,auth,000-auth.spec.ts,passed,,2026-11-25 03:46:18.686,38187
+2,1,bank-account,001-bank-account.spec.ts,failed,시간 초과: 5초 안에 요소가 60개가 되지 않았습니다 (지금 0개),2026-11-25 03:46:56.873,120841
+3,2,auth,000-auth.spec.ts,passed,,2026-11-25 03:50:16.245,35069
+4,3,auth,000-auth.spec.ts,passed,,2026-11-25 12:50:34.364,36471
+5,3,bank-account,001-bank-account.spec.ts,skipped,방문자가 시연을 중지했습니다,2026-11-25 12:51:10.835,11741
+6,4,auth,000-auth.spec.ts,skipped,방문자가 시연을 중지했습니다,2026-11-25 12:52:04.445,4020
+7,5,transaction-visibility,007-transaction-visibility.spec.ts,skipped,방문자가 시연을 중지했습니다,2026-11-25 12:52:17.013,474022
+8,6,transaction-filter,005-transaction-filter.spec.ts,skipped,방문자가 시연을 중지했습니다,2026-11-25 13:00:22.271,103293

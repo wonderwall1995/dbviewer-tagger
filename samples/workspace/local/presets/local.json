@@ -5,6 +5,11 @@
       "id": "mwhhjvxoswix4q4q41m",
       "name": "웹데모.public",
       "expanded": true
+    },
+    {
+      "id": "sample-testschema",
+      "name": "웹데모.testschema",
+      "expanded": true
     }
   ],
   "fileToFolder": {
@@ -16,7 +21,17 @@
     "notifications.csv": "mwhhjvxoswix4q4q41m",
     "transactions.csv": "mwhhjvxoswix4q4q41m",
     "users.csv": "mwhhjvxoswix4q4q41m",
-    "_prisma_migrations.csv": "mwhhjvxoswix4q4q41m"
+    "_prisma_migrations.csv": "mwhhjvxoswix4q4q41m",
+    "app_test_record.csv": "sample-testschema",
+    "app_test_report.csv": "sample-testschema",
+    "demo_run.csv": "sample-testschema",
+    "demo_test_record.csv": "sample-testschema",
+    "run_progress.csv": "sample-testschema",
+    "test_fixture.csv": "sample-testschema",
+    "test_fixture_person.csv": "sample-testschema",
+    "test_version.csv": "sample-testschema",
+    "web_test_record.csv": "sample-testschema",
+    "web_test_report.csv": "sample-testschema"
   },
   "fileSources": {
     "bank_accounts.csv": {
@@ -54,6 +69,46 @@
     "_prisma_migrations.csv": {
       "type": "local",
       "path": "DB-downloads/웹데모/public/_prisma_migrations.csv"
+    },
+    "app_test_record.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/app_test_record.csv"
+    },
+    "app_test_report.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/app_test_report.csv"
+    },
+    "demo_run.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/demo_run.csv"
+    },
+    "demo_test_record.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/demo_test_record.csv"
+    },
+    "run_progress.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/run_progress.csv"
+    },
+    "test_fixture.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/test_fixture.csv"
+    },
+    "test_fixture_person.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/test_fixture_person.csv"
+    },
+    "test_version.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/test_version.csv"
+    },
+    "web_test_record.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/web_test_record.csv"
+    },
+    "web_test_report.csv": {
+      "type": "local",
+      "path": "DB-downloads/웹데모/testschema/web_test_report.csv"
     }
   },
   "columnWidths": {

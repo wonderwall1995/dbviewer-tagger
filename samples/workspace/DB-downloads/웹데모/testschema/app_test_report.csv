@@ -1,0 +1,3 @@
+run_no,spec_ok,common_ok,api_ok,result,reported_at
+[PK|FK→test_fixture.run_no],,,,[NN],[NN]
+{integer},{boolean},{boolean},{boolean},{reportresult},{timestamp}

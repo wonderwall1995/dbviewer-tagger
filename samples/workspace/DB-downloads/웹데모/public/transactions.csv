@@ -1,12 +1,105 @@
 id,uuid,source,amount,description,privacyLevel,receiverId,senderId,balanceAtCompletion,status,createdAt,modifiedAt,payerAccountId,payeeAccountId,payerBalanceAfter,payeeBalanceAfter
 [PK],[NN],[NN],[NN],[NN],[NN],[NN],[NN],,[NN],[NN],[NN],,,,
 {string},{string},{string},{integer},{string},{privacylevel},{string},{string},{integer},{transactionstatus},{timestamp},{timestamp},{string},{string},{integer},{integer}
-XABmmO7Jj,f3a1c733-5a31-4cf6-80da-b37c6fcad6b5,gtg1TJydq,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:43 GMT+0900 (한국 표준시),,gtg1TJydq,,10000
-VtnIKkZbw,dab7baae-94fc-4dc6-a7b7-a8a561b1af5d,fw6RaUFkC,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:13:52 GMT+0900 (한국 표준시),,fw6RaUFkC,,10000
-6y2QMjyGM,421c4fe5-32e3-479e-9c1a-be3fa928751c,9v4cR8Q-p,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:02 GMT+0900 (한국 표준시),,9v4cR8Q-p,,10000
-ucgf5-gmq,a7fbdc75-616c-49b9-97a0-f0dcecc2c881,gtg1TJydq,500,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:12 GMT+0900 (한국 표준시),,gtg1TJydq,,10500
-dz8qWxKYl,89827e34-4710-4d12-9377-6d4b547ef9fa,gtg1TJydq,7900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:22 GMT+0900 (한국 표준시),,gtg1TJydq,,18400
-6zo5iUIny,daae5c6c-c68d-48a0-aac5-4898b04c76fb,fw6RaUFkC,37900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:31 GMT+0900 (한국 표준시),,fw6RaUFkC,,47900
-BBUkHyF7K,805021fb-7e15-4e4f-a7d9-ac0bed504b79,fw6RaUFkC,592600,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:41 GMT+0900 (한국 표준시),,fw6RaUFkC,,640500
-msl_9E9mu,7b9f24b5-8901-4b84-b435-f216604d4ea6,9v4cR8Q-p,6182000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:14:51 GMT+0900 (한국 표준시),,9v4cR8Q-p,,6192000
-A8gKYG7Gr,ceb4ed3d-bd33-4ab4-908c-e5046bd4fb92,gtg1TJydq,100,외부 입금,private,Q_L9iXnml,external-deposit,,complete,Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),Sat Nov 14 2026 22:15:23 GMT+0900 (한국 표준시),,gtg1TJydq,,18500
+XABmmO7Jj,f3a1c733-5a31-4cf6-80da-b37c6fcad6b5,gtg1TJydq,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:13:43.208,2026-11-14 22:13:43.208,,gtg1TJydq,,10000
+VtnIKkZbw,dab7baae-94fc-4dc6-a7b7-a8a561b1af5d,fw6RaUFkC,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:13:52.88,2026-11-14 22:13:52.88,,fw6RaUFkC,,10000
+6y2QMjyGM,421c4fe5-32e3-479e-9c1a-be3fa928751c,9v4cR8Q-p,10000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:02.655,2026-11-14 22:14:02.655,,9v4cR8Q-p,,10000
+ucgf5-gmq,a7fbdc75-616c-49b9-97a0-f0dcecc2c881,gtg1TJydq,500,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:12.371,2026-11-14 22:14:12.371,,gtg1TJydq,,10500
+dz8qWxKYl,89827e34-4710-4d12-9377-6d4b547ef9fa,gtg1TJydq,7900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:22.117,2026-11-14 22:14:22.117,,gtg1TJydq,,18400
+6zo5iUIny,daae5c6c-c68d-48a0-aac5-4898b04c76fb,fw6RaUFkC,37900,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:31.902,2026-11-14 22:14:31.902,,fw6RaUFkC,,47900
+BBUkHyF7K,805021fb-7e15-4e4f-a7d9-ac0bed504b79,fw6RaUFkC,592600,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:41.719,2026-11-14 22:14:41.719,,fw6RaUFkC,,640500
+msl_9E9mu,7b9f24b5-8901-4b84-b435-f216604d4ea6,9v4cR8Q-p,6182000,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:14:51.559,2026-11-14 22:14:51.559,,9v4cR8Q-p,,6192000
+A8gKYG7Gr,ceb4ed3d-bd33-4ab4-908c-e5046bd4fb92,gtg1TJydq,100,외부 입금,private,Q_L9iXnml,external-deposit,,complete,2026-11-14 22:15:23.273,2026-11-14 22:15:23.273,,gtg1TJydq,,18500
+8eTofTXmJ,ffe70473-9a8c-4048-b6ca-d7bd809af4b4,CwjJ7ZCDk,100,외부 입금,private,0hFLnlMbC,external-deposit,,complete,2026-11-24 07:09:44.994,2026-11-24 07:09:44.994,,CwjJ7ZCDk,,100
+8oqNHZMD1,f042c4c8-231f-47df-9250-a78a1a8fbda0,21pY_e4qF,10000,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:10:48.253,2026-11-24 07:10:48.253,,21pY_e4qF,,10000
+quvi-OOtb,ae620d8c-0653-4d52-8314-91a12cd0edc3,VTxlw_oLV,10000,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:10:58.635,2026-11-24 07:10:58.635,,VTxlw_oLV,,10000
+OhnBVTKnI,6ac16aa6-e9ba-4aa7-ad74-a68a562e2586,3vrqRjkgj,10000,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:11:09.128,2026-11-24 07:11:09.128,,3vrqRjkgj,,10000
+9RglCTSd6,b881aa2b-fdf1-4d97-a34c-f7f4d5574666,21pY_e4qF,900,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:11:19.6,2026-11-24 07:11:19.6,,21pY_e4qF,,10900
+sQLZTZ2Io,bc2dbb92-c560-4755-af1b-5f092ced395c,21pY_e4qF,4100,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:11:34.716,2026-11-24 07:11:34.716,,21pY_e4qF,,15000
+NrRRybWwI,f96de8cd-da3c-4562-9df5-0a14512832ff,VTxlw_oLV,16100,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:11:55.703,2026-11-24 07:11:55.703,,VTxlw_oLV,,26100
+ssx-agcC9,5ef0f069-ce43-4b55-b086-35c062e27463,VTxlw_oLV,188400,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:12:17.729,2026-11-24 07:12:17.729,,VTxlw_oLV,,214500
+cudPGAqT8,3bb48703-71e5-40eb-84ba-826a827fb9e6,3vrqRjkgj,4626900,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:16:53.008,2026-11-24 07:16:53.008,,3vrqRjkgj,,4636900
+pfsX68ex9,8c0b0234-3ebe-4985-9c0f-aee19eaeba80,21pY_e4qF,100,외부 입금,private,37zCxlqLq,external-deposit,,complete,2026-11-24 07:25:43.243,2026-11-24 07:25:43.243,,21pY_e4qF,,15100
+_NghRG6s8,5fd8575e-131b-484d-af65-177932a43be3,43oyfvwpS,100,외부 입금,private,4ocdLB6yR,external-deposit,,complete,2026-11-24 07:32:19.272,2026-11-24 07:32:19.272,,43oyfvwpS,,100
+hzMK1SulD,0242a162-db8e-411f-80cb-ace7cdf1a829,xIk8_04fd,10000,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:30.462,2026-11-24 07:32:30.462,,xIk8_04fd,,10000
+LAek_ee8j,91f63546-7eb6-4b69-b953-b8d5bb7a91cf,wVu_dSLLcY,10000,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:33.641,2026-11-24 07:32:33.641,,wVu_dSLLcY,,10000
+y9a949lKB,6fed09d4-8474-4f15-af99-05658235462c,K_HmIcj8ao,10000,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:36.778,2026-11-24 07:32:36.778,,K_HmIcj8ao,,10000
+cJGa4PACR,1d9e633e-eaa1-4f81-8be9-a58792705a59,xIk8_04fd,700,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:39.977,2026-11-24 07:32:39.977,,xIk8_04fd,,10700
+wFdpmW1_5,9bb35a08-226a-4bfe-aeee-9e1a3f7b3c5d,xIk8_04fd,3400,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:43.05,2026-11-24 07:32:43.05,,xIk8_04fd,,14100
+9Gqo-VVkQ,52baf9fb-e7a4-4cd2-aa80-eb3ecb98ec8b,wVu_dSLLcY,99000,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:46.161,2026-11-24 07:32:46.161,,wVu_dSLLcY,,109000
+ALEoMgm7V,2a389489-20d5-4df5-b105-91d05646292a,wVu_dSLLcY,111200,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:49.501,2026-11-24 07:32:49.501,,wVu_dSLLcY,,220200
+E3kpOLm-a,f616efb0-12a1-4d90-88c7-fdfdad7bd91f,K_HmIcj8ao,6314500,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:32:52.545,2026-11-24 07:32:52.545,,K_HmIcj8ao,,6324500
+Afmg-QLfn,3c2ed930-f868-4d82-a0a4-905ba79b96c9,xIk8_04fd,100,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:33:01.599,2026-11-24 07:33:01.599,,xIk8_04fd,,14200
+kF3f1VflB,ee622dcb-67df-4eb0-90b8-3b5728d26132,R_xiGXpE9,2147483600,외부 입금,private,d_A3vI0QZ,external-deposit,,complete,2026-11-24 07:33:17.351,2026-11-24 07:33:17.351,,R_xiGXpE9,,2147483600
+zjNZ1t7ckU,b8612819-2b48-40a8-9807-cb921b81c703,f9NhZFG-L,100000,외부 입금,private,FCsVwa_7I,external-deposit,,complete,2026-11-24 07:33:23.13,2026-11-24 07:33:23.13,,f9NhZFG-L,,100000
+M91K4g6nQt,c61aa6f3-b9d6-4e4d-a112-b0f216c8c834,iQLSVM9poL,100000,외부 입금,private,D2NDxCANh5,external-deposit,,complete,2026-11-24 07:33:23.398,2026-11-24 07:33:23.398,,iQLSVM9poL,,100000
+rp6cvgobPT,5dc852f2-922a-4e80-870d-6ce5456ba546,WNSTXzKKjL,100000,외부 입금,private,TWOcAyYzyA,external-deposit,,complete,2026-11-24 07:33:23.7,2026-11-24 07:33:23.7,,WNSTXzKKjL,,100000
+1JUf-kDuw,9280c3df-808b-4daf-a8b9-0051b3a231b4,WNSTXzKKjL,20700,순환 1: A -> B,public,FCsVwa_7I,TWOcAyYzyA,,complete,2026-11-24 07:33:33.828,2026-11-24 07:33:33.828,WNSTXzKKjL,f9NhZFG-L,79300,120700
+Rb9uoMNY7,02d97392-f254-4961-bd28-634b99d20327,f9NhZFG-L,20700,순환 2: B -> C,public,D2NDxCANh5,FCsVwa_7I,,complete,2026-11-24 07:33:34.286,2026-11-24 07:33:34.286,f9NhZFG-L,iQLSVM9poL,100000,120700
+cyWSrdjgMC,da634bdd-a01a-4522-b4ff-75002682e410,iQLSVM9poL,20700,순환 3: C -> A,public,TWOcAyYzyA,D2NDxCANh5,,complete,2026-11-24 07:33:34.52,2026-11-24 07:33:34.52,iQLSVM9poL,WNSTXzKKjL,100000,100000
+VnNlzzJlSR,377f86b0-13eb-4856-988e-cc41123dc66c,BJubO6SgPp,100000,외부 입금,private,iQpvKOdlm,external-deposit,,complete,2026-11-24 07:33:36.356,2026-11-24 07:33:36.356,,BJubO6SgPp,,100000
+PQYW5q1WdB,01249a6d-a764-4942-b61e-f99cf02c77e8,iHvSQ3-Dxi,100000,외부 입금,private,TyO7WfePO7,external-deposit,,complete,2026-11-24 07:33:36.616,2026-11-24 07:33:36.616,,iHvSQ3-Dxi,,100000
+IwRxcnKQnM,bbbcb7b5-7166-4449-b8a2-3200ea3d78da,iHvSQ3-Dxi,37900,거래 상세 시험,public,iQpvKOdlm,TyO7WfePO7,,complete,2026-11-24 07:33:36.733,2026-11-24 07:33:36.733,iHvSQ3-Dxi,BJubO6SgPp,62100,137900
+6lMv_TKkQp,6efe1ee0-40d1-4e49-8aa9-8b85e2f892c5,Ozf1ny96si,100000,외부 입금,private,1SzFYuYMw,external-deposit,,complete,2026-11-24 07:33:44.746,2026-11-24 07:33:44.746,,Ozf1ny96si,,100000
+7WGmrE7gk,fb788d0d-b97d-48e4-a642-d94ccc815e9d,e-GUr_nGKP,100000,외부 입금,private,KfRbeb3GMP,external-deposit,,complete,2026-11-24 07:33:45.081,2026-11-24 07:33:45.081,,e-GUr_nGKP,,100000
+cwP2EBMCvi,506f68c4-5213-4250-a355-af62433da742,CKT5OOtbXu,100000,외부 입금,private,KD25NFeQNE,external-deposit,,complete,2026-11-24 07:33:45.375,2026-11-24 07:33:45.375,,CKT5OOtbXu,,100000
+6Hz1dj-ktc,7e0f5d18-e8ec-4d69-8348-24bf48a6d079,CKT5OOtbXu,7500,API 이체,public,1SzFYuYMw,KD25NFeQNE,,complete,2026-11-24 07:33:45.489,2026-11-24 07:33:45.489,CKT5OOtbXu,Ozf1ny96si,92500,107500
+hBZoIERMJZ,15648570-4282-486a-895b-08dd97146d57,CKT5OOtbXu,36400,API 이체,public,KfRbeb3GMP,KD25NFeQNE,,complete,2026-11-24 07:33:45.601,2026-11-24 07:33:45.601,CKT5OOtbXu,e-GUr_nGKP,56100,136400
+nJkpvvprX9,37d96dcd-c9cf-4439-a2e8-9b72acf4b2c4,Ozf1ny96si,6500,API 이체,public,KD25NFeQNE,1SzFYuYMw,,complete,2026-11-24 07:33:45.811,2026-11-24 07:33:45.811,Ozf1ny96si,CKT5OOtbXu,101000,62600
+HgnjWZSjtAp,f1583bb1-c90f-472f-97e0-44caaa76aed9,e-GUr_nGKP,33700,API 이체,public,KD25NFeQNE,KfRbeb3GMP,,complete,2026-11-24 07:33:46.02,2026-11-24 07:33:46.02,e-GUr_nGKP,CKT5OOtbXu,102700,96300
+4NU8Ekc4EG,d9b4fb42-6105-4659-9f7a-141a02c1f064,utGIQk8NRO,10000,외부 입금,private,hepUbX-sl,external-deposit,,complete,2026-11-24 07:34:09.05,2026-11-24 07:34:09.05,,utGIQk8NRO,,10000
+cE9ppqiE0x,6dc61d5e-d2c8-4941-9c84-7b6ed7ace144,AbI0RwugzD,10000,외부 입금,private,YPcO5KNTd,external-deposit,,complete,2026-11-24 07:34:09.329,2026-11-24 07:34:09.329,,AbI0RwugzD,,10000
+A5fJ5UTvyi,7e5bb163-dd97-4a47-a7a1-b10c06cb9de2,ohONAuGXn,100000,외부 입금,private,G-7UE9jG9,external-deposit,,complete,2026-11-24 07:34:17.164,2026-11-24 07:34:17.164,,ohONAuGXn,,100000
+kknCZT5wCI,e61cdc01-0db4-4f3b-8520-25ea6a72e364,7x7sE4y2Qr,100000,외부 입금,private,Z6jGfex4gC,external-deposit,,complete,2026-11-24 07:34:17.434,2026-11-24 07:34:17.434,,7x7sE4y2Qr,,100000
+P5M9mCxEMH,0de1f43f-536b-4142-b3d0-bcce6b24c4bf,4ScNorWkvc,100000,외부 입금,private,mSGgDBe5ey,external-deposit,,complete,2026-11-24 07:34:17.682,2026-11-24 07:34:17.682,,4ScNorWkvc,,100000
+pf1W-qPkq,ef146fcb-cf0b-42b0-ab68-9c70e4e7e060,4ScNorWkvc,300,공개 거래,public,G-7UE9jG9,mSGgDBe5ey,,complete,2026-11-24 07:34:18.271,2026-11-24 07:34:18.271,4ScNorWkvc,ohONAuGXn,99700,100300
+qRw7t1thQP,90cd61ec-8af4-4001-8ac5-7a8550b8a4fc,4ScNorWkvc,3400,비공개 거래,private,G-7UE9jG9,mSGgDBe5ey,,complete,2026-11-24 07:34:18.384,2026-11-24 07:34:18.384,4ScNorWkvc,ohONAuGXn,96300,103700
+tSLYxhhfCK,db3ba2d7-1ce7-424d-adf7-570eec29ba41,B_clqo0usc,100000,외부 입금,private,jCgGUStJ-,external-deposit,,complete,2026-11-24 07:34:30.747,2026-11-24 07:34:30.747,,B_clqo0usc,,100000
+3GikfY9jg8,5a588e93-e2a8-43bf-9b1e-9ad15aeab6ac,N8DEJiUdLU,100000,외부 입금,private,Hd4zMprwiJ,external-deposit,,complete,2026-11-24 07:34:31.003,2026-11-24 07:34:31.003,,N8DEJiUdLU,,100000
+HRXCeL84U0,61fcae3d-0d62-4cf2-9565-ed871f93b8f5,oBqYvEtzv,100000,외부 입금,private,UbyfYqZFe2,external-deposit,,complete,2026-11-24 07:34:31.255,2026-11-24 07:34:31.255,,oBqYvEtzv,,100000
+AS-Yq73i5G,89206392-1233-40fd-8653-4e3507146ff1,oBqYvEtzv,9000,알림 시험,public,jCgGUStJ-,UbyfYqZFe2,,complete,2026-11-24 07:34:31.466,2026-11-24 07:34:31.466,oBqYvEtzv,B_clqo0usc,91000,109000
+xX5ckNWKXj,3e269b7d-090f-4ccc-9f01-770fab0f8271,bVOmQ0HZok,50000,외부 입금,private,r6Q743Q6M,external-deposit,,complete,2026-11-24 07:34:48.746,2026-11-24 07:34:48.746,,bVOmQ0HZok,,50000
+EUFejN9fd-,67fd5704-7b95-4c1a-aed8-cbe6b872fa4f,1E6AWgpNcU,100000,외부 입금,private,XroyYJxlcJ,external-deposit,,complete,2026-11-24 07:34:49.006,2026-11-24 07:34:49.006,,1E6AWgpNcU,,100000
+1b5PT5Nc7,040c2b35-bc06-49c5-8249-5202876d285b,gKhEHaS4w,5659500,외부 입금,private,72XzWWZ7E,external-deposit,,complete,2026-11-24 11:05:09.247,2026-11-24 11:05:09.247,,gKhEHaS4w,,5659500
+jkgtsw9F2,292a7104-7397-4e9b-a34d-629f7372796f,gKhEHaS4w,5000000,힣!,private,IoZx1AasT,72XzWWZ7E,,complete,2026-11-24 11:10:18.19,2026-11-24 11:10:18.19,gKhEHaS4w,Hwxkg3OOP,659500,5000000
+Uxz-WYzW5,9ff64814-51ea-448b-991e-37447a348da8,CYC04p1hL,100,외부 입금,private,upewxb7D8,external-deposit,,complete,2026-11-24 12:32:31.588,2026-11-24 12:32:31.588,,CYC04p1hL,,100
+_cEhOESzH,5d8c7f16-1b3b-43ea-a227-30ede88cb792,Xta1y7wM2,10000,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:33:35.172,2026-11-24 12:33:35.172,,Xta1y7wM2,,10000
+5IpQQUt3h,24581f16-ea96-4483-9486-0a736ad81f25,Ua71zMEsl,10000,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:33:45.625,2026-11-24 12:33:45.625,,Ua71zMEsl,,10000
+Is3QmYnTS,66fa34f2-2bca-4142-b008-cf858a4ec765,H2Rjcw0L2,10000,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:33:56.094,2026-11-24 12:33:56.094,,H2Rjcw0L2,,10000
+vuB-8GfuJ,176a9559-03f7-4f31-95f0-b197296901b9,Xta1y7wM2,100,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:34:06.564,2026-11-24 12:34:06.564,,Xta1y7wM2,,10100
+4IQGuVGni,eaeb2eab-ad48-4b2c-8d50-2432e503dc72,Xta1y7wM2,1900,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:34:17.075,2026-11-24 12:34:17.075,,Xta1y7wM2,,12000
+ZglEYANdy,1f9d92cd-0706-4794-b6b2-8bc9afdc981c,Ua71zMEsl,52900,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:34:27.612,2026-11-24 12:34:27.612,,Ua71zMEsl,,62900
+ZGz6EACNT,f20d9385-3e31-45bf-a89f-72b93cc2ba5c,Ua71zMEsl,448300,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:34:38.154,2026-11-24 12:34:38.154,,Ua71zMEsl,,511200
+UtI-TJNWP,24bbc746-39d2-4fea-963c-a47d9abda47d,H2Rjcw0L2,5657100,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:34:48.716,2026-11-24 12:34:48.716,,H2Rjcw0L2,,5667100
+1do-0Z3gc,67688a0b-f720-4735-8c48-40c52e97d799,Xta1y7wM2,100,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:35:22.613,2026-11-24 12:35:22.613,,Xta1y7wM2,,12100
+l34oUginu,f05ac134-4371-4dcb-be64-bc925d8f9655,MQHoNsoro,2147483600,외부 입금,private,uTKym34Dx,external-deposit,,complete,2026-11-24 12:36:35.522,2026-11-24 12:36:35.522,,MQHoNsoro,,2147483600
+OdFC8Isli,5e59d2e1-7817-4595-b9cb-30ace4eb7f9d,yAHOpsGFi,100000,외부 입금,private,c-WB24C9Q,external-deposit,,complete,2026-11-24 12:37:21.247,2026-11-24 12:37:21.247,,yAHOpsGFi,,100000
+NJnJFYPPl,ddddcd38-7c11-4902-b8eb-2d1a98f94cb7,nvpyyzBU0,100000,외부 입금,private,13ha4sc91,external-deposit,,complete,2026-11-24 12:37:32.128,2026-11-24 12:37:32.128,,nvpyyzBU0,,100000
+ClZmp_q6A,09454f1b-489a-48ea-9842-959cfde5fdfc,iuomVTX9C,100000,외부 입금,private,n6XN6jCit,external-deposit,,complete,2026-11-24 12:37:35.29,2026-11-24 12:37:35.29,,iuomVTX9C,,100000
+AQqzECo-Y,971e4a4e-e7b6-41f0-9f0a-2723b95e35f1,iuomVTX9C,42500,순환 1: A -> B,public,c-WB24C9Q,n6XN6jCit,,complete,2026-11-24 12:38:40.813,2026-11-24 12:38:40.813,iuomVTX9C,yAHOpsGFi,57500,142500
+1GY7_HQLz,1e6b6b62-6a56-40b7-8f0d-d3627e5db600,yAHOpsGFi,42500,순환 2: B -> C,public,13ha4sc91,c-WB24C9Q,,complete,2026-11-24 12:38:53.439,2026-11-24 12:38:53.439,yAHOpsGFi,nvpyyzBU0,100000,142500
+Yw6Gkent2,07a6443a-c8ef-433e-8c1f-251474499478,nvpyyzBU0,42500,순환 3: C -> A,public,n6XN6jCit,13ha4sc91,,complete,2026-11-24 12:38:59.673,2026-11-24 12:38:59.673,nvpyyzBU0,iuomVTX9C,100000,100000
+hkumjY7ar,65b399e2-902c-4d68-bd63-211b44a65fae,D74p_H9vx,100000,외부 입금,private,rDz7uB34r,external-deposit,,complete,2026-11-24 12:39:55.999,2026-11-24 12:39:55.999,,D74p_H9vx,,100000
+Jm2gsM_Az,233eee4c-9cc6-40e2-8797-a65a16d7911e,lGkWTB2z4,100000,외부 입금,private,wW5UhwT4-,external-deposit,,complete,2026-11-24 12:40:09.661,2026-11-24 12:40:09.661,,lGkWTB2z4,,100000
+rewtMkEBI,1b6493ca-d5fb-4283-8a92-db144284f4a8,lGkWTB2z4,100,,public,rDz7uB34r,wW5UhwT4-,,complete,2026-11-24 12:40:12.796,2026-11-24 12:40:12.796,lGkWTB2z4,D74p_H9vx,99900,100100
+xoPz7-kGX,53653813-9cee-468f-b343-7b67d3a8378f,lGkWTB2z4,1800,거래 상세 시험,public,rDz7uB34r,wW5UhwT4-,,complete,2026-11-24 12:40:15.11,2026-11-24 12:40:15.11,lGkWTB2z4,D74p_H9vx,98100,101900
+Zd-Nx8RQo,65a250ba-30b5-41f7-b1c7-c332c4f183fe,nUlpvDyX4,100000,외부 입금,private,YKnbN4r5c,external-deposit,,complete,2026-11-24 12:41:40.529,2026-11-24 12:41:40.529,,nUlpvDyX4,,100000
+CzH6GvAm0,31e5dd02-3a78-4baa-8b18-caf2efdd9437,bKUbAPVJD,100000,외부 입금,private,wN7XkfFr1,external-deposit,,complete,2026-11-24 12:41:54.089,2026-11-24 12:41:54.089,,bKUbAPVJD,,100000
+deoBdOH1D,3e8705a7-c8fc-4fe1-bf92-f59b161dc1b9,Mbi6QVY11,100000,외부 입금,private,mCYViWlww,external-deposit,,complete,2026-11-24 12:41:57.256,2026-11-24 12:41:57.256,,Mbi6QVY11,,100000
+yiNWAe9zO,ef702497-ac87-4186-85f4-8370b8e47fc7,Mbi6QVY11,2700,API 이체,public,YKnbN4r5c,mCYViWlww,,complete,2026-11-24 12:41:59.052,2026-11-24 12:41:59.052,Mbi6QVY11,nUlpvDyX4,97300,102700
+wq1dN2qd3,75cb754b-c958-47e1-a234-7fb68acc35c8,Mbi6QVY11,37400,API 이체,public,wN7XkfFr1,mCYViWlww,,complete,2026-11-24 12:42:02.181,2026-11-24 12:42:02.181,Mbi6QVY11,bKUbAPVJD,59900,137400
+gqyKQargo,aa0c91ec-7fd5-44e9-88cc-59f9a7b0f059,nUlpvDyX4,4900,API 이체,public,mCYViWlww,YKnbN4r5c,,complete,2026-11-24 12:42:04.509,2026-11-24 12:42:04.509,nUlpvDyX4,Mbi6QVY11,97800,64800
+vWU5m-Eoc,2e5dceba-ec87-4ddb-93c1-d86c80d2d427,bKUbAPVJD,33000,API 이체,public,mCYViWlww,wN7XkfFr1,,complete,2026-11-24 12:42:05.362,2026-11-24 12:42:05.362,bKUbAPVJD,Mbi6QVY11,104400,97800
+0EKiHn4wU,254adfb3-4779-4628-bbbc-601a43e92cb8,js2UJCjcd,100,외부 입금,private,-mPEOahxW,external-deposit,,complete,2026-11-25 03:55:24.284,2026-11-25 03:55:24.284,,js2UJCjcd,,100
+YK62VUnVZ,9bb75ea1-6fd7-43a2-8f2e-1144de148af9,Jp_XZcELT,100000,외부 입금,private,YpdO5GWiI,external-deposit,,complete,2026-11-25 12:52:29.087,2026-11-25 12:52:29.087,,Jp_XZcELT,,100000
+jc3qsUE5c,2b471611-a9da-460a-ab5d-c326e57f761c,S6qG7NLVd,100000,외부 입금,private,wR1Xus0a8,external-deposit,,complete,2026-11-25 12:52:45.287,2026-11-25 12:52:45.287,,S6qG7NLVd,,100000
+pO_kXVKmb,fe962cd4-3b19-42f2-9684-2eb8d91d2c01,7d87bvoSO,100000,외부 입금,private,D70P_YlAh,external-deposit,,complete,2026-11-25 12:52:56.293,2026-11-25 12:52:56.293,,7d87bvoSO,,100000
+CuAkq60OD,49bdd5bb-7b7d-426b-9d97-95e117912722,7d87bvoSO,8200,공개 거래,public,YpdO5GWiI,D70P_YlAh,,complete,2026-11-25 12:53:17.389,2026-11-25 12:53:17.389,7d87bvoSO,Jp_XZcELT,91800,108200
+9bN9iCYie,5aa98bbd-ceb6-45ab-a783-9694242d9073,7d87bvoSO,300,비공개 거래,private,YpdO5GWiI,D70P_YlAh,,complete,2026-11-25 12:53:20.388,2026-11-25 12:53:20.388,7d87bvoSO,Jp_XZcELT,91500,108500
+kS5Phykl2,b2111c1a-5d2f-409b-85fa-42019d1a898c,U6xXAK5Qr,100000,외부 입금,private,0IJJ2_yx7,external-deposit,,complete,2026-11-25 13:00:34.03,2026-11-25 13:00:34.03,,U6xXAK5Qr,,100000
+MJ9RJXPp2,5863aa5e-7937-4e84-aba0-efbe86659c39,sowlAANgw,100000,외부 입금,private,DlntE5dhY,external-deposit,,complete,2026-11-25 13:00:51.285,2026-11-25 13:00:51.285,,sowlAANgw,,100000
+qp2T9wnzAp,9b54c267-c843-4553-854b-1b10870e3e01,WGiDHi5WJ,100000,외부 입금,private,HTL3GJPwV,external-deposit,,complete,2026-11-25 13:00:54.438,2026-11-25 13:00:54.438,,WGiDHi5WJ,,100000
+PD0cw3iHl,8bde936c-853f-4e03-a9de-4b010e5b6fdb,WGiDHi5WJ,2200,API 이체,public,0IJJ2_yx7,HTL3GJPwV,,complete,2026-11-25 13:00:56.236,2026-11-25 13:00:56.236,WGiDHi5WJ,U6xXAK5Qr,97800,102200
+enbNFmjv-,eb621991-0baf-426b-bd0e-7d330102404d,WGiDHi5WJ,30800,API 이체,public,DlntE5dhY,HTL3GJPwV,,complete,2026-11-25 13:00:58.536,2026-11-25 13:00:58.536,WGiDHi5WJ,sowlAANgw,67000,130800
+itMQC0RP1,e6b86cd1-4781-4f21-96ec-2653aef56f6d,U6xXAK5Qr,4500,API 이체,public,HTL3GJPwV,0IJJ2_yx7,,complete,2026-11-25 13:01:00.703,2026-11-25 13:01:00.703,U6xXAK5Qr,WGiDHi5WJ,97700,71500
+npO4nPFAt,9561c515-0745-49af-a61e-62f45cf30b5a,sowlAANgw,34400,API 이체,public,HTL3GJPwV,DlntE5dhY,,complete,2026-11-25 13:01:01.693,2026-11-25 13:01:01.693,sowlAANgw,WGiDHi5WJ,96400,105900
