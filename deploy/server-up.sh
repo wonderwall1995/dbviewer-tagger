@@ -5,7 +5,7 @@
 #           deploy/server-up.sh --rollback     빌드 없이 바로 전에 배포한 버전으로 되돌림
 #
 # 버전별 폴더에 준비한 뒤 링크만 바꿔 끼운다. 바꿔 끼운 뒤 응답이 없으면 자동으로 이전 버전으로 되돌린다.
-#   /opt/tagger/releases/<커밋>/        서버 파일 2개      /opt/tagger/current  → 지금 버전
+#   /opt/tagger/releases/<커밋>/        서버 파일          /opt/tagger/current  → 지금 버전
 #   /var/www/tagger-releases/<커밋>/    화면 파일          /var/www/tagger      → 지금 버전
 # 서버 파일은 빌드한 폴더(홈)에서 바로 실행하지 않는다. 서비스는 홈 폴더를 볼 수 없다.
 # 이 스크립트는 시험(pnpm test)을 돌리지 않는다. 시험은 PR을 main에 병합하기 전에 개발 PC에서 돌린다.
@@ -126,7 +126,7 @@ main() {
 
   echo "== 4. 새 버전 준비 ($REV)"
   sudo install -d -o root -g root -m 0755 "$RELEASES/$REV" "$WEB_RELEASES/$REV"
-  sudo install -o root -g root -m 0644 apps/server/bundle/tagger-server.js apps/server/bundle/tagger-admin.js "$RELEASES/$REV/"
+  sudo install -o root -g root -m 0644 apps/server/bundle/tagger-server.js "$RELEASES/$REV/"
   sudo rsync -a --delete --chown=root:root --chmod=D755,F644 packages/ui/dist/ "$WEB_RELEASES/$REV/"
   if [[ -d samples/workspace ]]; then
     sudo rsync -a --delete --chown=tagger:www-data --chmod=D700,F600 samples/workspace/ /var/lib/tagger/sample/

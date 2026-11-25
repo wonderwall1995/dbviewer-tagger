@@ -1,20 +1,18 @@
 // 검토 보고서(report.html, 03b7284 기준)가 재현한 문제가 다시 생기지 않는지 확인한다.
-// N01 디스크 한도 우회, N02 IPv6 표기 우회, N03 소켓 로그인 제한 공유, N04 캐시 쓰기 실패로 프로세스 종료,
+// N01 디스크 한도 우회, N02 IPv6 표기 우회, N04 캐시 쓰기 실패로 프로세스 종료,
 // N06 내보내기 실패 시 이전 CSV 소실, N07 일관된 읽기, N08 CSV 직렬화, N09 DB 작업 상한, 화면 읽기 크기 상한.
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
-const http = require('node:http')
 const { isPublicAddress, ipv6ToBytes } = require('../packages/core/dist/netguard.js')
 const { makeWorkspace } = require('../packages/core/dist/workspace.js')
 const { makeSessionState } = require('../packages/core/dist/context.js')
 const { csvHandlers } = require('../packages/core/dist/csv.js')
 const { localHandlers } = require('../packages/core/dist/local.js')
 const { exportOneTable, csvValue, csvCell } = require('../packages/core/dist/db.js')
-const { createTaggerServer, clientKey, dirSize } = require('../apps/server/dist/server.js')
-const { writeAccess } = require('../apps/server/dist/access.js')
+const { createTaggerServer, dirSize } = require('../apps/server/dist/server.js')
 
 function tmpdir(t, prefix) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
@@ -36,33 +34,6 @@ test('N02: 같은 내부 주소의 다른 IPv6 표기도 막는다', () => {
   for (const ip of blocked) assert.equal(isPublicAddress(ip), false, ip)
   for (const ip of ['2606:4700:4700::1111', '2a00:1450:4001::200e', '::ffff:8.8.8.8', '2002:0808:0808::1']) assert.equal(isPublicAddress(ip), true, ip)
   assert.deepEqual(ipv6ToBytes('::ffff:127.0.0.1'), ipv6ToBytes('0:0:0:0:0:ffff:7f00:0001'))
-})
-
-// ── N03 ───────────────────────────────────────────────────────────────────────
-test('N03: 소켓으로 온 요청은 Nginx가 넣은 X-Real-IP로 접속자를 나눈다', () => {
-  const req = (remoteAddress, ip) => ({ socket: { remoteAddress }, headers: ip ? { 'x-real-ip': ip } : {} })
-  assert.notEqual(clientKey(req(undefined, '1.1.1.1')), clientKey(req(undefined, '2.2.2.2')))
-  assert.equal(clientKey(req('127.0.0.1', '1.1.1.1')), 'ip:1.1.1.1')
-  // TCP로 바깥에서 직접 온 요청의 머리글은 믿지 않는다
-  assert.equal(clientKey(req('203.0.113.5', '1.1.1.1')), 'ip:203.0.113.5')
-})
-
-test('N03: 소켓 서버에서 A가 10번 틀려도 B는 맞는 코드로 들어온다', async (t) => {
-  const dataDir = tmpdir(t, 'n03-')
-  writeAccess(dataDir, 'ABCD-EFGH-JKMN')
-  const { server } = createTaggerServer({ dataDir })
-  const socketPath = process.platform === 'win32' ? `\\\\.\\pipe\\tagger-n03-${process.pid}-${Date.now()}` : path.join(dataDir, 's.sock')
-  await new Promise((r) => server.listen(socketPath, r))
-  t.after(() => new Promise((r) => { server.closeAllConnections?.(); server.close(r) }))
-  const login = (ip, code) => new Promise((resolve, reject) => {
-    const body = JSON.stringify({ code })
-    const rq = http.request({ socketPath, path: '/api/login', method: 'POST', agent: false, headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), 'x-real-ip': ip } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)) })
-    rq.on('error', reject)
-    rq.end(body)
-  })
-  for (let i = 0; i < 10; i++) await login('1.1.1.1', 'ZZZZ-ZZZZ-ZZZZ')
-  assert.equal(await login('1.1.1.1', 'ABCD-EFGH-JKMN'), 429)
-  assert.equal(await login('2.2.2.2', 'ABCD-EFGH-JKMN'), 200)
 })
 
 // ── N04 ───────────────────────────────────────────────────────────────────────

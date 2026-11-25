@@ -8,7 +8,7 @@ DB와 CSV를 탐색하고, 제품별 Key의 의미와 관계를 정리하여 Con
 |---|---|---|
 | 대상 | 내 PC에서 실제 작업 | 면접관이 브라우저로 써 보기 |
 | 데이터 | 내 PC의 작업 폴더 | 들어올 때마다 견본 데이터의 복사본. 24시간 쓰지 않거나 서버를 다시 시작하면 지워짐 |
-| 입장 | 없음 | 공용 입장 코드 |
+| 입장 | 없음 | 코드 없이 "들어가기" |
 | DB 연결 | 직접 연결, SSH 터널 | 공인 주소의 DB만, 읽기 전용, SSH 터널 없음 |
 | CED | Local 저장(폴더 선택), Obsidian Vault 전송 | Local 저장 = 화면에서 보기 + zip 내려받기 |
 | Hermes 연결 | 있음 | 없음 |
@@ -38,10 +38,6 @@ DB 테이블 스냅샷 기반 DB 컬럼 대상 정보 색인, DB Key 정보 작�
 | GitHub Repo (이 저장소) | https://github.com/wonderwall1995/dbviewer-tagger |
 | 배포 주소 | https://dbtagger.hwk-resume.web.chickenkiller.com/ |
 | 이력서 | https://resume-hwk.ltwayne0.workers.dev/main |
-
-## 시연 코드
-
-**63PB-6HPM-R5KK** <<< 시연 웹을 **체험할 경우 필요한 공통 코드**입니다.
 
 <!-- 실행 방법, 기술 스택, 폴더 구조 같은 안내는 이 아래에 직접 채운다. -->
 
@@ -148,7 +144,7 @@ scripts/     시험(node:test)과 견본 생성 스크립트
 |---|---|
 | `pnpm install` | 의존성 설치 |
 | `pnpm dev` | 데스크톱 앱 개발 실행 |
-| `pnpm dev:web` | Web 개발 실행 (http://localhost:6200, 입장 코드 없이 열림) |
+| `pnpm dev:web` | Web 개발 실행 (http://localhost:6200, 입장 화면 없이 열림) |
 | `pnpm build` | 화면과 데스크톱 빌드 |
 | `pnpm build:web` | 화면과 Web 서버 빌드 |
 | `pnpm typecheck` | 화면 타입 검사 |

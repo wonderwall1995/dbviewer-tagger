@@ -6,7 +6,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 const http = require('node:http')
-const { spawn, spawnSync } = require('node:child_process')
+const { spawn } = require('node:child_process')
 
 const BUNDLE = path.join(__dirname, '..', 'apps', 'server', 'bundle')
 
@@ -25,7 +25,7 @@ function isolatedCopy(t) {
     }
     fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   })
-  for (const f of ['tagger-server.js', 'tagger-admin.js']) fs.copyFileSync(path.join(BUNDLE, f), path.join(dir, f))
+  fs.copyFileSync(path.join(BUNDLE, 'tagger-server.js'), path.join(dir, 'tagger-server.js'))
   return { dir, children }
 }
 
@@ -57,7 +57,7 @@ function startServer(copy, env) {
   return { child, stderr: () => err }
 }
 
-test('묶음은 node_modules 없이 TCP 포트로 뜨고, 운영 모드에서는 입장 코드를 요구한다', async (t) => {
+test('묶음은 node_modules 없이 TCP 포트로 뜨고, 운영 모드에서는 입장 전에 세션을 만들지 않는다', async (t) => {
   const copy = isolatedCopy(t)
   const dir = copy.dir
   const dataDir = path.join(dir, 'data')
@@ -79,12 +79,4 @@ test('묶음은 소켓(유닉스 소켓, Windows는 named pipe)으로 뜬다', a
   const r = await waitHealthy({ socketPath })
   assert.equal(r.status, 200)
   if (process.platform !== 'win32') assert.equal(fs.statSync(socketPath).mode & 0o777, 0o660)
-})
-
-test('관리 명령 묶음도 혼자 돈다', (t) => {
-  const copy = isolatedCopy(t)
-  const dir = copy.dir
-  const r = spawnSync(process.execPath, [path.join(dir, 'tagger-admin.js'), 'status'], { cwd: dir, env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, NODE_ENV: 'production', TAGGER_DATA_DIR: path.join(dir, 'data') }, encoding: 'utf8' })
-  assert.equal(r.status, 0)
-  assert.match(r.stdout, /입장 코드가 없습니다/)
 })

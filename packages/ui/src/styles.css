@@ -6589,12 +6589,6 @@ select.kn-input { cursor: pointer; }
   color: var(--gate-ivory);
 }
 .web-gate-title { font-family: 'Pixelify Sans Variable', var(--font-ui); font-size: 24px; color: var(--gate-ivory); }
-.web-gate-input {
-  padding: 11px 12px; border-radius: 7px; border: 1px solid var(--border-2); background: var(--bg-3); color: var(--gate-ivory);
-  font-family: var(--font-mono); font-size: 17px; letter-spacing: 1px; text-align: center; text-transform: uppercase; outline: none;
-}
-.web-gate-input::placeholder { color: rgba(255,255,240,0.45); }
-.web-gate-input:focus { border-color: rgba(167,139,250,0.7); }
 .web-gate-error { font-size: 14px; color: #f87171; }
 .web-gate-btn {
   padding: 10px 0; border-radius: 7px; border: none; background: #8b5cf6; color: var(--gate-ivory);

@@ -28,10 +28,6 @@ fi
 sessions="$(sudo find /var/lib/tagger/sessions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)"
 echo "면접관 세션  : ${sessions}개 (들어와 있는 사람 수)"
 
-if [[ -f /opt/tagger/current/tagger-admin.js ]]; then
-  echo "입장 코드    : $(bash "$REPO/deploy/tagger-admin.sh" status 2>/dev/null | sed 's/^입장 코드: //')"
-fi
-
 echo "최근 배포    :"
 sudo tail -n 3 /var/lib/tagger/deploy-history.log 2>/dev/null | sed 's/^/  /' || echo "  (기록 없음)"
 

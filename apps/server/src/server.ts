@@ -4,7 +4,6 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { makeWorkspace, makeSessionState, localHandlers, csvHandlers, lorebookHandlers, dbHandlers, normalizeSlots, keyinfoHandlers, isAllowedDbPort, resolvePublicHost } from '@tagger/core'
 import type { Ctx, Handlers, DbSlots } from '@tagger/core'
-import { LoginLimiter, checkCode, readAccess } from './access'
 
 // Web API 서버. 화면(httpApi)이 부르는 경로는 넷뿐이다.
 //   GET  /api/health          살아 있는지
@@ -20,7 +19,7 @@ export interface ServerOptions {
   maxDbOps?: number
   // 화면으로 통째로 보내는 파일(local:readFile)의 최대 크기 (기본 30MB)
   maxReadBytes?: number
-  // true면 입장 코드 없이 처음 요청에 세션을 만든다 (개발용). 운영은 false: /api/login 으로만 들어온다.
+  // true면 입장 화면 없이 처음 요청에 세션을 만든다 (개발용). 운영은 false: 입장 화면의 "들어가기"(/api/login)로만 세션을 만든다.
   openAccess?: boolean
   // 세션 작업 폴더들을 둘 폴더. 세션마다 <dataDir>/sessions/<id>/ 를 쓴다. 서버를 시작하면 sessions/ 를 비운다.
   dataDir: string
@@ -201,15 +200,13 @@ export function createTaggerServer(opts: ServerOptions) {
     return created
   }
 
-  // 입장 코드를 쓰는 서버는 /api/login 으로 들어온 세션만 받는다. 열린 서버(개발용)는 처음 요청에 세션을 만든다.
+  // 운영은 /api/login 으로 들어온 세션만 받는다. 열린 서버(개발용)는 처음 요청에 세션을 만든다.
   function sessionFor(req: http.IncomingMessage, res: http.ServerResponse): Session {
     const found = findSession(req)
     if (found) return found
-    if (!opts.openAccess) throw httpError(401, '입장 코드를 넣어 주세요.')
+    if (!opts.openAccess) throw httpError(401, '입장 화면에서 다시 들어와 주세요.')
     return startSession(res)
   }
-
-  const limiter = new LoginLimiter()
 
   // 오래 쓰지 않은 세션을 지운다.
   function sweep(now = Date.now()) {
@@ -228,7 +225,7 @@ export function createTaggerServer(opts: ServerOptions) {
     }
 
     // 지금 들어와 있는지. 화면은 앱을 그리기 전에 이것을 먼저 부르고, 답을 보고 입장 화면을 띄운다.
-    // 입장 코드를 쓰는 서버는 세션을 만들지 않는다. 열린 서버(개발용)는 여기서 세션을 하나 만든다.
+    // 운영은 여기서 세션을 만들지 않는다 (페이지만 훑는 봇이 세션을 차지하지 않는다). 열린 서버(개발용)는 여기서 세션을 하나 만든다.
     // (앱이 처음 뜰 때 요청을 동시에 여러 개 보내므로, 쿠키 없는 요청마다 세션이 생기지 않게 먼저 만들어 둔다)
     if (req.method === 'GET' && url.pathname === '/api/session') {
       let found = findSession(req)
@@ -236,32 +233,20 @@ export function createTaggerServer(opts: ServerOptions) {
       return sendJson(res, 200, { ok: true, value: { loggedIn: !!found, open: !!opts.openAccess } })
     }
 
-    // 입장: 공용 입장 코드가 맞으면 새 세션(새 견본)을 시작한다.
+    // 입장: 새 세션(새 견본)을 시작한다. 코드는 묻지 않는다. 이미 들어와 있으면 세션을 늘리지 않는다.
+    // 경로 이름은 Nginx의 요청 횟수 제한(location = /api/login)과 맞춘 것이다.
     if (req.method === 'POST' && url.pathname === '/api/login') {
-      const who = clientKey(req)
-      if (limiter.blocked(who)) return sendJson(res, 429, { ok: false, error: '여러 번 틀렸어요. 10분 뒤에 다시 해 주세요.' })
-      const body = await readBody(req, 1024)
-      let code: unknown = null
-      try { code = JSON.parse(body.toString('utf8'))?.code } catch { /* 아래에서 wrong */ }
-      const result = checkCode(readAccess(opts.dataDir), code)
-      if (result === 'no-code') return sendJson(res, 503, { ok: false, error: '아직 입장 코드가 정해지지 않았어요.' })
-      if (result !== 'ok') {
-        limiter.fail(who)
-        return sendJson(res, 401, { ok: false, error: result === 'expired' ? '입장 코드가 만료되었어요.' : '입장 코드가 맞지 않아요.' })
-      }
-      limiter.clear(who)
-      const existing = findSession(req)
-      if (existing) return sendJson(res, 200, { ok: true })
-      startSession(res)
+      req.resume()
+      if (!findSession(req)) startSession(res)
       return sendJson(res, 200, { ok: true })
     }
 
     // 견본 재생성: 지금 세션(작업 폴더와 메모리)을 지우고 견본의 새 복사본으로 다시 시작한다.
-    // 이미 들어와 있는 사람만 쓸 수 있다 (입장 코드를 다시 묻지 않는다). 세션 수는 늘지 않는다.
+    // 이미 들어와 있는 사람만 쓸 수 있다. 세션 수는 늘지 않는다.
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       req.resume()
       const current = findSession(req)
-      if (!current) throw httpError(401, '입장 코드를 넣어 주세요.')
+      if (!current) throw httpError(401, '입장 화면에서 다시 들어와 주세요.')
       current.ctx.state.exportAborted = true
       removeSession(current)
       startSession(res)
@@ -395,19 +380,6 @@ export async function webDbGuard(host: string, port: number) {
       options: '-c default_transaction_read_only=on',
     },
   }
-}
-
-// 입장 실패를 셀 때 쓰는 접속자 구분값. 서버는 127.0.0.1에만 묶여 Nginx를 거쳐 오므로,
-// 바로 앞이 루프백이면 Nginx가 넣은 X-Real-IP를 쓴다. (바깥에서 이 머리글을 넣어도 Nginx가 덮어쓴다)
-// 운영은 유닉스 소켓으로 받는다. 소켓 파일은 Nginx(www-data)만 쓸 수 있으므로 소켓으로 온 요청의 X-Real-IP는 Nginx가 넣은 값이다.
-// 소켓 요청에는 remoteAddress가 없다. 예전에는 이때 빈 문자열이 모든 접속자의 키가 되어, 한 사람의 실패가 모두를 막았다.
-export function clientKey(req: http.IncomingMessage): string {
-  const remote = req.socket.remoteAddress
-  const real = req.headers['x-real-ip']
-  const header = typeof real === 'string' && real !== '' ? real : ''
-  if (!remote) return header ? `ip:${header}` : 'socket'
-  const isLoopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
-  return isLoopback && header ? `ip:${header}` : `ip:${remote}`
 }
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown) {
