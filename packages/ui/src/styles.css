@@ -6579,12 +6579,12 @@ select.kn-input { cursor: pointer; }
 .hermes-vault-tree ul { margin: 0 0 0 14px; padding: 0; list-style: none; color: var(--text-3); }
 
 /* Web 입장 화면 (WebGate). 데스크톱에서는 쓰지 않는다.
-   크기: 처음 판(폭 360px, 높이 약 360px)의 폭 160%, 높이 140%. 글자는 처음 판보다 2px 크게, 색은 아이보리. */
+   도움말을 읽은 뒤 들어가기를 누른다. 폭은 도움말의 가장 긴 줄에 맞추고, 화면이 작으면 도움말만 스크롤한다. */
 .web-gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); }
 .web-gate-card {
   --gate-ivory: #fffff0;
-  width: 576px; max-width: calc(100vw - 32px); min-height: 504px; box-sizing: border-box;
-  padding: 39px 40px 34px; display: flex; flex-direction: column; justify-content: center; gap: 17px;
+  width: max-content; max-width: min(1100px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box;
+  padding: 32px 34px 30px; display: flex; flex-direction: column; justify-content: center; gap: 17px;
   background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   color: var(--gate-ivory);
 }
@@ -6595,8 +6595,9 @@ select.kn-input { cursor: pointer; }
   font-family: var(--font-ui); font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .web-gate-btn:disabled { opacity: 0.5; cursor: default; }
-.web-gate-notice { word-break: keep-all; margin: 0; padding: 12px 14px 12px 30px; border-radius: 8px; background: var(--bg-3); color: var(--gate-ivory); font-size: 13px; line-height: 1.7; }
-.web-gate-notice li + li { margin-top: 4px; }
+.web-gate-help { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-3); }
+.web-gate-help-head { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; color: #fde68a; }
+.web-gate-help .help-list { overflow-y: auto; }
 
 /* DB 슬롯 창의 SSL/TLS 선택 칸 */
 .db-ssl-row { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; font-size: 12px; color: var(--text-2); cursor: pointer; }

@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { isDesktop } from '../api'
+import { HelpList, HelpTitle } from '../components/HelpModal'
 import { uiId } from '../ui/uiId'
 
-// Web 입장 화면. 안내를 보여 주고 "들어가기"를 누르면 세션이 생긴다. 데스크톱에서는 아무것도 하지 않는다.
+// Web 입장 화면. 도움말(Help!)을 먼저 보여 주고 "들어가기"를 누르면 세션이 생긴다. 데스크톱에서는 아무것도 하지 않는다.
 // 쓰는 중에 세션이 끝나면(서버가 401로 답하면) httpApi가 'tagger:need-login'을 알리고, 다시 이 화면을 띄운다.
 type GateState = 'checking' | 'login' | 'open'
 
@@ -51,11 +52,10 @@ export function WebGate({ children }: { children: ReactNode }) {
     <div className="web-gate" {...uiId('WG.frame')}>
       <div className="web-gate-card" {...uiId('WG.card')}>
         <div className="web-gate-title">DBViewer-tagger</div>
-        <ul className="web-gate-notice" {...uiId('WG.notice')}>
-          <li>시연을 위해 배포된 웹입니다. 웹 안에는 자신의 주요 정보를 남기지 않으시는 게 좋습니다.</li>
-          <li>Key 노트 창엔 Hermes - Obsidian 환경 전송 버튼을 가렸습니다.</li>
-          <li>DB는 실제 연결하지 않으시는 것을 권합니다. 준비된 CSV 파일이 약소하게 있습니다.</li>
-        </ul>
+        <div className="web-gate-help" {...uiId('WG.help')}>
+          <div className="web-gate-help-head"><HelpTitle /></div>
+          <HelpList />
+        </div>
         {error && <div className="web-gate-error" {...uiId('WG.error')}>{error}</div>}
         <button className="web-gate-btn" type="button" onClick={enter} disabled={busy} {...uiId('WG.enter')}>
           {busy ? '들어가는 중…' : '들어가기'}
