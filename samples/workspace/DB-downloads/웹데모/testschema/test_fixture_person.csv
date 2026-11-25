@@ -1,0 +1,6 @@
+run_no,person,username_base,first_name,last_name,phone_number,bank_name,account_number,partition_username,partition_name,partition_phone,partition_account_length
+[PK|FK→test_fixture.run_no],[PK],[NN],[NN],[NN],[NN],[NN],[NN],[NN],[NN],[NN],[NN]
+{integer},{testperson},{string},{string},{string},{string},{string},{string},{string},{string},{string},{integer}
+1,A,틒뿙겠뤮,튨,o,010-86■■-42■■,Bank of North America,085410117,korean,one,mobile,9
+1,B,t90etju,뤐낯,jwfdoi,+82 10-43■■-17■■,우리들은행,9621179712,english-digits,usual,international,10
+1,C,댩팰3hcp,pyigksctwtqmdgujrnhifn,눝휗팴놅쐽쿝궗읰싦즵뀲멦턼붇쫃땎핅퇲꾫붲좝껞밚찠땖텸,(02) 37■-45■■,하라은행,38393763844,mixed,long,area,11

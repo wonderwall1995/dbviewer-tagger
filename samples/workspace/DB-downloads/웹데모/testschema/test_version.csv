@@ -1,0 +1,5 @@
+part,version,major,minor,fingerprint,first_seen_at
+[PK],[PK],[NN],[NN],[NN],[NN]
+{versionpart},{string},{integer},{integer},{string},{timestamp}
+server,0.100,0,100,8fb727a692449e1d,2026-11-24 07:30:47.086
+web,0.100,0,100,70f2c3281c1bb52e,2026-11-24 07:30:47.086
